@@ -1,5 +1,6 @@
 // API Configuration
-export const API_BASE_URL = 'http://localhost:3001';
+// Use environment variable if available, otherwise fallback to production API
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://booking-production-de35.up.railway.app';
 export const RESTAURANT_ID = 'demo-restaurant';
 
 // Fetch widget data
