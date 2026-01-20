@@ -917,14 +917,25 @@ app.post('/api/admin/save', async (req, res) => {
         }
 
         // --- ZONES: Delete zones NOT in payload, then upsert ---
+        // CRITICAL FIX: Must delete slots referencing zones BEFORE deleting zones
+        // (slots have ON DELETE RESTRICT constraint on zone_id)
         const zoneIds = (zones || []).map(z => z.id);
         if (zoneIds.length > 0) {
+            // First, delete any slots that reference zones we're about to delete
+            await client.query(
+                `DELETE FROM slots WHERE zone_id IN (
+                    SELECT id FROM zones WHERE restaurant_id = $1 AND id != ALL($2::text[])
+                )`,
+                [targetRestaurantId, zoneIds]
+            );
+            // Now safe to delete zones
             await client.query(
                 `DELETE FROM zones WHERE restaurant_id = $1 AND id != ALL($2::text[])`,
                 [targetRestaurantId, zoneIds]
             );
         } else if (force) {
-            // Only delete all zones if force is set
+            // Only delete all zones if force is set - delete slots first
+            await client.query(`DELETE FROM slots WHERE zone_id IN (SELECT id FROM zones WHERE restaurant_id = $1)`, [targetRestaurantId]);
             await client.query(`DELETE FROM zones WHERE restaurant_id = $1`, [targetRestaurantId]);
         }
 
