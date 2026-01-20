@@ -21,6 +21,7 @@ export interface BookingRequest {
     customer_email?: string;    // Optional - for booking confirmation email
     customer_phone?: string;    // Optional - contact phone
     remarks?: string;           // Optional - special requests/opmerkingen
+    idempotency_key?: string;   // Auto-generated to prevent duplicate submissions
 }
 
 export interface BookingResponse {
@@ -30,12 +31,18 @@ export interface BookingResponse {
 }
 
 export async function bookTable(booking: BookingRequest): Promise<BookingResponse> {
+    // Generate idempotency key if not provided (prevents double submissions)
+    const idempotencyKey = booking.idempotency_key || crypto.randomUUID();
+
     const response = await fetch(`${API_BASE_URL}/api/book`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify(booking),
+        body: JSON.stringify({
+            ...booking,
+            idempotency_key: idempotencyKey
+        }),
     });
 
     if (!response.ok) {
