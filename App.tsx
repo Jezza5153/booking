@@ -6,7 +6,7 @@ import { CalendarManager } from './components/CalendarManager';
 import { LoginPage } from './components/LoginPage';
 import { EVENTS_DATA, WIJKEN_DATA } from './data';
 import { EventData, Wijk } from './types';
-import { API_BASE_URL } from './api';
+import { API_BASE_URL, fetchWidgetData, RESTAURANT_ID } from './api';
 import { Smartphone, Settings, BookOpen, Calendar as CalendarIcon, LogOut } from 'lucide-react';
 
 type ViewMode = 'widget' | 'admin' | 'guide' | 'calendar';
@@ -53,6 +53,25 @@ const App: React.FC = () => {
       setIsCheckingAuth(false);
     }
   }, []);
+
+  // Load data from API when authenticated
+  const loadDataFromAPI = async () => {
+    try {
+      const data = await fetchWidgetData(RESTAURANT_ID);
+      setEvents(data.events);
+      setWijken(data.zones);
+      console.log('✅ Loaded data from API:', data.events.length, 'events');
+    } catch (error) {
+      console.error('Failed to load from API, using local data:', error);
+    }
+  };
+
+  // Load data when authenticated
+  useEffect(() => {
+    if (isAuthenticated && !embedMode) {
+      loadDataFromAPI();
+    }
+  }, [isAuthenticated, embedMode]);
 
   const handleLoginSuccess = (token: string) => {
     setIsAuthenticated(true);
