@@ -304,7 +304,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
                 return (
                   <div
                     key={slot.id}
-                    className={`relative p-3 rounded-lg border-2 transition-colors group/slot 
+                    className={`relative p-3 rounded-lg border-2 transition-colors group/slot overflow-hidden
                     ${isFull ? 'border-red-100 bg-red-50/50' : slot.isNextAvailable ? 'border-amber-200 bg-amber-50' : 'border-gray-100 hover:border-gray-200'}
                     `}
                   >
@@ -353,7 +353,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
                         <select
                           value={slot.wijkId || ''}
                           onChange={(e) => handleSlotChange(event.id, slot.id, 'wijkId', e.target.value)}
-                          className="flex-1 text-xs bg-white border border-gray-200 rounded px-1.5 py-1 text-gray-600 truncate"
+                          className="flex-1 min-w-0 max-w-[120px] text-xs bg-white border border-gray-200 rounded px-1.5 py-1 text-gray-600 truncate"
                         >
                           {wijken.map(w => (
                             <option key={w.id} value={w.id}>{w.name}</option>
