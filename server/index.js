@@ -564,48 +564,63 @@ app.delete('/api/admin/clear', async (req, res) => {
 });
 
 // Cancel a booking (Admin only) - marks cancelled, decrements slot counter
+// SECURITY: Tenant-scoped, atomic, race-safe
 app.post('/api/admin/bookings/:id/cancel', async (req, res) => {
     const bookingId = req.params.id;
+    const restaurantId = req.query.restaurantId || req.body?.restaurantId || 'demo-restaurant';
+
+    // Input validation
+    if (!bookingId || typeof bookingId !== 'string') {
+        return res.status(422).json({ error: 'Invalid booking ID' });
+    }
 
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
 
-        // Get and lock the booking
+        // Get and lock BOTH booking AND slot (race-safe)
         const bookingResult = await client.query(
             `SELECT b.*, s.booked_count_2_tops, s.booked_count_4_tops, s.booked_count_6_tops
              FROM bookings b
              JOIN slots s ON s.id = b.slot_id
-             WHERE b.id = $1
-             FOR UPDATE OF b`,
-            [bookingId]
+             WHERE b.id = $1 AND b.restaurant_id = $2
+             FOR UPDATE OF b, s`,
+            [bookingId, restaurantId]
         );
 
         if (bookingResult.rowCount === 0) {
             await client.query('ROLLBACK');
-            return res.status(404).json({ error: 'booking not found' });
+            // SECURITY: Don't reveal if booking exists but belongs to different restaurant
+            return res.status(404).json({ error: 'Booking not found' });
         }
 
         const booking = bookingResult.rows[0];
 
+        // Idempotent: already cancelled = 409 with no side effects
         if (booking.status === 'cancelled') {
             await client.query('ROLLBACK');
-            return res.status(409).json({ error: 'booking already cancelled' });
+            return res.status(409).json({ error: 'Booking already cancelled', cancelled_at: booking.cancelled_at });
         }
 
-        // Mark as cancelled
+        // Mark as cancelled with timestamp
         await client.query(
             `UPDATE bookings SET status = 'cancelled', cancelled_at = now() WHERE id = $1`,
             [bookingId]
         );
 
-        // Decrement slot counter (only if currently > 0)
-        const col =
-            booking.table_type === '2' ? 'booked_count_2_tops' :
-                booking.table_type === '4' ? 'booked_count_4_tops' :
-                    booking.table_type === '6' ? 'booked_count_6_tops' : null;
+        // Decrement slot counter based on table_type
+        const colMap = { '2': 'booked_count_2_tops', '4': 'booked_count_4_tops', '6': 'booked_count_6_tops' };
+        const col = colMap[booking.table_type];
 
         if (col) {
+            const currentCount = booking[col] || 0;
+
+            // Warn if counter already 0 (data inconsistency)
+            if (currentCount <= 0) {
+                console.warn(`[${req.requestId}] Counter mismatch: ${col} already 0 for slot ${booking.slot_id}, booking ${bookingId}`);
+            }
+
+            // Decrement with floor at 0 (never negative)
             await client.query(
                 `UPDATE slots SET ${col} = GREATEST(0, ${col} - 1) WHERE id = $1`,
                 [booking.slot_id]
@@ -613,13 +628,13 @@ app.post('/api/admin/bookings/:id/cancel', async (req, res) => {
         }
 
         await client.query('COMMIT');
-        console.log(`[${req.requestId}] Booking ${bookingId} cancelled`);
+        console.log(`[${req.requestId}] Booking ${bookingId} cancelled for restaurant ${restaurantId}`);
 
         return res.status(200).json({ success: true, message: 'Booking cancelled' });
     } catch (error) {
         await client.query('ROLLBACK');
         console.error(`[${req.requestId}] Cancel error:`, error.message);
-        return res.status(500).json({ error: 'internal error' });
+        return res.status(500).json({ error: 'Internal error' });
     } finally {
         client.release();
     }
@@ -631,10 +646,30 @@ app.get('/api/admin/bookings', async (req, res) => {
     const restaurantId = req.query.restaurantId || 'demo-restaurant';
     const from = req.query.from || null; // ISO date string
     const to = req.query.to || null; // ISO date string
-    const status = req.query.status || null; // 'confirmed' | 'cancelled' | null (all)
+    const statusParam = req.query.status || null; // 'confirmed' | 'cancelled' | null (all)
     const search = req.query.q || null; // search term
-    const limit = Math.min(parseInt(req.query.limit) || 200, 500);
-    const offset = parseInt(req.query.offset) || 0;
+
+    // Input validation
+    const limitRaw = parseInt(req.query.limit);
+    const offsetRaw = parseInt(req.query.offset);
+
+    const limit = isNaN(limitRaw) ? 200 : Math.max(1, Math.min(limitRaw, 500));
+    const offset = isNaN(offsetRaw) ? 0 : Math.max(0, offsetRaw);
+
+    // Validate status param
+    const validStatuses = ['confirmed', 'cancelled', 'all', null];
+    const status = statusParam === 'all' ? null : statusParam;
+    if (statusParam && !validStatuses.includes(statusParam)) {
+        return res.status(422).json({ error: 'Invalid status. Use: confirmed, cancelled, or all' });
+    }
+
+    // Validate date params (if provided, must be parseable)
+    if (from && isNaN(Date.parse(from))) {
+        return res.status(422).json({ error: 'Invalid from date. Use ISO format: YYYY-MM-DDTHH:mm:ssZ' });
+    }
+    if (to && isNaN(Date.parse(to))) {
+        return res.status(422).json({ error: 'Invalid to date. Use ISO format: YYYY-MM-DDTHH:mm:ssZ' });
+    }
 
     try {
         // Get total count for pagination

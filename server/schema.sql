@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS bookings (
   
   -- Timestamps and status
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  cancelled_at TIMESTAMPTZ,
   status TEXT NOT NULL DEFAULT 'confirmed' CHECK (status IN ('confirmed','cancelled'))
 );
 
@@ -77,6 +78,7 @@ CREATE INDEX IF NOT EXISTS idx_slots_datetime ON slots(start_datetime);
 CREATE INDEX IF NOT EXISTS idx_bookings_slot ON bookings(slot_id);
 CREATE INDEX IF NOT EXISTS idx_bookings_restaurant ON bookings(restaurant_id);
 CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings(status);
+CREATE INDEX IF NOT EXISTS idx_bookings_cancelled_at ON bookings(cancelled_at);
 
 -- Unique constraint on idempotency key to prevent duplicates
 CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_idempotency_unique 
