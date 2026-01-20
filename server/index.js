@@ -1036,14 +1036,16 @@ function parseSlotDateTime(dateStr, timeStr) {
         if (dateStr && dateStr.match(/^\d{4}-\d{2}-\d{2}/)) {
             // ISO date format: "2026-01-20" or "2026-01-20T18:00:00"
             if (dateStr.includes('T')) {
-                // Full ISO with time
+                // Full ISO with time - parse as-is
                 return new Date(dateStr);
             } else {
-                // ISO date only, combine with timeStr
+                // ISO date only (YYYY-MM-DD), combine with timeStr
+                // CRITICAL FIX: Don't use new Date(dateStr) as it parses as UTC midnight
+                // Instead, construct the date in local time directly
+                const [year, month, day] = dateStr.split('-').map(Number);
                 const [hours, minutes] = (timeStr || '12:00').split(':').map(Number);
-                const parsed = new Date(dateStr);
-                parsed.setHours(hours, minutes, 0, 0);
-                return parsed;
+                // Month is 0-indexed in JS Date constructor
+                return new Date(year, month - 1, day, hours, minutes, 0, 0);
             }
         }
 
