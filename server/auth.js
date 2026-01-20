@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
+import pool from './db-postgres.js';
 
 dotenv.config();
 
@@ -14,44 +15,100 @@ if (!JWT_SECRET) {
     process.exit(1);
 }
 
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME;
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
-
-if (!ADMIN_USERNAME || !ADMIN_PASSWORD) {
-    console.error('❌ FATAL: ADMIN_USERNAME and ADMIN_PASSWORD environment variables are required');
-    process.exit(1);
-}
-
 // ============================================
-// Authentication
+// MULTI-TENANT: Database-backed authentication
+// Each restaurant has their own admin users
 // ============================================
 
-// Verify login credentials (async for bcrypt)
+// Fallback to env vars if admin_users table doesn't exist yet (migration pending)
+const FALLBACK_USERNAME = process.env.ADMIN_USERNAME;
+const FALLBACK_PASSWORD = process.env.ADMIN_PASSWORD;
+const FALLBACK_RESTAURANT_ID = process.env.DEFAULT_RESTAURANT_ID || 'demo-restaurant';
+
+// Verify login credentials against database
 export async function verifyCredentials(username, password) {
-    if (username !== ADMIN_USERNAME) {
-        return false;
+    console.log('[AUTH] Attempting login for username:', username);
+    try {
+        // Try database lookup first
+        const result = await pool.query(
+            `SELECT id, restaurant_id, username, password_hash 
+             FROM admin_users 
+             WHERE username = $1 AND is_active = true`,
+            [username]
+        );
+
+        console.log('[AUTH] Database query returned', result.rows.length, 'rows');
+        if (result.rows.length > 0) {
+            console.log('[AUTH] Found user:', result.rows[0].username, 'restaurant:', result.rows[0].restaurant_id);
+        }
+
+        if (result.rows.length > 0) {
+            const user = result.rows[0];
+            const isValid = await bcrypt.compare(password, user.password_hash);
+            console.log('[AUTH] Password comparison result:', isValid);
+            if (isValid) {
+                // Update last_login
+                await pool.query(
+                    'UPDATE admin_users SET last_login = now() WHERE id = $1',
+                    [user.id]
+                ).catch(() => { }); // Non-blocking
+
+                return {
+                    valid: true,
+                    userId: user.id,
+                    username: user.username,
+                    restaurantId: user.restaurant_id
+                };
+            }
+        }
+    } catch (error) {
+        // Table might not exist yet - fall through to env var fallback
+        console.warn('Database auth lookup failed, trying fallback:', error.message);
     }
 
-    // SECURITY: Require bcrypt-hashed password (starts with $2)
-    if (!ADMIN_PASSWORD.startsWith('$2')) {
-        console.error('❌ FATAL: ADMIN_PASSWORD must be bcrypt hashed. Generate with: npx bcrypt-cli hash "yourpassword"');
-        return false;
+    // FALLBACK: Use environment variables (for backwards compatibility)
+    if (FALLBACK_USERNAME && FALLBACK_PASSWORD) {
+        if (username !== FALLBACK_USERNAME) {
+            return { valid: false };
+        }
+
+        // Support both hashed and unhashed fallback passwords
+        let isValid = false;
+        if (FALLBACK_PASSWORD.startsWith('$2')) {
+            isValid = await bcrypt.compare(password, FALLBACK_PASSWORD);
+        } else {
+            // Plain text comparison (not recommended for production)
+            isValid = password === FALLBACK_PASSWORD;
+        }
+
+        if (isValid) {
+            return {
+                valid: true,
+                userId: 'fallback-admin',
+                username: FALLBACK_USERNAME,
+                restaurantId: FALLBACK_RESTAURANT_ID
+            };
+        }
     }
 
-    // Compare with bcrypt
-    return await bcrypt.compare(password, ADMIN_PASSWORD);
+    return { valid: false };
 }
 
-// Generate JWT token with explicit algorithm
-export function generateToken(username) {
+// Generate JWT token with restaurant_id for multi-tenancy
+export function generateToken(userId, username, restaurantId) {
     return jwt.sign(
-        { username, role: 'admin' },
+        {
+            userId,
+            username,
+            restaurantId,  // CRITICAL: This scopes all admin API calls
+            role: 'admin'
+        },
         JWT_SECRET,
         { expiresIn: '24h', algorithm: 'HS256' }
     );
 }
 
-// Middleware to verify JWT token
+// Middleware to verify JWT token and extract restaurant_id
 export function authMiddleware(req, res, next) {
     const authHeader = req.headers.authorization;
 
@@ -65,6 +122,14 @@ export function authMiddleware(req, res, next) {
         // SECURITY: Explicitly specify allowed algorithms to prevent "none" attack
         const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
         req.user = decoded;
+
+        // MULTI-TENANT: Override any query param with token's restaurant_id
+        // This prevents a user from accessing another restaurant's data
+        if (decoded.restaurantId) {
+            req.query.restaurantId = decoded.restaurantId;
+            req.body.restaurantId = decoded.restaurantId;
+        }
+
         next();
     } catch (error) {
         // Don't leak details about token verification failures
@@ -81,11 +146,16 @@ export async function loginHandler(req, res) {
     }
 
     // Security: Don't reveal whether username or password was wrong
-    const isValid = await verifyCredentials(username, password);
-    if (!isValid) {
+    const authResult = await verifyCredentials(username, password);
+    if (!authResult.valid) {
         return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const token = generateToken(username);
-    res.json({ token, username, expiresIn: '24h' });
+    const token = generateToken(authResult.userId, authResult.username, authResult.restaurantId);
+    res.json({
+        token,
+        username: authResult.username,
+        restaurantId: authResult.restaurantId,
+        expiresIn: '24h'
+    });
 }
