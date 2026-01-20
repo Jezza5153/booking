@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { EventData, Slot, Wijk } from '../types';
 import { Save, Star, Calendar, Trash2, Plus, GripVertical, MapPin, Users, MinusCircle, PlusCircle, Armchair, Loader2, CheckCircle, XCircle } from 'lucide-react';
-import { formatDateToDutch } from '../utils';
+// formatDateToDutch no longer needed - sending ISO dates directly to backend
 import { saveAdminData, RESTAURANT_ID } from '../api';
 
 interface AdminDashboardProps {
@@ -86,8 +86,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
       const defaultWijk = wijken[0];
       const newSlot: Slot = {
         id: `s-${Date.now()}`,
-        date: 'Nieuwe datum',
-        time: '00:00',
+        date: new Date().toISOString().split('T')[0], // ISO date format: YYYY-MM-DD
+        time: '18:00',
         booked2tops: 0,
         booked4tops: 0,
         booked6tops: 0,
@@ -104,9 +104,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
     }));
   };
 
+  // AUDIT FIX: Send ISO date directly to backend (not Dutch format)
+  // Backend parseSlotDateTime prefers ISO 8601 format: "2026-01-20"
   const handleDateSelect = (eventId: string, slotId: string, isoDate: string) => {
-    const formattedDate = formatDateToDutch(isoDate);
-    handleSlotChange(eventId, slotId, 'date', formattedDate);
+    // Store ISO date directly - backend handles timestamp conversion properly
+    handleSlotChange(eventId, slotId, 'date', isoDate);
   };
 
   const toggleNextAvailable = (eventId: string, slotId: string) => {

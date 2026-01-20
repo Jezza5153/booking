@@ -2,8 +2,11 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import crypto from 'crypto';
+import helmet from 'helmet';
 import pool from './db-postgres.js';
-import { loginHandler, authMiddleware, loginRateLimiter, bookingRateLimiter, widgetRateLimiter } from './auth.js';
+import { loginHandler, authMiddleware } from './auth.js';
+import { loginRateLimiter, bookingRateLimiter, widgetRateLimiter, calendarRateLimiter, isRedisConnected } from './ratelimit.js';
+import { initSentry, sentryErrorHandler, captureException } from './sentry.js';
 import { sendBookingConfirmation } from './email.js';
 
 dotenv.config();
@@ -20,6 +23,11 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // ============================================
+// SECURITY: Initialize Sentry (must be first)
+// ============================================
+initSentry(app);
+
+// ============================================
 // SECURITY: Middleware
 // ============================================
 
@@ -29,10 +37,23 @@ app.set('trust proxy', 1);
 app.use(cors());
 app.use(express.json({ limit: '16kb' }));
 
-// Security headers
+// Helmet for security headers including CSP
+app.use(helmet({
+    contentSecurityPolicy: {
+        useDefaults: true,
+        directives: {
+            // Allow widget to be embedded on any site
+            'frame-ancestors': ['*'],
+            'connect-src': ["'self'", process.env.ALLOWED_API_ORIGIN || '*'],
+        },
+    },
+    // Allow X-Frame-Options to be overridden by frame-ancestors
+    frameguard: false,
+}));
+
+// Additional security headers
 app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
     next();
 });
 
@@ -140,6 +161,8 @@ app.get('/api/widget/:restaurantId', widgetRateLimiter, async (req, res) => {
             })
         );
 
+        // Set caching header for widget data (short TTL, fresh data)
+        res.set('Cache-Control', 'public, max-age=5, s-maxage=30');
         res.json({ restaurant, zones: zonesResult.rows, events: eventsWithSlots });
     } catch (error) {
         console.error('Widget data error:', error);
@@ -314,8 +337,8 @@ app.post('/api/book', bookingRateLimiter, async (req, res) => {
     }
 });
 
-// GET /api/calendar/:restaurantId.ics - iCal feed (public)
-app.get('/api/calendar/:restaurantId.ics', async (req, res) => {
+// GET /api/calendar/:restaurantId.ics - iCal feed (public, rate limited)
+app.get('/api/calendar/:restaurantId.ics', calendarRateLimiter, async (req, res) => {
     const restaurantId = req.params.restaurantId.replace('.ics', '');
     const bookedOnly = req.query.booked_only === 'true';
 
@@ -387,7 +410,8 @@ app.get('/api/calendar/:restaurantId.ics', async (req, res) => {
 
         res.set({
             'Content-Type': 'text/calendar; charset=utf-8',
-            'Content-Disposition': `attachment; filename="${restaurantId}-bookings.ics"`
+            'Content-Disposition': `attachment; filename="${restaurantId}-bookings.ics"`,
+            'Cache-Control': 'public, max-age=60'
         });
         res.send(icalContent.join('\r\n'));
     } catch (error) {
@@ -396,9 +420,27 @@ app.get('/api/calendar/:restaurantId.ics', async (req, res) => {
     }
 });
 
-// Health check
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+// Health check with DB connectivity verification
+app.get('/api/health', async (req, res) => {
+    try {
+        // Verify DB connectivity
+        const dbResult = await pool.query('SELECT 1 as ok');
+        if (dbResult.rows[0]?.ok !== 1) {
+            throw new Error('DB check failed');
+        }
+        res.json({
+            status: 'ok',
+            timestamp: new Date().toISOString(),
+            db: 'connected'
+        });
+    } catch (error) {
+        console.error('Health check failed:', error.message);
+        res.status(503).json({
+            status: 'unhealthy',
+            timestamp: new Date().toISOString(),
+            db: 'disconnected'
+        });
+    }
 });
 
 // ============================================
@@ -704,11 +746,19 @@ function parseSlotDateTime(dateStr, timeStr) {
 }
 
 // ============================================
+// SENTRY ERROR HANDLER (before global handler)
+// ============================================
+sentryErrorHandler(app);
+
+// ============================================
 // GLOBAL ERROR HANDLER (Must be last)
 // ============================================
 app.use((err, req, res, next) => {
     // Log error safely (no sensitive data)
     console.error(`[${req.requestId}] Unhandled error:`, err.message);
+
+    // Capture to Sentry
+    captureException(err, { requestId: req.requestId });
 
     // Never expose stack traces or internal details
     res.status(500).json({

@@ -23,49 +23,6 @@ if (!ADMIN_USERNAME || !ADMIN_PASSWORD) {
 }
 
 // ============================================
-// Rate Limiting (in-memory, simple implementation)
-// ============================================
-const rateLimitStore = new Map();
-
-function createRateLimiter(maxRequests, windowMs) {
-    return (req, res, next) => {
-        const ip = req.ip || req.connection.remoteAddress || 'unknown';
-        const key = `${req.path}:${ip}`;
-        const now = Date.now();
-
-        const record = rateLimitStore.get(key) || { count: 0, resetAt: now + windowMs };
-
-        // Reset window if expired
-        if (now > record.resetAt) {
-            record.count = 0;
-            record.resetAt = now + windowMs;
-        }
-
-        record.count++;
-        rateLimitStore.set(key, record);
-
-        // Set rate limit headers
-        res.setHeader('X-RateLimit-Limit', maxRequests);
-        res.setHeader('X-RateLimit-Remaining', Math.max(0, maxRequests - record.count));
-        res.setHeader('X-RateLimit-Reset', Math.ceil(record.resetAt / 1000));
-
-        if (record.count > maxRequests) {
-            return res.status(429).json({
-                error: 'Too many requests',
-                retryAfter: Math.ceil((record.resetAt - now) / 1000)
-            });
-        }
-
-        next();
-    };
-}
-
-// Export rate limiters for different endpoints
-export const loginRateLimiter = createRateLimiter(5, 60 * 1000);      // 5 per minute
-export const bookingRateLimiter = createRateLimiter(20, 60 * 1000);   // 20 per minute
-export const widgetRateLimiter = createRateLimiter(60, 60 * 1000);    // 60 per minute
-
-// ============================================
 // Authentication
 // ============================================
 
@@ -75,23 +32,22 @@ export async function verifyCredentials(username, password) {
         return false;
     }
 
-    // Check if password is bcrypt hashed (starts with $2)
-    if (ADMIN_PASSWORD.startsWith('$2')) {
-        // Compare with bcrypt
-        return await bcrypt.compare(password, ADMIN_PASSWORD);
+    // SECURITY: Require bcrypt-hashed password (starts with $2)
+    if (!ADMIN_PASSWORD.startsWith('$2')) {
+        console.error('❌ FATAL: ADMIN_PASSWORD must be bcrypt hashed. Generate with: npx bcrypt-cli hash "yourpassword"');
+        return false;
     }
 
-    // MIGRATION: Plain text fallback - log warning
-    console.warn('⚠️  ADMIN_PASSWORD is not hashed. Hash it with: npx bcrypt-cli hash "yourpassword"');
-    return password === ADMIN_PASSWORD;
+    // Compare with bcrypt
+    return await bcrypt.compare(password, ADMIN_PASSWORD);
 }
 
-// Generate JWT token
+// Generate JWT token with explicit algorithm
 export function generateToken(username) {
     return jwt.sign(
         { username, role: 'admin' },
         JWT_SECRET,
-        { expiresIn: '24h' }
+        { expiresIn: '24h', algorithm: 'HS256' }
     );
 }
 
@@ -106,7 +62,8 @@ export function authMiddleware(req, res, next) {
     const token = authHeader.split(' ')[1];
 
     try {
-        const decoded = jwt.verify(token, JWT_SECRET);
+        // SECURITY: Explicitly specify allowed algorithms to prevent "none" attack
+        const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
         req.user = decoded;
         next();
     } catch (error) {
