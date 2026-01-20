@@ -33,6 +33,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             // Store token and notify parent
             localStorage.setItem('events_token', data.token);
             localStorage.setItem('events_user', data.username);
+            localStorage.setItem('events_restaurantId', data.restaurantId);
             onLoginSuccess(data.token);
         } catch (err: any) {
             setError(err.message || 'Login failed');

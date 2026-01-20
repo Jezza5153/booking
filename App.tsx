@@ -28,10 +28,22 @@ const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [embedMode] = useState(isEmbedMode());
+  const [sessionRestaurantId, setSessionRestaurantId] = useState<string | null>(null);
+
+  // Get effective restaurantId: session > URL param > default
+  const getRestaurantId = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlRestaurantId = urlParams.get('restaurantId');
+    return sessionRestaurantId || urlRestaurantId || RESTAURANT_ID;
+  };
 
   // Check for existing token on mount
   useEffect(() => {
     const token = localStorage.getItem('events_token');
+    const storedRestaurantId = localStorage.getItem('events_restaurantId');
+    if (storedRestaurantId) {
+      setSessionRestaurantId(storedRestaurantId);
+    }
     if (token) {
       // Verify token with server
       fetch(`${API_BASE_URL}/api/auth/verify`, {
@@ -60,9 +72,10 @@ const App: React.FC = () => {
   const loadDataFromAPI = async () => {
     try {
       // Authenticated users get admin endpoint with raw ISO dates for proper editing
+      const restaurantId = getRestaurantId();
       const data = isAuthenticated
-        ? await fetchAdminData(RESTAURANT_ID)
-        : await fetchWidgetData(RESTAURANT_ID);
+        ? await fetchAdminData(restaurantId)
+        : await fetchWidgetData(restaurantId);
       setEvents(data.events);
       setWijken(data.zones);
       console.log('✅ Loaded data from API:', data.events.length, 'events');
@@ -79,12 +92,19 @@ const App: React.FC = () => {
   }, [isAuthenticated, embedMode]);
 
   const handleLoginSuccess = (token: string) => {
+    // Read the restaurantId that LoginPage just stored
+    const storedRestaurantId = localStorage.getItem('events_restaurantId');
+    if (storedRestaurantId) {
+      setSessionRestaurantId(storedRestaurantId);
+    }
     setIsAuthenticated(true);
   };
 
   const handleLogout = () => {
     localStorage.removeItem('events_token');
     localStorage.removeItem('events_user');
+    localStorage.removeItem('events_restaurantId');
+    setSessionRestaurantId(null);
     setIsAuthenticated(false);
     setView('widget');
   };
@@ -129,7 +149,7 @@ const App: React.FC = () => {
   if (embedMode) {
     return (
       <div className="min-h-screen bg-gray-50 p-4 flex items-start justify-center">
-        <EventsWidget events={events} wijken={wijken} useApi={true} />
+        <EventsWidget events={events} wijken={wijken} useApi={true} restaurantId={getRestaurantId()} />
       </div>
     );
   }
@@ -223,7 +243,7 @@ const App: React.FC = () => {
 
               {/* The Live Widget Instance */}
               <div className="bg-white rounded-3xl border border-gray-200 shadow-2xl shadow-gray-200 overflow-hidden relative min-h-[600px] h-[600px]">
-                <EventsWidget events={events} wijken={wijken} useApi={true} />
+                <EventsWidget events={events} wijken={wijken} useApi={true} restaurantId={getRestaurantId()} />
               </div>
 
               <div className="absolute -bottom-6 right-4 text-xs font-mono text-gray-400 select-none">
@@ -258,7 +278,7 @@ const App: React.FC = () => {
         {/* VIEW: BOOKINGS MANAGER */}
         {view === 'bookings' && (
           <div className="animate-in slide-in-from-bottom-4 duration-300">
-            <BookingsManager />
+            <BookingsManager restaurantId={getRestaurantId()} />
           </div>
         )}
 
