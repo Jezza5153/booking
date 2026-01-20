@@ -2,20 +2,36 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import pool from './db-postgres.js';
-import { loginHandler, authMiddleware } from './auth.js';
+import { loginHandler, authMiddleware, loginRateLimiter, bookingRateLimiter, widgetRateLimiter } from './auth.js';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// ============================================
+// SECURITY: Middleware
+// ============================================
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '16kb' }));
+
+// Security headers
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    next();
+});
+
+// Request ID for logging (don't log sensitive data)
+app.use((req, res, next) => {
+    req.requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    next();
+});
 
 // ============================================
-// AUTH ROUTES (Public)
+// AUTH ROUTES (Public, Rate Limited)
 // ============================================
-app.post('/api/auth/login', loginHandler);
+app.post('/api/auth/login', loginRateLimiter, loginHandler);
 
 // Verify token endpoint
 app.get('/api/auth/verify', authMiddleware, (req, res) => {
@@ -23,12 +39,29 @@ app.get('/api/auth/verify', authMiddleware, (req, res) => {
 });
 
 // ============================================
-// PUBLIC ROUTES (No auth required)
+// PUBLIC ROUTES (Rate Limited)
 // ============================================
 
+// Input sanitization helper
+function sanitizeString(str, maxLength = 100) {
+    if (typeof str !== 'string') return '';
+    return str.slice(0, maxLength).replace(/[<>"'&]/g, '');
+}
+
+function validateRestaurantId(id) {
+    if (typeof id !== 'string') return false;
+    // Allow alphanumeric, hyphens, underscores
+    return /^[a-zA-Z0-9_-]{1,64}$/.test(id);
+}
+
 // GET /api/widget/:restaurantId - Widget data
-app.get('/api/widget/:restaurantId', async (req, res) => {
+app.get('/api/widget/:restaurantId', widgetRateLimiter, async (req, res) => {
     const { restaurantId } = req.params;
+
+    // Validate input
+    if (!validateRestaurantId(restaurantId)) {
+        return res.status(400).json({ error: 'Invalid restaurant ID format' });
+    }
 
     try {
         // Get restaurant
@@ -100,25 +133,34 @@ app.get('/api/widget/:restaurantId', async (req, res) => {
     }
 });
 
-// POST /api/book - Book a table (public)
-app.post('/api/book', async (req, res) => {
+// POST /api/book - Book a table (public, rate limited)
+app.post('/api/book', bookingRateLimiter, async (req, res) => {
     const { slot_id, table_type, guest_count } = req.body;
 
-    if (!slot_id || !table_type || !guest_count) {
-        return res.status(400).json({ error: 'Missing required fields' });
+    // Input validation
+    if (!slot_id || typeof slot_id !== 'string' || slot_id.length > 64) {
+        return res.status(400).json({ error: 'Invalid slot_id' });
+    }
+    if (!['2', '4', '6'].includes(table_type)) {
+        return res.status(400).json({ error: 'Invalid table_type, must be 2, 4, or 6' });
+    }
+    if (!guest_count || typeof guest_count !== 'number' || guest_count < 1 || guest_count > 12) {
+        return res.status(400).json({ error: 'Invalid guest_count, must be 1-12' });
     }
 
     const client = await pool.connect();
     try {
-        await client.query('BEGIN');
+        // Use SERIALIZABLE isolation for booking atomicity
+        await client.query('BEGIN ISOLATION LEVEL SERIALIZABLE');
 
-        // Get slot with zone capacity
+        // Get slot with zone capacity - with row lock
         const slotResult = await client.query(
             `SELECT s.*, z.capacity_2_tops, z.capacity_4_tops, z.capacity_6_tops, e.restaurant_id
        FROM slots s
        JOIN zones z ON s.zone_id = z.id
        JOIN events e ON s.event_id = e.id
-       WHERE s.id = $1`,
+       WHERE s.id = $1
+       FOR UPDATE OF s`, // Row lock
             [slot_id]
         );
 
@@ -351,8 +393,8 @@ app.post('/api/admin/save', async (req, res) => {
         res.json({ success: true, message: 'Changes saved successfully' });
     } catch (error) {
         await client.query('ROLLBACK');
-        console.error('Save error:', error);
-        res.status(500).json({ error: 'Failed to save changes', details: error.message });
+        console.error('Save error:', error.message); // Log without full stack in prod
+        res.status(500).json({ error: 'Failed to save changes' }); // Don't leak details
     } finally {
         client.release();
     }
@@ -384,9 +426,24 @@ function parseSlotDateTime(dateStr, timeStr) {
     }
 }
 
+// ============================================
+// GLOBAL ERROR HANDLER (Must be last)
+// ============================================
+app.use((err, req, res, next) => {
+    // Log error safely (no sensitive data)
+    console.error(`[${req.requestId}] Unhandled error:`, err.message);
+
+    // Never expose stack traces or internal details
+    res.status(500).json({
+        error: 'Internal server error',
+        requestId: req.requestId
+    });
+});
+
 // Start server
 app.listen(PORT, () => {
     console.log(`🚀 EVENTS API server running on http://localhost:${PORT}`);
     console.log(`📅 Calendar: http://localhost:${PORT}/api/calendar/demo-restaurant.ics`);
     console.log(`🔐 Auth: POST /api/auth/login`);
+    console.log(`🛡️  Security: Rate limiting, input validation, SERIALIZABLE transactions enabled`);
 });
