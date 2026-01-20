@@ -33,9 +33,12 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
   const events = useMemo(() => (useApi ? apiEvents ?? [] : fallbackEvents), [useApi, apiEvents, fallbackEvents])
   const wijken = useMemo(() => (useApi ? apiWijken ?? [] : fallbackWijken), [useApi, apiWijken, fallbackWijken])
 
-  const loadData = useCallback(async () => {
+  // silentRefresh = true means no loading spinner (used after booking)
+  const loadData = useCallback(async (silentRefresh = false) => {
     if (!useApi) return
-    setLoading(true)
+    if (!silentRefresh) {
+      setLoading(true)
+    }
     setError(null)
 
     try {
@@ -44,16 +47,20 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
       setApiWijken(data.zones ?? [])
     } catch (e: any) {
       console.error("Failed to load widget data:", e)
-      setError(e?.message || "We kunnen de beschikbaarheid nu even niet laden.")
+      if (!silentRefresh) {
+        setError(e?.message || "We kunnen de beschikbaarheid nu even niet laden.")
+      }
       setApiEvents([])
       setApiWijken([])
     } finally {
-      setLoading(false)
+      if (!silentRefresh) {
+        setLoading(false)
+      }
     }
   }, [useApi, restaurantId])
 
   useEffect(() => {
-    if (useApi) void loadData()
+    if (useApi) void loadData(false)
   }, [useApi, loadData])
 
   const activeEvents = useMemo(() => {
@@ -61,8 +68,9 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
     return (events ?? []).filter((ev) => Array.isArray(ev.slots) && ev.slots.length > 0)
   }, [events])
 
+  // Silent refresh after booking - no spinner, no disruption
   const handleBookingComplete = useCallback(() => {
-    if (useApi) void loadData()
+    if (useApi) void loadData(true)
   }, [useApi, loadData])
 
   return (
@@ -84,16 +92,6 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
                   </div>
                 </div>
               </div>
-
-              {useApi && (
-                <button
-                  onClick={loadData}
-                  className="text-xs text-white/70 hover:text-white flex items-center gap-2 px-3 py-2 rounded-lg border border-white/10 hover:border-white/20 transition"
-                >
-                  <RefreshCcw className="w-3.5 h-3.5" />
-                  Vernieuwen
-                </button>
-              )}
             </div>
           </div>
         )}
