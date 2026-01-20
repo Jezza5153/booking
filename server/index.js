@@ -240,12 +240,35 @@ app.post('/api/book', bookingRateLimiter, async (req, res) => {
             [slot_id]
         );
 
+        // Generate unique booking ID
+        const bookingId = `bkg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+        // Insert booking record for audit trail
+        await client.query(
+            `INSERT INTO bookings (id, restaurant_id, slot_id, table_type, guest_count, customer_name, customer_email, customer_phone, remarks, idempotency_key)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+            [
+                bookingId,
+                slot.restaurant_id,
+                slot_id,
+                table_type,
+                guest_count,
+                sanitizeString(customer_name, 100),
+                customer_email || null,
+                customer_phone ? sanitizeString(customer_phone, 20) : null,
+                remarks ? sanitizeString(remarks, 500) : null,
+                idempotency_key || null
+            ]
+        );
+
         const restaurantResult = await client.query(
             'SELECT handoff_url_base FROM restaurants WHERE id = $1',
             [slot.restaurant_id]
         );
 
         await client.query('COMMIT');
+
+        console.log(`[${req.requestId}] Booking ${bookingId} created for slot ${slot_id}`);
 
         // Send booking confirmation emails (non-blocking)
         sendBookingConfirmation({
@@ -401,14 +424,52 @@ app.delete('/api/admin/clear', async (req, res) => {
     }
 });
 
-// Save zones and events (Admin) - FULL SYNC (delete missing, upsert present)
+// Save zones and events (Admin) - FULL SYNC with SAFETY RAILS
 app.post('/api/admin/save', async (req, res) => {
-    const { restaurantId, zones, events } = req.body;
+    const { restaurantId, zones, events, force } = req.body;
     const targetRestaurantId = restaurantId || 'demo-restaurant';
+
+    // SAFETY: Reject completely empty payloads
+    if ((!zones || zones.length === 0) && (!events || events.length === 0)) {
+        if (!force) {
+            return res.status(400).json({
+                error: 'Empty payload rejected. Send force=true to confirm deletion of all data.',
+                warning: 'This would delete ALL zones and events.'
+            });
+        }
+    }
 
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
+
+        // SAFETY: Get current counts to check for dangerous deletions
+        const currentZonesResult = await client.query(
+            'SELECT COUNT(*) as count FROM zones WHERE restaurant_id = $1',
+            [targetRestaurantId]
+        );
+        const currentEventsResult = await client.query(
+            'SELECT COUNT(*) as count FROM events WHERE restaurant_id = $1',
+            [targetRestaurantId]
+        );
+        const currentZoneCount = parseInt(currentZonesResult.rows[0].count) || 0;
+        const currentEventCount = parseInt(currentEventsResult.rows[0].count) || 0;
+
+        const newZoneCount = (zones || []).length;
+        const newEventCount = (events || []).length;
+
+        // SAFETY: Warn if deleting more than 50% of data
+        const zoneDeleteRatio = currentZoneCount > 0 ? (currentZoneCount - newZoneCount) / currentZoneCount : 0;
+        const eventDeleteRatio = currentEventCount > 0 ? (currentEventCount - newEventCount) / currentEventCount : 0;
+
+        if ((zoneDeleteRatio > 0.5 || eventDeleteRatio > 0.5) && !force) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({
+                error: 'Dangerous operation blocked. More than 50% of data would be deleted.',
+                warning: `Current: ${currentZoneCount} zones, ${currentEventCount} events. New: ${newZoneCount} zones, ${newEventCount} events.`,
+                hint: 'Send force=true to confirm this operation.'
+            });
+        }
 
         // --- ZONES: Delete zones NOT in payload, then upsert ---
         const zoneIds = (zones || []).map(z => z.id);
@@ -417,8 +478,8 @@ app.post('/api/admin/save', async (req, res) => {
                 `DELETE FROM zones WHERE restaurant_id = $1 AND id != ALL($2::text[])`,
                 [targetRestaurantId, zoneIds]
             );
-        } else {
-            // No zones in payload = delete all
+        } else if (force) {
+            // Only delete all zones if force is set
             await client.query(`DELETE FROM zones WHERE restaurant_id = $1`, [targetRestaurantId]);
         }
 
@@ -436,7 +497,7 @@ app.post('/api/admin/save', async (req, res) => {
         // --- EVENTS: Get current event IDs then delete those not in payload ---
         const eventIds = (events || []).map(e => e.id);
         if (eventIds.length > 0) {
-            // Delete events NOT in the payload
+            // Delete events NOT in the payload (slots cascade due to FK)
             await client.query(
                 `DELETE FROM slots WHERE event_id IN (SELECT id FROM events WHERE restaurant_id = $1 AND id != ALL($2::text[]))`,
                 [targetRestaurantId, eventIds]
@@ -445,8 +506,8 @@ app.post('/api/admin/save', async (req, res) => {
                 `DELETE FROM events WHERE restaurant_id = $1 AND id != ALL($2::text[])`,
                 [targetRestaurantId, eventIds]
             );
-        } else {
-            // No events in payload = delete all
+        } else if (force) {
+            // Only delete all if force is set
             await client.query(`DELETE FROM slots WHERE event_id IN (SELECT id FROM events WHERE restaurant_id = $1)`, [targetRestaurantId]);
             await client.query(`DELETE FROM events WHERE restaurant_id = $1`, [targetRestaurantId]);
         }
@@ -500,10 +561,27 @@ app.post('/api/admin/save', async (req, res) => {
     }
 });
 
-// Helper function to parse Dutch date format
+// Helper function to parse slot date/time
+// PREFERRED: ISO 8601 format (e.g., "2026-01-20T18:00:00" or "2026-01-20")
+// FALLBACK: Dutch format "Di 20 jan" for backwards compatibility
 function parseSlotDateTime(dateStr, timeStr) {
     try {
-        // Handle formats like "Di 20 jan" or "Ma 14 okt"
+        // PREFERRED: Check if dateStr is already ISO format
+        if (dateStr && dateStr.match(/^\d{4}-\d{2}-\d{2}/)) {
+            // ISO date format: "2026-01-20" or "2026-01-20T18:00:00"
+            if (dateStr.includes('T')) {
+                // Full ISO with time
+                return new Date(dateStr);
+            } else {
+                // ISO date only, combine with timeStr
+                const [hours, minutes] = (timeStr || '12:00').split(':').map(Number);
+                const parsed = new Date(dateStr);
+                parsed.setHours(hours, minutes, 0, 0);
+                return parsed;
+            }
+        }
+
+        // FALLBACK: Dutch date format "Di 20 jan" or "Ma 14 okt"
         const months = {
             'jan': 0, 'feb': 1, 'mrt': 2, 'apr': 3, 'mei': 4, 'jun': 5,
             'jul': 6, 'aug': 7, 'sep': 8, 'okt': 9, 'nov': 10, 'dec': 11
@@ -513,7 +591,7 @@ function parseSlotDateTime(dateStr, timeStr) {
             const day = parseInt(parts[1]);
             const month = months[parts[2].toLowerCase()] ?? 0;
             let year = new Date().getFullYear();
-            const [hours, minutes] = timeStr.split(':').map(Number);
+            const [hours, minutes] = (timeStr || '12:00').split(':').map(Number);
 
             // Create date and check if it's in the past
             let parsedDate = new Date(year, month, day, hours, minutes);
@@ -526,12 +604,14 @@ function parseSlotDateTime(dateStr, timeStr) {
 
             return parsedDate;
         }
-        // Fallback: return current date with the time
-        const [hours, minutes] = timeStr.split(':').map(Number);
+
+        // Last resort: return current date with the time
+        const [hours, minutes] = (timeStr || '12:00').split(':').map(Number);
         const now = new Date();
         now.setHours(hours, minutes, 0, 0);
         return now;
     } catch (e) {
+        console.error('Date parsing error:', e.message);
         return new Date();
     }
 }
