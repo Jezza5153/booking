@@ -28,6 +28,8 @@ export interface Slot {
 export interface EventData {
   id: string;
   title: string;
+  description?: string; // Short subtext under title
+  price_per_person?: number; // Price in euros, e.g. 35.00
   slots: Slot[];
 }
 

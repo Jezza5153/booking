@@ -119,7 +119,7 @@ app.get('/api/widget/:restaurantId', widgetRateLimiter, async (req, res) => {
 
         // Get active events
         const eventsResult = await pool.query(
-            'SELECT id, title FROM events WHERE restaurant_id = $1 AND is_active = true',
+            'SELECT id, title, description, price_per_person FROM events WHERE restaurant_id = $1 AND is_active = true',
             [restaurantId]
         );
 
@@ -163,7 +163,13 @@ app.get('/api/widget/:restaurantId', widgetRateLimiter, async (req, res) => {
                     };
                 });
 
-                return { id: event.id, title: event.title, slots: formattedSlots };
+                return {
+                    id: event.id,
+                    title: event.title,
+                    description: event.description || null,
+                    price_per_person: event.price_per_person ? parseFloat(event.price_per_person) : null,
+                    slots: formattedSlots
+                };
             })
         );
 
@@ -506,7 +512,7 @@ app.get('/api/admin/data', async (req, res) => {
 
         // Get events with slots (raw ISO dates)
         const eventsResult = await pool.query(
-            'SELECT id, title FROM events WHERE restaurant_id = $1 AND is_active = true',
+            'SELECT id, title, description, price_per_person FROM events WHERE restaurant_id = $1 AND is_active = true',
             [restaurantId]
         );
 
@@ -544,7 +550,13 @@ app.get('/api/admin/data', async (req, res) => {
                     };
                 });
 
-                return { id: event.id, title: event.title, slots };
+                return {
+                    id: event.id,
+                    title: event.title,
+                    description: event.description || null,
+                    price_per_person: event.price_per_person ? parseFloat(event.price_per_person) : null,
+                    slots
+                };
             })
         );
 
@@ -971,10 +983,10 @@ app.post('/api/admin/save', async (req, res) => {
         // --- EVENTS: Upsert each event ---
         for (const event of events || []) {
             await client.query(
-                `INSERT INTO events (id, restaurant_id, title, is_active)
-                 VALUES ($1, $2, $3, true)
-                 ON CONFLICT (id) DO UPDATE SET title = $3`,
-                [event.id, targetRestaurantId, event.title]
+                `INSERT INTO events (id, restaurant_id, title, description, price_per_person, is_active)
+                 VALUES ($1, $2, $3, $4, $5, true)
+                 ON CONFLICT (id) DO UPDATE SET title = $3, description = $4, price_per_person = $5`,
+                [event.id, targetRestaurantId, event.title, event.description || null, event.price_per_person || null]
             );
 
             // --- SLOTS: For this event, sync slots ---

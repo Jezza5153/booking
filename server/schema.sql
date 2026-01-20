@@ -26,6 +26,8 @@ CREATE TABLE IF NOT EXISTS events (
   id TEXT PRIMARY KEY,
   restaurant_id TEXT NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
+  description TEXT, -- Short subtext under title
+  price_per_person NUMERIC(10,2), -- Price in euros
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

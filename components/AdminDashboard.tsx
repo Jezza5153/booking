@@ -88,6 +88,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
     setEvents(prev => prev.map(e => e.id === eventId ? { ...e, title: newTitle } : e));
   };
 
+  const handleEventDescriptionChange = (eventId: string, newDescription: string) => {
+    setEvents(prev => prev.map(e => e.id === eventId ? { ...e, description: newDescription } : e));
+  };
+
+  const handleEventPriceChange = (eventId: string, newPrice: string) => {
+    const priceNum = parseFloat(newPrice) || null;
+    setEvents(prev => prev.map(e => e.id === eventId ? { ...e, price_per_person: priceNum } : e));
+  };
+
   const handleSlotChange = (eventId: string, slotId: string, field: keyof Slot, value: any) => {
     setEvents(prev => prev.map(event => {
       if (event.id !== eventId) return event;
@@ -282,27 +291,59 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
       {events.map((event) => (
         <div key={event.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
           {/* Event Header */}
-          <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center gap-4 group">
-            <div className="p-2 bg-white rounded-md border border-gray-200 text-gray-400 cursor-move">
-              <GripVertical className="w-4 h-4" />
+          <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center gap-4 group">
+              <div className="p-2 bg-white rounded-md border border-gray-200 text-gray-400 cursor-move">
+                <GripVertical className="w-4 h-4" />
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Event Title</label>
+                <input
+                  type="text"
+                  value={event.title}
+                  onChange={(e) => handleEventTitleChange(event.id, e.target.value)}
+                  className="w-full text-lg font-bold text-gray-900 bg-transparent border-none focus:ring-0 p-0 placeholder-gray-400"
+                  placeholder="e.g. Taco Tuesday"
+                />
+              </div>
+              <button
+                onClick={() => setDeleteConfirm({ type: 'event', id: event.id })}
+                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                title="Delete Event"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
             </div>
-            <div className="flex-1">
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Event Title</label>
-              <input
-                type="text"
-                value={event.title}
-                onChange={(e) => handleEventTitleChange(event.id, e.target.value)}
-                className="w-full text-lg font-bold text-gray-900 bg-transparent border-none focus:ring-0 p-0 placeholder-gray-400"
-                placeholder="e.g. Taco Tuesday"
-              />
+
+            {/* Description and Price Row */}
+            <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Description (optional)</label>
+                <input
+                  type="text"
+                  value={event.description || ''}
+                  onChange={(e) => handleEventDescriptionChange(event.id, e.target.value)}
+                  className="w-full text-sm text-gray-700 bg-white border border-gray-200 rounded-lg px-3 py-2 placeholder-gray-400"
+                  placeholder="A short description shown to customers"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Price per person (€)</label>
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500 font-medium">€</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={event.price_per_person || ''}
+                    onChange={(e) => handleEventPriceChange(event.id, e.target.value)}
+                    className="w-24 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg px-3 py-2 placeholder-gray-400"
+                    placeholder="0.00"
+                  />
+                  <span className="text-xs text-gray-400">p.p.</span>
+                </div>
+              </div>
             </div>
-            <button
-              onClick={() => setDeleteConfirm({ type: 'event', id: event.id })}
-              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-              title="Delete Event"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
           </div>
 
           {/* Slots Grid Editor */}
