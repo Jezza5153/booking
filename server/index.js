@@ -625,21 +625,50 @@ app.post('/api/admin/bookings/:id/cancel', async (req, res) => {
     }
 });
 
-// Get all bookings for admin view
-// P0-7 FIX: Scope to restaurant
+// Get all bookings for admin view with filtering, search, and pagination
+// Enhanced: from, to, status, q (search), limit, offset
 app.get('/api/admin/bookings', async (req, res) => {
     const restaurantId = req.query.restaurantId || 'demo-restaurant';
+    const from = req.query.from || null; // ISO date string
+    const to = req.query.to || null; // ISO date string
+    const status = req.query.status || null; // 'confirmed' | 'cancelled' | null (all)
+    const search = req.query.q || null; // search term
+    const limit = Math.min(parseInt(req.query.limit) || 200, 500);
+    const offset = parseInt(req.query.offset) || 0;
+
     try {
         const result = await pool.query(
-            `SELECT b.*, s.start_datetime, e.title as event_title, z.name as zone_name
+            `SELECT 
+                b.id,
+                b.created_at,
+                b.status,
+                b.customer_name,
+                b.customer_email,
+                b.customer_phone,
+                b.remarks,
+                b.guest_count,
+                b.table_type,
+                b.slot_id,
+                s.start_datetime,
+                e.title as event_title,
+                z.name as zone_name
              FROM bookings b
              JOIN slots s ON s.id = b.slot_id
              JOIN events e ON e.id = s.event_id
              JOIN zones z ON z.id = s.zone_id
              WHERE b.restaurant_id = $1
-             ORDER BY b.created_at DESC
-             LIMIT 100`,
-            [restaurantId]
+               AND ($2::timestamptz IS NULL OR s.start_datetime >= $2)
+               AND ($3::timestamptz IS NULL OR s.start_datetime < $3)
+               AND ($4::text IS NULL OR b.status = $4)
+               AND ($5::text IS NULL OR (
+                   b.customer_name ILIKE '%' || $5 || '%'
+                   OR COALESCE(b.customer_email, '') ILIKE '%' || $5 || '%'
+                   OR COALESCE(b.customer_phone, '') ILIKE '%' || $5 || '%'
+                   OR COALESCE(b.remarks, '') ILIKE '%' || $5 || '%'
+               ))
+             ORDER BY s.start_datetime ASC
+             LIMIT $6 OFFSET $7`,
+            [restaurantId, from, to, status, search, limit, offset]
         );
         res.json(result.rows);
     } catch (error) {

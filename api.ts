@@ -97,3 +97,52 @@ export async function saveAdminData(data: SaveAdminDataRequest): Promise<{ succe
 
     return response.json();
 }
+
+// Fetch bookings with optional filters
+export interface BookingsFilter {
+    restaurantId?: string;
+    from?: string;  // ISO date
+    to?: string;    // ISO date
+    status?: 'confirmed' | 'cancelled' | null;
+    q?: string;     // search term
+    limit?: number;
+    offset?: number;
+}
+
+export async function fetchBookings(filters: BookingsFilter = {}) {
+    const token = localStorage.getItem('events_token');
+    const params = new URLSearchParams();
+
+    params.set('restaurantId', filters.restaurantId || RESTAURANT_ID);
+    if (filters.from) params.set('from', filters.from);
+    if (filters.to) params.set('to', filters.to);
+    if (filters.status) params.set('status', filters.status);
+    if (filters.q) params.set('q', filters.q);
+    if (filters.limit) params.set('limit', String(filters.limit));
+    if (filters.offset) params.set('offset', String(filters.offset));
+
+    const response = await fetch(
+        `${API_BASE_URL}/api/admin/bookings?${params.toString()}`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+
+    if (!response.ok) {
+        throw new Error('Failed to fetch bookings');
+    }
+    return response.json();
+}
+
+// Cancel a booking
+export async function cancelBooking(bookingId: string): Promise<{ success: boolean; message: string }> {
+    const token = localStorage.getItem('events_token');
+    const response = await fetch(`${API_BASE_URL}/api/admin/bookings/${bookingId}/cancel`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to cancel booking');
+    }
+    return response.json();
+}

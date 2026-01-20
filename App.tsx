@@ -3,13 +3,14 @@ import { EventsWidget } from './components/EventsWidget';
 import { AdminDashboard } from './components/AdminDashboard';
 import { IntegrationGuide } from './components/IntegrationGuide';
 import { CalendarManager } from './components/CalendarManager';
+import { BookingsManager } from './components/BookingsManager';
 import { LoginPage } from './components/LoginPage';
 import { EVENTS_DATA, WIJKEN_DATA } from './data';
 import { EventData, Wijk } from './types';
 import { API_BASE_URL, fetchWidgetData, fetchAdminData, RESTAURANT_ID } from './api';
-import { Smartphone, Settings, BookOpen, Calendar as CalendarIcon, LogOut } from 'lucide-react';
+import { Smartphone, Settings, BookOpen, Calendar as CalendarIcon, LogOut, Users } from 'lucide-react';
 
-type ViewMode = 'widget' | 'admin' | 'guide' | 'calendar';
+type ViewMode = 'widget' | 'admin' | 'guide' | 'calendar' | 'bookings';
 
 // Check if we're in embed mode (public widget only, no login required)
 const isEmbedMode = () => {
@@ -176,6 +177,13 @@ const App: React.FC = () => {
                   Editor
                 </button>
                 <button
+                  onClick={() => setView('bookings')}
+                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-2 whitespace-nowrap ${view === 'bookings' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                >
+                  <Users className="w-4 h-4" />
+                  Boekingen
+                </button>
+                <button
                   onClick={() => setView('guide')}
                   className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-2 whitespace-nowrap ${view === 'guide' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
                 >
@@ -244,6 +252,13 @@ const App: React.FC = () => {
               setWijken={setWijken}
               onRefresh={loadDataFromAPI}
             />
+          </div>
+        )}
+
+        {/* VIEW: BOOKINGS MANAGER */}
+        {view === 'bookings' && (
+          <div className="animate-in slide-in-from-bottom-4 duration-300">
+            <BookingsManager />
           </div>
         )}
 

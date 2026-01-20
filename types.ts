@@ -42,3 +42,20 @@ export interface SlotPersisted {
   booked_count_4_tops: number;
   booked_count_6_tops: number;
 }
+
+// Admin booking row (from /api/admin/bookings)
+export interface BookingRow {
+  id: string;
+  created_at: string;
+  status: 'confirmed' | 'cancelled';
+  customer_name: string;
+  customer_email?: string;
+  customer_phone?: string;
+  remarks?: string;
+  guest_count: number;
+  table_type: '2' | '4' | '6' | '7+';
+  slot_id: string;
+  start_datetime: string;
+  event_title: string;
+  zone_name: string;
+}
