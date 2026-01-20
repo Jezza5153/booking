@@ -456,3 +456,4 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
         </div>
     )
 }
+
