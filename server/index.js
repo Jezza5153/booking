@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import pool from './db-postgres.js';
 import { loginHandler, authMiddleware, loginRateLimiter, bookingRateLimiter, widgetRateLimiter } from './auth.js';
+import { sendBookingConfirmation } from './email.js';
 
 dotenv.config();
 
@@ -149,7 +150,7 @@ setInterval(() => {
 
 // POST /api/book - Book a table (public, rate limited)
 app.post('/api/book', bookingRateLimiter, async (req, res) => {
-    const { slot_id, table_type, guest_count, idempotency_key, _hp_field } = req.body;
+    const { slot_id, table_type, guest_count, customer_email, idempotency_key, _hp_field } = req.body;
 
     // SECURITY: Honeypot field - bots fill this, humans don't
     if (_hp_field) {
@@ -243,9 +244,19 @@ app.post('/api/book', bookingRateLimiter, async (req, res) => {
 
         await client.query('COMMIT');
 
+        // Send booking confirmation emails (non-blocking)
+        sendBookingConfirmation({
+            customerEmail: customer_email,
+            eventTitle: slot.event_title || 'Event',
+            slotTime: new Date(slot.start_datetime).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }),
+            slotDate: new Date(slot.start_datetime).toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' }),
+            guestCount: guest_count,
+            tableType: table_type,
+            zoneName: slot.zone_name || 'Main',
+        }).catch(err => console.error('Email sending failed:', err));
+
         const responseBody = {
             success: true,
-            handoff_url: `${restaurantResult.rows[0].handoff_url_base}?slot=${slot_id}&guests=${guest_count}`,
             message: `Booking confirmed for ${guest_count} guests`
         };
 

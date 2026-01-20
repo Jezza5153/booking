@@ -70,20 +70,20 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
   const activeEvents = events.filter(event => event.slots.length > 0);
 
   return (
-    <div className="w-full h-full bg-white flex flex-col font-sans text-gray-900">
-      {/* Sticky Header */}
-      <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-200/50 px-6 py-4 flex items-center justify-between transition-all">
+    <div className="w-full h-full bg-[#0f0f0f] flex flex-col font-sans text-white">
+      {/* Sticky Header - Black with gold accents */}
+      <div className="sticky top-0 z-30 bg-[#0f0f0f]/95 backdrop-blur-md border-b border-[#2a2a2a] px-6 py-4 flex items-center justify-between transition-all">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded bg-black shadow-lg flex items-center justify-center">
-            <span className="text-white font-bold text-sm tracking-widest">E</span>
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#c9a227] to-[#a08020] shadow-lg flex items-center justify-center">
+            <span className="text-[#0f0f0f] font-bold text-sm tracking-widest">E</span>
           </div>
-          <span className="font-bold text-gray-900 tracking-tight text-lg uppercase">EVENTS</span>
+          <span className="font-bold text-[#c9a227] tracking-tight text-lg uppercase">EVENTS</span>
         </div>
 
-        <div className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100/50 flex items-center gap-1.5 shadow-sm">
+        <div className="text-[10px] font-semibold text-[#c9a227] bg-[#c9a227]/10 px-2.5 py-1 rounded-full border border-[#c9a227]/30 flex items-center gap-1.5">
           <span className="relative flex h-1.5 w-1.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#c9a227] opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#c9a227]"></span>
           </span>
           LIVE
         </div>
@@ -93,21 +93,21 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
       <div className="flex-1 overflow-y-auto no-scrollbar pb-12">
         {loading ? (
           <div className="flex flex-col items-center justify-center h-40 gap-3 text-gray-400">
-            <Loader2 className="w-6 h-6 animate-spin" />
-            <p className="text-sm">Loading events...</p>
+            <Loader2 className="w-6 h-6 animate-spin text-[#c9a227]" />
+            <p className="text-sm text-gray-400">Loading events...</p>
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center h-40 text-red-400 text-sm p-6 text-center">
             <p>{error}</p>
             <button
               onClick={loadData}
-              className="mt-3 text-indigo-600 hover:text-indigo-700 font-medium"
+              className="mt-3 text-[#c9a227] hover:text-[#d4af37] font-medium"
             >
               Try again
             </button>
           </div>
         ) : (
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-[#2a2a2a]">
             {activeEvents.length > 0 ? (
               activeEvents.map(event => (
                 <EventCard
@@ -118,7 +118,7 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
                 />
               ))
             ) : (
-              <div className="flex flex-col items-center justify-center h-40 text-gray-400 text-sm">
+              <div className="flex flex-col items-center justify-center h-40 text-gray-500 text-sm">
                 <p>No available events currently.</p>
               </div>
             )}
@@ -127,10 +127,10 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
 
         {/* Footer watermark */}
         <div className="flex flex-col items-center justify-center py-8 gap-1 opacity-40 hover:opacity-100 transition-opacity duration-300">
-          <div className="w-4 h-4 rounded bg-gray-200 flex items-center justify-center">
-            <span className="text-[8px] text-white font-bold">E</span>
+          <div className="w-4 h-4 rounded bg-[#c9a227] flex items-center justify-center">
+            <span className="text-[8px] text-[#0f0f0f] font-bold">E</span>
           </div>
-          <div className="text-[10px] uppercase tracking-widest font-semibold text-gray-400">
+          <div className="text-[10px] uppercase tracking-widest font-semibold text-gray-500">
             Powered by EVENTS
           </div>
         </div>

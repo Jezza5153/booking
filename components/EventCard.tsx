@@ -16,6 +16,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
   const [selectedTableType, setSelectedTableType] = useState<TableType | null>(null);
   const [guestCount, setGuestCount] = useState<number | null>(null);
+  const [customerEmail, setCustomerEmail] = useState('');
   const [isBooking, setIsBooking] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
@@ -54,6 +55,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
         slot_id: selectedSlotId,
         table_type: selectedTableType,
         guest_count: guestCount,
+        customer_email: customerEmail || undefined,
       };
 
       const result = await bookTable(booking);
@@ -70,6 +72,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
         setSelectedSlotId(null);
         setSelectedTableType(null);
         setGuestCount(null);
+        setCustomerEmail('');
         setBookingSuccess(false);
       }, 3000);
 
@@ -93,10 +96,10 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
   } : { free2: 0, free4: 0, free6: 0 };
 
   return (
-    <div className="flex flex-col gap-5 p-6 border-b border-gray-100 last:border-0 bg-white first:pt-8 last:pb-8">
+    <div className="flex flex-col gap-5 p-6 border-b border-[#2a2a2a] last:border-0 bg-[#0f0f0f] first:pt-8 last:pb-8">
 
       <div className="flex items-baseline justify-between">
-        <h2 className="text-xl font-bold text-gray-900 tracking-tight">
+        <h2 className="text-xl font-bold text-[#c9a227] tracking-tight">
           {event.title}
         </h2>
       </div>
@@ -131,18 +134,18 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
       {/* EXPANDABLE BOOKING FLOW */}
       <div className={`
         overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)]
-        ${selectedSlotId ? 'max-h-[500px] opacity-100 mt-2' : 'max-h-0 opacity-0 mt-0'}
+        ${selectedSlotId ? 'max-h-[600px] opacity-100 mt-2' : 'max-h-0 opacity-0 mt-0'}
       `}>
-        <div className="bg-gray-50/80 rounded-2xl border border-gray-100 p-5 space-y-6">
+        <div className="bg-[#1a1a1a] rounded-2xl border border-[#2a2a2a] p-5 space-y-6">
 
           {/* Booking Success State */}
           {bookingSuccess && (
             <div className="flex flex-col items-center justify-center py-6 animate-in zoom-in-95">
-              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
-                <CheckCircle className="w-10 h-10 text-emerald-600" />
+              <div className="w-16 h-16 bg-[#c9a227]/20 rounded-full flex items-center justify-center mb-4">
+                <CheckCircle className="w-10 h-10 text-[#c9a227]" />
               </div>
-              <div className="text-lg font-bold text-emerald-700">Booking Confirmed!</div>
-              <div className="text-sm text-gray-500">You're all set 🎉</div>
+              <div className="text-lg font-bold text-[#c9a227]">Booking Confirmed!</div>
+              <div className="text-sm text-gray-400">You're all set 🎉</div>
             </div>
           )}
 
@@ -265,8 +268,8 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
                                 className={`
                                 w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all
                                 ${guestCount === num
-                                    ? 'bg-black text-white shadow-lg scale-110'
-                                    : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-400'
+                                    ? 'bg-[#c9a227] text-[#0f0f0f] shadow-lg scale-110'
+                                    : 'bg-[#1a1a1a] border border-[#3a3a3a] text-white hover:border-[#c9a227]'
                                   }
                               `}
                               >
@@ -275,13 +278,27 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
                             ))}
                       </div>
 
+                      {/* Email Input */}
+                      {guestCount && (
+                        <div className="space-y-2 animate-in fade-in">
+                          <label className="text-xs font-medium text-gray-400">Your email (for confirmation)</label>
+                          <input
+                            type="email"
+                            value={customerEmail}
+                            onChange={(e) => setCustomerEmail(e.target.value)}
+                            placeholder="email@example.com"
+                            className="w-full px-4 py-3 rounded-xl bg-[#0f0f0f] border border-[#3a3a3a] text-white placeholder-gray-500 focus:border-[#c9a227] focus:ring-1 focus:ring-[#c9a227] outline-none transition-all"
+                          />
+                        </div>
+                      )}
+
                       {/* Final Action Button */}
                       {guestCount && (
                         <div className="pt-2 animate-in fade-in slide-in-from-bottom-2">
                           <button
                             onClick={handleBook}
                             disabled={isBooking}
-                            className="w-full bg-black hover:bg-gray-800 disabled:bg-gray-400 text-white px-4 py-4 rounded-xl text-base font-semibold transition-all shadow-xl shadow-indigo-100 hover:shadow-2xl hover:shadow-indigo-200 hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2 group"
+                            className="w-full bg-gradient-to-r from-[#c9a227] to-[#a08020] hover:from-[#d4af37] hover:to-[#b89828] disabled:from-gray-600 disabled:to-gray-700 text-[#0f0f0f] px-4 py-4 rounded-xl text-base font-bold transition-all shadow-lg shadow-[#c9a227]/20 hover:shadow-xl hover:shadow-[#c9a227]/30 hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2 group"
                           >
                             {isBooking ? (
                               <>
