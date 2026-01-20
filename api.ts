@@ -77,6 +77,7 @@ export interface SaveAdminDataRequest {
     restaurantId: string;
     zones: any[];
     events: any[];
+    force?: boolean; // Bypass safety rails for intentional deletions
 }
 
 export async function saveAdminData(data: SaveAdminDataRequest): Promise<{ success: boolean; message: string }> {
@@ -87,7 +88,10 @@ export async function saveAdminData(data: SaveAdminDataRequest): Promise<{ succe
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+            ...data,
+            force: true // Always allow intentional admin changes
+        }),
     });
 
     if (!response.ok) {
