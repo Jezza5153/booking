@@ -11,12 +11,22 @@ import { Smartphone, Settings, BookOpen, Calendar as CalendarIcon, LogOut } from
 
 type ViewMode = 'widget' | 'admin' | 'guide' | 'calendar';
 
+// Check if we're in embed mode (public widget only, no login required)
+const isEmbedMode = () => {
+  const params = new URLSearchParams(window.location.search);
+  // Embed mode if: ?embed=true OR in iframe OR ?widget=true
+  const hasEmbedParam = params.get('embed') === 'true' || params.get('widget') === 'true';
+  const isInIframe = window.self !== window.top;
+  return hasEmbedParam || isInIframe;
+};
+
 const App: React.FC = () => {
   const [events, setEvents] = useState<EventData[]>(EVENTS_DATA);
   const [wijken, setWijken] = useState<Wijk[]>(WIJKEN_DATA);
   const [view, setView] = useState<ViewMode>('widget');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [embedMode] = useState(isEmbedMode());
 
   // Check for existing token on mount
   useEffect(() => {
@@ -82,8 +92,8 @@ const App: React.FC = () => {
     }
   };
 
-  // Show loading while checking auth
-  if (isCheckingAuth) {
+  // Show loading while checking auth (skip in embed mode)
+  if (isCheckingAuth && !embedMode) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-pulse text-gray-400">Loading...</div>
@@ -91,7 +101,16 @@ const App: React.FC = () => {
     );
   }
 
-  // Show login page if not authenticated
+  // EMBED MODE: Show only the public widget (no login required)
+  if (embedMode) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-4 flex items-start justify-center">
+        <EventsWidget events={events} wijken={wijken} useApi={true} />
+      </div>
+    );
+  }
+
+  // Show login page if not authenticated (admin access)
   if (!isAuthenticated) {
     return <LoginPage onLoginSuccess={handleLoginSuccess} />;
   }
