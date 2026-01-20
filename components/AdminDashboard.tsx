@@ -310,21 +310,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
                     <div className="space-y-3 pt-1">
                       {/* Date & Time & Zone */}
                       <div className="flex gap-2">
-                        {/* Date Picker */}
-                        <div className="relative w-24">
-                          <input
-                            type="text"
-                            value={slot.date}
-                            readOnly
-                            className="w-full text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded px-1.5 py-1 cursor-pointer"
-                            placeholder="Select date"
-                          />
+                        {/* Date Picker - using label+input pattern for reliable clicking */}
+                        <label className="relative w-28 flex items-center gap-1 bg-white border border-gray-200 rounded px-2 py-1 cursor-pointer hover:border-indigo-300 transition-colors">
+                          <Calendar className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                          <span className="text-xs font-medium text-gray-700 truncate">
+                            {slot.date || 'Pick date'}
+                          </span>
                           <input
                             type="date"
-                            className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                            className="absolute inset-0 opacity-0 cursor-pointer"
                             onChange={(e) => handleDateSelect(event.id, slot.id, e.target.value)}
                           />
-                        </div>
+                        </label>
                         {/* Time Dropdown */}
                         <select
                           value={slot.time}

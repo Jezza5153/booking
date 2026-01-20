@@ -404,8 +404,19 @@ app.post('/api/admin/save', async (req, res) => {
     try {
         await client.query('BEGIN');
 
-        // --- ZONES: Upsert all zones from payload ---
+        // --- ZONES: Delete zones NOT in payload, then upsert ---
         const zoneIds = (zones || []).map(z => z.id);
+        if (zoneIds.length > 0) {
+            await client.query(
+                `DELETE FROM zones WHERE restaurant_id = $1 AND id != ALL($2::text[])`,
+                [targetRestaurantId, zoneIds]
+            );
+        } else {
+            // No zones in payload = delete all
+            await client.query(`DELETE FROM zones WHERE restaurant_id = $1`, [targetRestaurantId]);
+        }
+
+        // Upsert zones
         for (const zone of zones || []) {
             await client.query(
                 `INSERT INTO zones (id, restaurant_id, name, capacity_2_tops, capacity_4_tops, capacity_6_tops)
