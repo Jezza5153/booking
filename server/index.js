@@ -346,7 +346,18 @@ app.post('/api/book', bookingRateLimiter, async (req, res) => {
             zoneName: slot.zone_name || 'Main',
         }).catch(err => console.error('Email sending failed:', err));
 
-        return res.status(201).json({ success: true, booking_id: insertedBookingId });
+        // Return full booking details for instant confirmation screen
+        return res.status(201).json({
+            success: true,
+            booking_id: insertedBookingId,
+            start_datetime: slot.start_datetime,
+            event_title: slot.event_title || 'Event',
+            zone_name: slot.zone_name || 'Main',
+            customer_name: name,
+            guest_count: guest_count,
+            table_type: table_type,
+            message: 'Reservering bevestigd'
+        });
     } catch (error) {
         await client.query('ROLLBACK');
         console.error(`[${req.requestId}] Booking error:`, error.message);

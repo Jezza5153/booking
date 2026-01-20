@@ -26,7 +26,13 @@ export interface BookingRequest {
 
 export interface BookingResponse {
     success: boolean;
-    handoff_url: string;
+    booking_id: string;
+    start_datetime: string;
+    event_title: string;
+    zone_name: string;
+    customer_name: string;
+    guest_count: number;
+    table_type: string;
     message: string;
 }
 

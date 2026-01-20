@@ -26,6 +26,15 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
   const [isBooking, setIsBooking] = useState(false)
   const [bookingSuccess, setBookingSuccess] = useState(false)
   const [bookingError, setBookingError] = useState<string | null>(null)
+  const [bookingResponse, setBookingResponse] = useState<{
+    booking_id: string
+    start_datetime: string
+    event_title: string
+    zone_name: string
+    customer_name: string
+    guest_count: number
+    table_type: string
+  } | null>(null)
 
   const selectedSlot = useMemo(() => event.slots.find((s) => s.id === selectedSlotId) ?? null, [event.slots, selectedSlotId])
 
@@ -96,9 +105,17 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
         remarks: customerRemarks.trim() || undefined,
       }
 
-      await bookTable(booking)
+      const response = await bookTable(booking)
 
+      // Verify we got a real booking back
+      if (!response?.booking_id) {
+        throw new Error('Reservering niet bevestigd. Probeer opnieuw.')
+      }
+
+      setBookingResponse(response)
       setBookingSuccess(true)
+
+      // Silent refresh in background (no loading overlay for user)
       onBookingComplete?.()
 
       setTimeout(() => {
@@ -110,6 +127,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
         setCustomerPhone("")
         setCustomerRemarks("")
         setBookingSuccess(false)
+        setBookingResponse(null)
       }, 2500)
     } catch (error: any) {
       setBookingError(error?.message || "Reserveren lukt nu even niet. Probeer het opnieuw.")
@@ -178,13 +196,64 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
         <div className="overflow-hidden">
           <div className="px-5 pb-5">
             <div className="rounded-2xl border border-white/10 bg-black/40 p-5 space-y-5">
-              {bookingSuccess ? (
-                <div className="flex flex-col items-center justify-center py-6">
-                  <div className="w-14 h-14 bg-[#c9a227]/15 rounded-full flex items-center justify-center mb-3">
+              {bookingSuccess && bookingResponse ? (
+                <div className="flex flex-col items-center justify-center py-6 space-y-4">
+                  <div className="w-14 h-14 bg-[#c9a227]/15 rounded-full flex items-center justify-center">
                     <CheckCircle className="w-8 h-8 text-[#c9a227]" />
                   </div>
-                  <div className="text-lg font-bold text-[#c9a227]">Reservering bevestigd</div>
-                  <div className="text-sm text-white/60">Tot snel bij ons aan tafel.</div>
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-[#c9a227]">Reservering bevestigd ✓</div>
+                    <div className="text-sm text-white/60 mt-1">Je tafel staat voor je klaar.</div>
+                  </div>
+
+                  {/* Booking details */}
+                  <div className="w-full rounded-xl border border-white/10 bg-white/[0.03] p-4 space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-white/50">Datum</span>
+                      <span className="text-white font-semibold">
+                        {new Date(bookingResponse.start_datetime).toLocaleDateString('nl-NL', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Amsterdam' })}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/50">Tijd</span>
+                      <span className="text-white font-semibold">
+                        {new Date(bookingResponse.start_datetime).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam' })}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/50">Naam</span>
+                      <span className="text-white font-semibold">{bookingResponse.customer_name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/50">Gezelschap</span>
+                      <span className="text-white font-semibold">{bookingResponse.guest_count} personen</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/50">Tafel</span>
+                      <span className="text-white font-semibold">{bookingResponse.table_type}-pers</span>
+                    </div>
+                    <div className="flex justify-between border-t border-white/10 pt-2 mt-2">
+                      <span className="text-white/40 text-xs">Referentie</span>
+                      <span className="text-white/60 text-xs font-mono">{bookingResponse.booking_id.slice(0, 8)}…</span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setSelectedSlotId(null)
+                      setSelectedTableType(null)
+                      setGuestCount(null)
+                      setCustomerName("")
+                      setCustomerEmail("")
+                      setCustomerPhone("")
+                      setCustomerRemarks("")
+                      setBookingSuccess(false)
+                      setBookingResponse(null)
+                    }}
+                    className="rounded-xl border border-white/15 bg-white/[0.03] px-5 py-2.5 text-sm font-semibold text-white/70 hover:bg-white/[0.06] transition"
+                  >
+                    Sluiten
+                  </button>
                 </div>
               ) : (
                 <>
