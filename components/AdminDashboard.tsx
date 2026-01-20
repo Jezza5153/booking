@@ -19,6 +19,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [saveMessage, setSaveMessage] = useState('');
 
+  // Delete confirmation modal state
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'zone' | 'event' | null; id: string | null }>({ type: null, id: null });
+
   // Save changes to API
   const handleSaveChanges = async () => {
     setSaving(true);
@@ -64,9 +67,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
   };
 
   const handleDeleteWijk = (id: string) => {
-    if (confirm('Delete this zone? Events using it may lose capacity settings.')) {
-      setWijken(wijken.filter(w => w.id !== id));
+    setDeleteConfirm({ type: 'zone', id });
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirm.type === 'zone' && deleteConfirm.id) {
+      setWijken(wijken.filter(w => w.id !== deleteConfirm.id));
+    } else if (deleteConfirm.type === 'event' && deleteConfirm.id) {
+      onDeleteEvent(deleteConfirm.id);
     }
+    setDeleteConfirm({ type: null, id: null });
+  };
+
+  const cancelDelete = () => {
+    setDeleteConfirm({ type: null, id: null });
   };
 
   // --- Event Management ---
@@ -283,7 +297,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
               />
             </div>
             <button
-              onClick={() => onDeleteEvent(event.id)}
+              onClick={() => setDeleteConfirm({ type: 'event', id: event.id })}
               className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
               title="Delete Event"
             >
@@ -417,6 +431,36 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
           </div>
         </div>
       ))}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm.type && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 max-w-sm mx-4 shadow-xl">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              {deleteConfirm.type === 'zone' ? 'Delete Zone?' : 'Delete Event?'}
+            </h3>
+            <p className="text-sm text-gray-600 mb-6">
+              {deleteConfirm.type === 'zone'
+                ? 'Events using this zone may lose capacity settings. This action cannot be undone.'
+                : 'This will permanently delete the event and all its slots. This action cannot be undone.'}
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={cancelDelete}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
