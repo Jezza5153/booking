@@ -59,6 +59,19 @@ export function getCalendarUrl(restaurantId: string, bookedOnly: boolean = false
     return bookedOnly ? `${url}?booked_only=true` : url;
 }
 
+// P0-3: Fetch admin data with raw ISO dates for editing
+export async function fetchAdminData(restaurantId: string) {
+    const token = localStorage.getItem('events_token');
+    const response = await fetch(
+        `${API_BASE_URL}/api/admin/data?restaurantId=${restaurantId}`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+    if (!response.ok) {
+        throw new Error('Failed to fetch admin data');
+    }
+    return response.json();
+}
+
 // Save admin data (zones and events)
 export interface SaveAdminDataRequest {
     restaurantId: string;

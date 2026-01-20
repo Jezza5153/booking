@@ -135,20 +135,26 @@ app.get('/api/widget/:restaurantId', widgetRateLimiter, async (req, res) => {
 
                 const formattedSlots = slotsResult.rows.map(slot => {
                     const dt = new Date(slot.start_datetime);
-                    const formatter = new Intl.DateTimeFormat('nl-NL', {
-                        weekday: 'short', day: 'numeric', month: 'short'
+                    // P0-1 FIX: Always use Europe/Amsterdam timezone for consistent formatting
+                    const dateFormatter = new Intl.DateTimeFormat('nl-NL', {
+                        weekday: 'short', day: 'numeric', month: 'short',
+                        timeZone: 'Europe/Amsterdam'
                     });
-                    const parts = formatter.formatToParts(dt);
+                    const timeFormatter = new Intl.DateTimeFormat('nl-NL', {
+                        hour: '2-digit', minute: '2-digit', hour12: false,
+                        timeZone: 'Europe/Amsterdam'
+                    });
+                    const parts = dateFormatter.formatToParts(dt);
                     const weekday = parts.find(p => p.type === 'weekday')?.value || '';
                     const day = parts.find(p => p.type === 'day')?.value || '';
                     const month = parts.find(p => p.type === 'month')?.value?.replace('.', '') || '';
-                    const hours = dt.getHours().toString().padStart(2, '0');
-                    const minutes = dt.getMinutes().toString().padStart(2, '0');
+                    const timeStr = timeFormatter.format(dt);
 
                     return {
                         id: slot.id,
                         date: `${weekday.charAt(0).toUpperCase() + weekday.slice(1)} ${day} ${month}`,
-                        time: `${hours}:${minutes}`,
+                        time: timeStr,
+                        start_datetime: slot.start_datetime, // P0-2: Include ISO for client-side consistency
                         isNextAvailable: slot.is_highlighted,
                         wijkId: slot.wijkId,
                         booked2tops: slot.booked2tops,
@@ -326,14 +332,15 @@ app.post('/api/book', bookingRateLimiter, async (req, res) => {
         console.log(`[${req.requestId}] Booking ${insertedBookingId} created for slot ${slot_id}`);
 
         // Send emails async (never block response)
+        // P0-1 FIX: Always use Europe/Amsterdam timezone for email formatting
         sendBookingConfirmation({
             customerName: name,
             customerEmail: email || null,
             customerPhone: phone || null,
             remarks: note || null,
             eventTitle: slot.event_title || 'Event',
-            slotTime: slotTime.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }),
-            slotDate: slotTime.toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' }),
+            slotTime: slotTime.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam' }),
+            slotDate: slotTime.toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/Amsterdam' }),
             guestCount: guest_count,
             tableType: table_type,
             zoneName: slot.zone_name || 'Main',
@@ -461,22 +468,94 @@ app.get('/api/health', async (req, res) => {
 app.use('/api/admin', authMiddleware);
 
 // Example: Get all events for admin
+// P0-7 FIX: Scope to restaurant
 app.get('/api/admin/events', async (req, res) => {
+    const restaurantId = req.query.restaurantId || 'demo-restaurant';
     try {
-        const result = await pool.query('SELECT * FROM events ORDER BY title');
+        const result = await pool.query(
+            'SELECT * FROM events WHERE restaurant_id = $1 ORDER BY title',
+            [restaurantId]
+        );
         res.json(result.rows);
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch events' });
     }
 });
 
+// P0-3: Dedicated admin data endpoint with raw ISO dates for editing
+app.get('/api/admin/data', async (req, res) => {
+    const restaurantId = req.query.restaurantId || 'demo-restaurant';
+    try {
+        // Get zones
+        const zonesResult = await pool.query(
+            `SELECT id, name, capacity_2_tops as count2tops, capacity_4_tops as count4tops, capacity_6_tops as count6tops
+             FROM zones WHERE restaurant_id = $1`,
+            [restaurantId]
+        );
+
+        // Get events with slots (raw ISO dates)
+        const eventsResult = await pool.query(
+            'SELECT id, title FROM events WHERE restaurant_id = $1 AND is_active = true',
+            [restaurantId]
+        );
+
+        const eventsWithSlots = await Promise.all(
+            eventsResult.rows.map(async (event) => {
+                const slotsResult = await pool.query(
+                    `SELECT id, zone_id as "wijkId", start_datetime, is_highlighted as "isNextAvailable",
+                            booked_count_2_tops as booked2tops, booked_count_4_tops as booked4tops, booked_count_6_tops as booked6tops
+                     FROM slots WHERE event_id = $1 ORDER BY start_datetime ASC`,
+                    [event.id]
+                );
+
+                // Return raw data for admin editing (ISO dates)
+                const slots = slotsResult.rows.map(slot => {
+                    const dt = new Date(slot.start_datetime);
+                    // Extract date and time in Amsterdam timezone for admin inputs
+                    const dateFormatter = new Intl.DateTimeFormat('en-CA', {
+                        year: 'numeric', month: '2-digit', day: '2-digit',
+                        timeZone: 'Europe/Amsterdam'
+                    });
+                    const timeFormatter = new Intl.DateTimeFormat('nl-NL', {
+                        hour: '2-digit', minute: '2-digit', hour12: false,
+                        timeZone: 'Europe/Amsterdam'
+                    });
+                    return {
+                        id: slot.id,
+                        date: dateFormatter.format(dt), // YYYY-MM-DD format for <input type="date">
+                        time: timeFormatter.format(dt), // HH:MM format
+                        start_datetime: slot.start_datetime,
+                        isNextAvailable: slot.isNextAvailable,
+                        wijkId: slot.wijkId,
+                        booked2tops: slot.booked2tops,
+                        booked4tops: slot.booked4tops,
+                        booked6tops: slot.booked6tops
+                    };
+                });
+
+                return { id: event.id, title: event.title, slots };
+            })
+        );
+
+        res.json({ zones: zonesResult.rows, events: eventsWithSlots });
+    } catch (error) {
+        console.error('Admin data error:', error);
+        res.status(500).json({ error: 'Failed to fetch admin data' });
+    }
+});
+
 // Clear all events and slots (Admin - for fresh start)
+// P0-7 FIX: Scope to restaurant
 app.delete('/api/admin/clear', async (req, res) => {
+    const restaurantId = req.query.restaurantId || 'demo-restaurant';
     try {
         // Delete in order: slots -> events (due to foreign keys)
-        await pool.query('DELETE FROM slots');
-        await pool.query('DELETE FROM events');
-        console.log('✅ All events and slots cleared');
+        await pool.query(
+            'DELETE FROM slots WHERE event_id IN (SELECT id FROM events WHERE restaurant_id = $1)',
+            [restaurantId]
+        );
+        await pool.query('DELETE FROM events WHERE restaurant_id = $1', [restaurantId]);
+        console.log(`✅ All events and slots cleared for ${restaurantId}`);
         res.json({ success: true, message: 'All events and slots cleared' });
     } catch (error) {
         console.error('Clear failed:', error.message);
@@ -547,7 +626,9 @@ app.post('/api/admin/bookings/:id/cancel', async (req, res) => {
 });
 
 // Get all bookings for admin view
+// P0-7 FIX: Scope to restaurant
 app.get('/api/admin/bookings', async (req, res) => {
+    const restaurantId = req.query.restaurantId || 'demo-restaurant';
     try {
         const result = await pool.query(
             `SELECT b.*, s.start_datetime, e.title as event_title, z.name as zone_name
@@ -555,13 +636,122 @@ app.get('/api/admin/bookings', async (req, res) => {
              JOIN slots s ON s.id = b.slot_id
              JOIN events e ON e.id = s.event_id
              JOIN zones z ON z.id = s.zone_id
+             WHERE b.restaurant_id = $1
              ORDER BY b.created_at DESC
-             LIMIT 100`
+             LIMIT 100`,
+            [restaurantId]
         );
         res.json(result.rows);
     } catch (error) {
         console.error('Bookings fetch error:', error.message);
         res.status(500).json({ error: 'Failed to fetch bookings' });
+    }
+});
+
+// Reconciliation endpoint - verify slot counters match booking counts
+// GET /api/admin/reconcile?restaurantId=xxx&repair=true
+app.get('/api/admin/reconcile', async (req, res) => {
+    const restaurantId = req.query.restaurantId || 'demo-restaurant';
+    const shouldRepair = req.query.repair === 'true';
+
+    try {
+        // Get actual booking counts grouped by slot and table type
+        const bookingCounts = await pool.query(
+            `SELECT 
+                b.slot_id,
+                b.table_type,
+                COUNT(*) as count
+             FROM bookings b
+             JOIN slots s ON s.id = b.slot_id
+             JOIN events e ON e.id = s.event_id
+             WHERE e.restaurant_id = $1 AND b.status = 'confirmed'
+             GROUP BY b.slot_id, b.table_type`,
+            [restaurantId]
+        );
+
+        // Get current slot counters
+        const slotCounters = await pool.query(
+            `SELECT s.id, s.booked_count_2_tops, s.booked_count_4_tops, s.booked_count_6_tops
+             FROM slots s
+             JOIN events e ON e.id = s.event_id
+             WHERE e.restaurant_id = $1`,
+            [restaurantId]
+        );
+
+        // Build lookup of actual counts
+        const actualCounts = {};
+        for (const row of bookingCounts.rows) {
+            if (!actualCounts[row.slot_id]) {
+                actualCounts[row.slot_id] = { '2': 0, '4': 0, '6': 0 };
+            }
+            actualCounts[row.slot_id][row.table_type] = parseInt(row.count);
+        }
+
+        // Compare and find mismatches
+        const mismatches = [];
+        const repairs = [];
+
+        for (const slot of slotCounters.rows) {
+            const actual = actualCounts[slot.id] || { '2': 0, '4': 0, '6': 0 };
+
+            if (slot.booked_count_2_tops !== actual['2']) {
+                mismatches.push({
+                    slot_id: slot.id,
+                    table_type: '2',
+                    slot_counter: slot.booked_count_2_tops,
+                    actual_bookings: actual['2']
+                });
+                if (shouldRepair) {
+                    repairs.push({ slot_id: slot.id, column: 'booked_count_2_tops', value: actual['2'] });
+                }
+            }
+
+            if (slot.booked_count_4_tops !== actual['4']) {
+                mismatches.push({
+                    slot_id: slot.id,
+                    table_type: '4',
+                    slot_counter: slot.booked_count_4_tops,
+                    actual_bookings: actual['4']
+                });
+                if (shouldRepair) {
+                    repairs.push({ slot_id: slot.id, column: 'booked_count_4_tops', value: actual['4'] });
+                }
+            }
+
+            if (slot.booked_count_6_tops !== actual['6']) {
+                mismatches.push({
+                    slot_id: slot.id,
+                    table_type: '6',
+                    slot_counter: slot.booked_count_6_tops,
+                    actual_bookings: actual['6']
+                });
+                if (shouldRepair) {
+                    repairs.push({ slot_id: slot.id, column: 'booked_count_6_tops', value: actual['6'] });
+                }
+            }
+        }
+
+        // Apply repairs if requested
+        if (shouldRepair && repairs.length > 0) {
+            for (const repair of repairs) {
+                await pool.query(
+                    `UPDATE slots SET ${repair.column} = $1 WHERE id = $2`,
+                    [repair.value, repair.slot_id]
+                );
+            }
+            console.log(`✅ Reconciliation: repaired ${repairs.length} slot counters`);
+        }
+
+        res.json({
+            status: mismatches.length === 0 ? 'ok' : 'mismatches_found',
+            total_slots: slotCounters.rows.length,
+            mismatches_count: mismatches.length,
+            mismatches,
+            repaired: shouldRepair ? repairs.length : 0
+        });
+    } catch (error) {
+        console.error('Reconciliation error:', error.message);
+        res.status(500).json({ error: 'Reconciliation failed' });
     }
 });
 
@@ -706,7 +896,17 @@ app.post('/api/admin/save', async (req, res) => {
         res.json({ success: true, message: 'Changes saved successfully' });
     } catch (error) {
         await client.query('ROLLBACK');
-        console.error('Save error:', error.message);
+        console.error('Save error:', error.message, error.code);
+
+        // P0-8: Handle foreign key violations gracefully
+        if (error.code === '23503') {
+            return res.status(409).json({
+                error: 'Cannot delete zone or event with existing references',
+                detail: error.detail || 'Slots or bookings still reference this item. Delete those first.',
+                hint: 'Move or delete related slots/bookings before deleting zones or events.'
+            });
+        }
+
         res.status(500).json({ error: 'Failed to save changes' });
     } finally {
         client.release();

@@ -1,61 +1,89 @@
-import React, { useState } from 'react';
-import { EventData, Wijk } from '../types';
-import { SlotBubble } from './SlotBubble';
-import { ArrowRight, ExternalLink, Users, Mail, Armchair, Loader2, CheckCircle } from 'lucide-react';
-import { bookTable, BookingRequest } from '../api';
+import React, { useMemo, useState } from "react"
+import { EventData, Wijk } from "../types"
+import { SlotBubble } from "./SlotBubble"
+import { ArrowRight, Users, Mail, Armchair, Loader2, CheckCircle, AlertTriangle } from "lucide-react"
+import { bookTable, BookingRequest } from "../api"
 
 interface EventCardProps {
-  event: EventData;
-  wijken: Wijk[];
-  onBookingComplete?: () => void;
+  event: EventData
+  wijken: Wijk[]
+  onBookingComplete?: () => void
+  bookingEmail?: string // pass from widget data if available
 }
 
-type TableType = '2' | '4' | '6' | '7+';
+type TableType = "2" | "4" | "6" | "7+"
 
-export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingComplete }) => {
-  const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
-  const [selectedTableType, setSelectedTableType] = useState<TableType | null>(null);
-  const [guestCount, setGuestCount] = useState<number | null>(null);
-  const [customerName, setCustomerName] = useState('');
-  const [customerEmail, setCustomerEmail] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
-  const [customerRemarks, setCustomerRemarks] = useState('');
-  const [isBooking, setIsBooking] = useState(false);
-  const [bookingSuccess, setBookingSuccess] = useState(false);
-  const [bookingError, setBookingError] = useState<string | null>(null);
+export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingComplete, bookingEmail }) => {
+  const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null)
+  const [selectedTableType, setSelectedTableType] = useState<TableType | null>(null)
+  const [guestCount, setGuestCount] = useState<number | null>(null)
+
+  const [customerName, setCustomerName] = useState("")
+  const [customerEmail, setCustomerEmail] = useState("")
+  const [customerPhone, setCustomerPhone] = useState("")
+  const [customerRemarks, setCustomerRemarks] = useState("")
+
+  const [isBooking, setIsBooking] = useState(false)
+  const [bookingSuccess, setBookingSuccess] = useState(false)
+  const [bookingError, setBookingError] = useState<string | null>(null)
+
+  const selectedSlot = useMemo(() => event.slots.find((s) => s.id === selectedSlotId) ?? null, [event.slots, selectedSlotId])
+
+  const wijk = useMemo(() => {
+    if (!selectedSlot) return null
+    return wijken.find((w) => w.id === selectedSlot.wijkId) ?? null
+  }, [selectedSlot, wijken])
+
+  const availability = useMemo(() => {
+    if (!selectedSlot || !wijk) return { free2: 0, free4: 0, free6: 0 }
+    return {
+      free2: Math.max(0, wijk.count2tops - selectedSlot.booked2tops),
+      free4: Math.max(0, wijk.count4tops - selectedSlot.booked4tops),
+      free6: Math.max(0, wijk.count6tops - selectedSlot.booked6tops),
+    }
+  }, [selectedSlot, wijk])
 
   const handleSlotClick = (id: string) => {
     if (selectedSlotId === id) {
-      // Deselect
-      setSelectedSlotId(null);
-      setSelectedTableType(null);
-      setGuestCount(null);
-      setBookingError(null);
-    } else {
-      // Select new
-      setSelectedSlotId(id);
-      setSelectedTableType(null);
-      setGuestCount(null);
-      setBookingError(null);
-      setBookingSuccess(false);
+      setSelectedSlotId(null)
+      setSelectedTableType(null)
+      setGuestCount(null)
+      setBookingError(null)
+      setBookingSuccess(false)
+      return
     }
-  };
+    setSelectedSlotId(id)
+    setSelectedTableType(null)
+    setGuestCount(null)
+    setBookingError(null)
+    setBookingSuccess(false)
+  }
 
   const handleTableTypeSelect = (type: TableType) => {
-    setSelectedTableType(type);
-    setGuestCount(null);
-    setBookingError(null);
-  };
+    setSelectedTableType(type)
+    setGuestCount(null)
+    setBookingError(null)
+  }
+
+  const emailLooksValid = useMemo(() => {
+    if (!customerEmail.trim()) return true // optional
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail.trim())
+  }, [customerEmail])
+
+  const canSubmit = useMemo(() => {
+    if (!selectedSlotId) return false
+    if (!selectedTableType || selectedTableType === "7+") return false
+    if (!guestCount) return false
+    if (!customerName.trim()) return false
+    if (!emailLooksValid) return false
+    return true
+  }, [selectedSlotId, selectedTableType, guestCount, customerName, emailLooksValid])
 
   const handleBook = async () => {
-    if (!selectedSlotId || !selectedTableType || !guestCount || selectedTableType === '7+') return;
-    if (!customerName.trim()) {
-      setBookingError('Vul alsjeblieft je naam in.');
-      return;
-    }
+    if (!canSubmit || !selectedSlotId || !selectedTableType || !guestCount || selectedTableType === "7+") return
 
-    setIsBooking(true);
-    setBookingError(null);
+    setIsBooking(true)
+    setBookingError(null)
 
     try {
       const booking: BookingRequest = {
@@ -63,340 +91,289 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
         table_type: selectedTableType,
         guest_count: guestCount,
         customer_name: customerName.trim(),
-        customer_email: customerEmail || undefined,
-        customer_phone: customerPhone || undefined,
-        remarks: customerRemarks || undefined,
-      };
-
-      const result = await bookTable(booking);
-
-      setBookingSuccess(true);
-
-      // Notify parent to refresh data
-      if (onBookingComplete) {
-        onBookingComplete();
+        customer_email: customerEmail.trim() || undefined,
+        customer_phone: customerPhone.trim() || undefined,
+        remarks: customerRemarks.trim() || undefined,
       }
 
-      // Show success and reset after delay (no redirect)
+      await bookTable(booking)
+
+      setBookingSuccess(true)
+      onBookingComplete?.()
+
       setTimeout(() => {
-        setSelectedSlotId(null);
-        setSelectedTableType(null);
-        setGuestCount(null);
-        setCustomerName('');
-        setCustomerEmail('');
-        setCustomerPhone('');
-        setCustomerRemarks('');
-        setBookingSuccess(false);
-      }, 3000);
-
+        setSelectedSlotId(null)
+        setSelectedTableType(null)
+        setGuestCount(null)
+        setCustomerName("")
+        setCustomerEmail("")
+        setCustomerPhone("")
+        setCustomerRemarks("")
+        setBookingSuccess(false)
+      }, 2500)
     } catch (error: any) {
-      setBookingError(error.message || 'Booking failed. Please try again.');
+      setBookingError(error?.message || "Reserveren lukt nu even niet. Probeer het opnieuw.")
     } finally {
-      setIsBooking(false);
+      setIsBooking(false)
     }
-  };
+  }
 
-  const selectedSlot = event.slots.find(s => s.id === selectedSlotId);
-  const slotCount = event.slots.length;
+  const groupEmail = bookingEmail || "reserveren@tafelaaramersfoort.nl"
 
-  // Calculate availability for the selected slot
-  const wijk = selectedSlot ? wijken.find(w => w.id === selectedSlot.wijkId) : null;
+  const guestOptions = useMemo(() => {
+    if (selectedTableType === "2") return [1, 2]
+    if (selectedTableType === "4") return [3, 4]
+    if (selectedTableType === "6") return [5, 6]
+    return []
+  }, [selectedTableType])
 
-  const availability = selectedSlot && wijk ? {
-    free2: Math.max(0, wijk.count2tops - selectedSlot.booked2tops),
-    free4: Math.max(0, wijk.count4tops - selectedSlot.booked4tops),
-    free6: Math.max(0, wijk.count6tops - selectedSlot.booked6tops),
-  } : { free2: 0, free4: 0, free6: 0 };
+  const slotCount = event.slots.length
 
   return (
-    <div className="flex flex-col gap-5 p-6 border-b border-[#2a2a2a] last:border-0 bg-[#0f0f0f] first:pt-8 last:pb-8">
+    <div className="rounded-2xl border border-white/10 bg-white/[0.02]">
+      <div className="px-5 py-5">
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="text-[18px] sm:text-[20px] font-bold tracking-tight text-[#c9a227]">
+            {event.title}
+          </h2>
 
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-xl font-bold text-[#c9a227] tracking-tight">
-          {event.title}
-        </h2>
+          {selectedSlot && (
+            <div className="text-[11px] sm:text-xs text-white/70 bg-black/40 border border-white/10 px-3 py-1.5 rounded-full">
+              Gekozen: <span className="text-white/90 font-semibold">{selectedSlot.date} · {selectedSlot.time}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Slots */}
+        <div className="mt-4">
+          {slotCount <= 3 ? (
+            <div className="flex flex-wrap gap-3 justify-center">
+              {event.slots.map((slot) => {
+                const slotWijk = wijken.find(w => w.id === slot.wijkId)
+                return (
+                  <div key={slot.id} className="min-w-[120px]">
+                    <SlotBubble slot={slot} wijk={slotWijk} isSelected={selectedSlotId === slot.id} onClick={() => handleSlotClick(slot.id)} />
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="grid grid-cols-4 min-[500px]:grid-cols-5 gap-3" role="group" aria-label={`Tijdsloten voor ${event.title}`}>
+              {event.slots.map((slot) => {
+                const slotWijk = wijken.find(w => w.id === slot.wijkId)
+                return <SlotBubble key={slot.id} slot={slot} wijk={slotWijk} isSelected={selectedSlotId === slot.id} onClick={() => handleSlotClick(slot.id)} />
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Slots Layout */}
-      {slotCount <= 3 ? (
-        <div className="flex flex-wrap gap-4 justify-center py-2">
-          {event.slots.map((slot) => (
-            <div key={slot.id} className="w-full sm:w-auto min-w-[120px]">
-              <SlotBubble
-                slot={slot}
-                isSelected={selectedSlotId === slot.id}
-                onClick={() => handleSlotClick(slot.id)}
-              />
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-4 min-[500px]:grid-cols-5 gap-3 sm:gap-4" role="group" aria-label={`Available slots for ${event.title}`}>
-          {event.slots.map((slot) => (
-            <div key={slot.id} className="col-span-1">
-              <SlotBubble
-                slot={slot}
-                isSelected={selectedSlotId === slot.id}
-                onClick={() => handleSlotClick(slot.id)}
-              />
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* EXPANDABLE BOOKING FLOW */}
-      <div className={`
-        overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)]
-        ${selectedSlotId ? 'max-h-[600px] opacity-100 mt-2' : 'max-h-0 opacity-0 mt-0'}
-      `}>
-        <div className="bg-[#1a1a1a] rounded-2xl border border-[#2a2a2a] p-5 space-y-6">
-
-          {/* Booking Success State */}
-          {bookingSuccess && (
-            <div className="flex flex-col items-center justify-center py-6 animate-in zoom-in-95">
-              <div className="w-16 h-16 bg-[#c9a227]/20 rounded-full flex items-center justify-center mb-4">
-                <CheckCircle className="w-10 h-10 text-[#c9a227]" />
-              </div>
-              <div className="text-lg font-bold text-[#c9a227]">Booking Confirmed!</div>
-              <div className="text-sm text-gray-400">You're all set 🎉</div>
-            </div>
-          )}
-
-          {/* Error Message */}
-          {bookingError && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center text-red-700 text-sm animate-in shake">
-              {bookingError}
-            </div>
-          )}
-
-          {/* Normal booking flow */}
-          {!bookingSuccess && (
-            <>
-              {/* STEP 1: Select Table Type */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                  <Armchair className="w-3.5 h-3.5" />
-                  Select a Table
+      {/* Booking panel */}
+      <div
+        className={[
+          "grid transition-[grid-template-rows,opacity] duration-300 ease-out",
+          selectedSlotId ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
+        ].join(" ")}
+      >
+        <div className="overflow-hidden">
+          <div className="px-5 pb-5">
+            <div className="rounded-2xl border border-white/10 bg-black/40 p-5 space-y-5">
+              {bookingSuccess ? (
+                <div className="flex flex-col items-center justify-center py-6">
+                  <div className="w-14 h-14 bg-[#c9a227]/15 rounded-full flex items-center justify-center mb-3">
+                    <CheckCircle className="w-8 h-8 text-[#c9a227]" />
+                  </div>
+                  <div className="text-lg font-bold text-[#c9a227]">Reservering bevestigd</div>
+                  <div className="text-sm text-white/60">Tot snel bij ons aan tafel.</div>
                 </div>
+              ) : (
+                <>
+                  {bookingError && (
+                    <div className="rounded-2xl border border-red-500/25 bg-red-500/10 p-4 text-sm text-red-200 flex gap-3 items-start">
+                      <AlertTriangle className="w-4 h-4 mt-0.5 text-red-300" />
+                      <div>{bookingError}</div>
+                    </div>
+                  )}
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {/* 2-Top */}
-                  <button
-                    onClick={() => handleTableTypeSelect('2')}
-                    disabled={availability.free2 === 0}
-                    className={`
-                        flex flex-col items-center justify-center p-3 rounded-xl border transition-all
-                        ${selectedTableType === '2'
-                        ? 'bg-white border-indigo-600 shadow-md ring-1 ring-indigo-100 text-indigo-700'
-                        : availability.free2 === 0
-                          ? 'bg-gray-100 border-transparent opacity-50 cursor-not-allowed text-gray-400'
-                          : 'bg-white border-gray-200 hover:border-indigo-300 text-gray-700 hover:shadow-sm'
-                      }
-                      `}
-                  >
-                    <span className="text-sm font-bold">2-Pers</span>
-                    <span className="text-[10px] font-medium opacity-60">
-                      {availability.free2 === 0 ? 'Full' : `${availability.free2} left`}
-                    </span>
-                  </button>
+                  {/* Step 1: table */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-[11px] font-bold tracking-widest text-white/50 uppercase">
+                      <Armchair className="w-3.5 h-3.5" />
+                      Kies je tafel
+                    </div>
 
-                  {/* 4-Top */}
-                  <button
-                    onClick={() => handleTableTypeSelect('4')}
-                    disabled={availability.free4 === 0}
-                    className={`
-                        flex flex-col items-center justify-center p-3 rounded-xl border transition-all
-                        ${selectedTableType === '4'
-                        ? 'bg-white border-indigo-600 shadow-md ring-1 ring-indigo-100 text-indigo-700'
-                        : availability.free4 === 0
-                          ? 'bg-gray-100 border-transparent opacity-50 cursor-not-allowed text-gray-400'
-                          : 'bg-white border-gray-200 hover:border-indigo-300 text-gray-700 hover:shadow-sm'
-                      }
-                      `}
-                  >
-                    <span className="text-sm font-bold">4-Pers</span>
-                    <span className="text-[10px] font-medium opacity-60">
-                      {availability.free4 === 0 ? 'Full' : `${availability.free4} left`}
-                    </span>
-                  </button>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {([
+                        { type: "2" as const, label: "2 pers", free: availability.free2 },
+                        { type: "4" as const, label: "4 pers", free: availability.free4 },
+                        { type: "6" as const, label: "6 pers", free: availability.free6 },
+                      ]).map((t) => {
+                        const disabled = t.free === 0
+                        const selected = selectedTableType === t.type
+                        return (
+                          <button
+                            key={t.type}
+                            onClick={() => handleTableTypeSelect(t.type)}
+                            disabled={disabled}
+                            className={[
+                              "rounded-xl border px-3 py-3 text-left transition",
+                              disabled ? "opacity-40 cursor-not-allowed border-white/10 bg-white/[0.02]" : "border-white/10 hover:border-[#c9a227]/40 bg-white/[0.02]",
+                              selected ? "border-[#c9a227]/60 bg-[#c9a227]/10" : "",
+                            ].join(" ")}
+                          >
+                            <div className="text-sm font-bold text-white">{t.label}</div>
+                            <div className="text-[11px] text-white/55">
+                              {disabled ? "Vol" : `Nog ${t.free} vrij`}
+                            </div>
+                          </button>
+                        )
+                      })}
 
-                  {/* 6-Top */}
-                  <button
-                    onClick={() => handleTableTypeSelect('6')}
-                    disabled={availability.free6 === 0}
-                    className={`
-                        flex flex-col items-center justify-center p-3 rounded-xl border transition-all
-                        ${selectedTableType === '6'
-                        ? 'bg-white border-indigo-600 shadow-md ring-1 ring-indigo-100 text-indigo-700'
-                        : availability.free6 === 0
-                          ? 'bg-gray-100 border-transparent opacity-50 cursor-not-allowed text-gray-400'
-                          : 'bg-white border-gray-200 hover:border-indigo-300 text-gray-700 hover:shadow-sm'
-                      }
-                      `}
-                  >
-                    <span className="text-sm font-bold">6-Pers</span>
-                    <span className="text-[10px] font-medium opacity-60">
-                      {availability.free6 === 0 ? 'Full' : `${availability.free6} left`}
-                    </span>
-                  </button>
+                      <button
+                        onClick={() => handleTableTypeSelect("7+")}
+                        className={[
+                          "rounded-xl border px-3 py-3 text-left transition",
+                          selectedTableType === "7+" ? "border-[#c9a227]/60 bg-[#c9a227]/10" : "border-white/10 hover:border-[#c9a227]/40 bg-white/[0.02]",
+                        ].join(" ")}
+                      >
+                        <div className="text-sm font-bold text-white">7+ groep</div>
+                        <div className="text-[11px] text-white/55">Op aanvraag</div>
+                      </button>
+                    </div>
+                  </div>
 
-                  {/* 7+ Group */}
-                  <button
-                    onClick={() => handleTableTypeSelect('7+')}
-                    className={`
-                        flex flex-col items-center justify-center p-3 rounded-xl border transition-all
-                        ${selectedTableType === '7+'
-                        ? 'bg-indigo-600 border-indigo-600 shadow-md text-white'
-                        : 'bg-indigo-50 border-indigo-100 hover:border-indigo-300 text-indigo-700'
-                      }
-                      `}
-                  >
-                    <span className="text-sm font-bold">Group 7+</span>
-                    <span className="text-[10px] font-medium opacity-80">
-                      Request
-                    </span>
-                  </button>
-                </div>
-              </div>
+                  {/* Step 2 */}
+                  {selectedTableType && (
+                    <div className="pt-1">
+                      {selectedTableType !== "7+" ? (
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2 text-[11px] font-bold tracking-widest text-white/50 uppercase">
+                            <Users className="w-3.5 h-3.5" />
+                            Aantal personen
+                          </div>
 
-              {/* STEP 2: Logic Branch */}
-              {selectedTableType && (
-                <div className="animate-in slide-in-from-top-2 fade-in duration-300">
-
-                  {/* Branch A: Standard Table Selected */}
-                  {selectedTableType !== '7+' && (
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                        <Users className="w-3.5 h-3.5" />
-                        Number of Guests
-                      </div>
-
-                      <div className="flex gap-2">
-                        {(selectedTableType === '2' ? [1, 2] :
-                          selectedTableType === '4' ? [3, 4] :
-                            [5, 6]).map(num => (
+                          <div className="flex gap-2">
+                            {guestOptions.map((num) => (
                               <button
                                 key={num}
                                 onClick={() => setGuestCount(num)}
-                                className={`
-                                w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all
-                                ${guestCount === num
-                                    ? 'bg-[#c9a227] text-[#0f0f0f] shadow-lg scale-110'
-                                    : 'bg-[#1a1a1a] border border-[#3a3a3a] text-white hover:border-[#c9a227]'
-                                  }
-                              `}
+                                className={[
+                                  "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition",
+                                  guestCount === num
+                                    ? "bg-[#c9a227] text-[#0b0b0b] shadow-lg"
+                                    : "bg-white/[0.02] border border-white/10 text-white hover:border-[#c9a227]/40",
+                                ].join(" ")}
                               >
                                 {num}
                               </button>
                             ))}
-                      </div>
-
-                      {/* Customer Details Form */}
-                      {guestCount && (
-                        <div className="space-y-3 animate-in fade-in">
-                          {/* Name (Required) */}
-                          <div>
-                            <label className="text-xs font-medium text-gray-400">Naam *</label>
-                            <input
-                              type="text"
-                              value={customerName}
-                              onChange={(e) => setCustomerName(e.target.value)}
-                              placeholder="Je naam"
-                              required
-                              className="w-full mt-1 px-4 py-3 rounded-xl bg-[#0f0f0f] border border-[#3a3a3a] text-white placeholder-gray-500 focus:border-[#c9a227] focus:ring-1 focus:ring-[#c9a227] outline-none transition-all"
-                            />
                           </div>
 
-                          {/* Email (Optional) */}
-                          <div>
-                            <label className="text-xs font-medium text-gray-400">E-mail (voor bevestiging)</label>
-                            <input
-                              type="email"
-                              value={customerEmail}
-                              onChange={(e) => setCustomerEmail(e.target.value)}
-                              placeholder="email@voorbeeld.nl"
-                              className="w-full mt-1 px-4 py-3 rounded-xl bg-[#0f0f0f] border border-[#3a3a3a] text-white placeholder-gray-500 focus:border-[#c9a227] focus:ring-1 focus:ring-[#c9a227] outline-none transition-all"
-                            />
-                          </div>
+                          {guestCount && (
+                            <div className="space-y-3">
+                              <div className="text-[11px] text-white/40 mb-3">
+                                Je gegevens worden alleen gebruikt voor deze reservering.
+                              </div>
+                              <div>
+                                <label className="text-xs font-medium text-white/60">Naam *</label>
+                                <input
+                                  type="text"
+                                  value={customerName}
+                                  onChange={(e) => setCustomerName(e.target.value)}
+                                  placeholder="Je naam"
+                                  className="w-full mt-1 px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-white/35 focus:border-[#c9a227]/60 focus:ring-1 focus:ring-[#c9a227]/30 outline-none"
+                                />
+                                {!customerName.trim() && (
+                                  <div className="mt-1 text-[11px] text-white/40">Vul je naam in om door te gaan.</div>
+                                )}
+                              </div>
 
-                          {/* Phone (Optional) */}
-                          <div>
-                            <label className="text-xs font-medium text-gray-400">Telefoon (optioneel)</label>
-                            <input
-                              type="tel"
-                              value={customerPhone}
-                              onChange={(e) => setCustomerPhone(e.target.value)}
-                              placeholder="06-12345678"
-                              className="w-full mt-1 px-4 py-3 rounded-xl bg-[#0f0f0f] border border-[#3a3a3a] text-white placeholder-gray-500 focus:border-[#c9a227] focus:ring-1 focus:ring-[#c9a227] outline-none transition-all"
-                            />
-                          </div>
+                              <div>
+                                <label className="text-xs font-medium text-white/60">E-mail (optioneel, alleen voor bevestiging)</label>
+                                <input
+                                  type="email"
+                                  value={customerEmail}
+                                  onChange={(e) => setCustomerEmail(e.target.value)}
+                                  placeholder="email@voorbeeld.nl"
+                                  className="w-full mt-1 px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-white/35 focus:border-[#c9a227]/60 focus:ring-1 focus:ring-[#c9a227]/30 outline-none"
+                                />
+                                {!emailLooksValid && (
+                                  <div className="mt-1 text-[11px] text-red-200/80">Dit e-mailadres lijkt niet te kloppen.</div>
+                                )}
+                              </div>
 
-                          {/* Remarks (Optional) */}
-                          <div>
-                            <label className="text-xs font-medium text-gray-400">Opmerkingen (optioneel)</label>
-                            <textarea
-                              value={customerRemarks}
-                              onChange={(e) => setCustomerRemarks(e.target.value)}
-                              placeholder="Bijv. allergieen, verjaardag, kinderstoel..."
-                              rows={2}
-                              className="w-full mt-1 px-4 py-3 rounded-xl bg-[#0f0f0f] border border-[#3a3a3a] text-white placeholder-gray-500 focus:border-[#c9a227] focus:ring-1 focus:ring-[#c9a227] outline-none transition-all resize-none"
-                            />
-                          </div>
+                              <div>
+                                <label className="text-xs font-medium text-white/60">Telefoon (optioneel)</label>
+                                <input
+                                  type="tel"
+                                  value={customerPhone}
+                                  onChange={(e) => setCustomerPhone(e.target.value)}
+                                  placeholder="06 12345678"
+                                  className="w-full mt-1 px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-white/35 focus:border-[#c9a227]/60 focus:ring-1 focus:ring-[#c9a227]/30 outline-none"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="text-xs font-medium text-white/60">Opmerkingen (optioneel)</label>
+                                <textarea
+                                  value={customerRemarks}
+                                  onChange={(e) => setCustomerRemarks(e.target.value)}
+                                  placeholder="Allergieën? Zet ze hier, dan houden we rekening."
+                                  rows={2}
+                                  className="w-full mt-1 px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-white/35 focus:border-[#c9a227]/60 focus:ring-1 focus:ring-[#c9a227]/30 outline-none resize-none"
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          {guestCount && (
+                            <button
+                              onClick={handleBook}
+                              disabled={isBooking || !canSubmit}
+                              className={[
+                                "w-full rounded-xl px-4 py-4 text-base font-bold transition flex items-center justify-center gap-2",
+                                "bg-gradient-to-r from-[#c9a227] to-[#8f6f17] text-[#0b0b0b]",
+                                "hover:from-[#d4af37] hover:to-[#a8831d]",
+                                (isBooking || !canSubmit) ? "opacity-60 cursor-not-allowed" : "",
+                              ].join(" ")}
+                            >
+                              {isBooking ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                  Bezig met reserveren…
+                                </>
+                              ) : (
+                                <>
+                                  Bevestig reservering <span className="opacity-80">({selectedSlot?.time})</span>
+                                  <ArrowRight className="w-4 h-4" />
+                                </>
+                              )}
+                            </button>
+                          )}
                         </div>
-                      )}
-
-                      {/* Final Action Button */}
-                      {guestCount && (
-                        <div className="pt-2 animate-in fade-in slide-in-from-bottom-2">
-                          <button
-                            onClick={handleBook}
-                            disabled={isBooking}
-                            className="w-full bg-gradient-to-r from-[#c9a227] to-[#a08020] hover:from-[#d4af37] hover:to-[#b89828] disabled:from-gray-600 disabled:to-gray-700 text-[#0f0f0f] px-4 py-4 rounded-xl text-base font-bold transition-all shadow-lg shadow-[#c9a227]/20 hover:shadow-xl hover:shadow-[#c9a227]/30 hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2 group"
+                      ) : (
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 text-center space-y-3">
+                          <div className="text-sm text-white/80 font-semibold">
+                            Voor 7+ maken we graag iets passends. Mail ons even, dan regelen we het.
+                          </div>
+                          <a
+                            href={`mailto:${groupEmail}?subject=Groepsreservering (7+)%20-%20${encodeURIComponent(event.title)}`}
+                            className="inline-flex items-center gap-2 rounded-xl border border-[#c9a227]/35 bg-[#c9a227]/10 px-4 py-3 text-sm font-bold text-[#c9a227] hover:bg-[#c9a227]/15 transition"
                           >
-                            {isBooking ? (
-                              <>
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                Booking...
-                              </>
-                            ) : (
-                              <>
-                                Book {selectedSlot?.time} for {guestCount}
-                                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                              </>
-                            )}
-                          </button>
+                            <Mail className="w-4 h-4" />
+                            Mail ons
+                          </a>
+                          <div className="text-xs text-white/45">{groupEmail}</div>
                         </div>
                       )}
                     </div>
                   )}
-
-                  {/* Branch B: 7+ Group Selected */}
-                  {selectedTableType === '7+' && (
-                    <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 text-center space-y-3">
-                      <div className="text-sm text-indigo-900 font-medium">
-                        For groups of 7 or more, we arrange a special setup for you.
-                      </div>
-                      <a
-                        href="mailto:reserveren@tafelaaramersfoort.nl?subject=Group Booking Request (7+)"
-                        className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors shadow-sm"
-                      >
-                        <Mail className="w-4 h-4" />
-                        Email Us
-                      </a>
-                      <div className="text-xs text-indigo-400">
-                        reserveren@tafelaaramersfoort.nl
-                      </div>
-                    </div>
-                  )}
-
-                </div>
+                </>
               )}
-            </>
-          )}
-
+            </div>
+          </div>
         </div>
       </div>
-
     </div>
-  );
-};
+  )
+}

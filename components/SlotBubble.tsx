@@ -1,75 +1,118 @@
-import React from 'react';
-import { Slot } from '../types';
-import { Star } from 'lucide-react';
+import React from 'react'
+import { Slot, Wijk } from '../types'
+import { Star, AlertCircle } from 'lucide-react'
 
 interface SlotBubbleProps {
-  slot: Slot;
-  isSelected: boolean;
-  onClick: () => void;
+  slot: Slot
+  isSelected: boolean
+  onClick: () => void
+  wijk?: Wijk // optional, for "bijna vol" indicator
 }
 
-export const SlotBubble: React.FC<SlotBubbleProps> = ({ slot, isSelected, onClick }) => {
-  const { date, time, isNextAvailable } = slot;
+export const SlotBubble: React.FC<SlotBubbleProps> = ({ slot, isSelected, onClick, wijk }) => {
+  const { date, time, isNextAvailable } = slot
+
+  // Calculate availability for "bijna vol" indicator
+  const totalCapacity = wijk
+    ? (wijk.count2tops + wijk.count4tops + wijk.count6tops)
+    : 0
+  const totalBooked = slot.booked2tops + slot.booked4tops + slot.booked6tops
+  const fillRatio = totalCapacity > 0 ? totalBooked / totalCapacity : 0
+  const isAlmostFull = fillRatio >= 0.7 && fillRatio < 1
+  const isFull = totalCapacity > 0 && totalBooked >= totalCapacity
+
+  // Format date for display (handles both ISO and Dutch formats)
+  const displayDate = date?.match(/^\d{4}-\d{2}-\d{2}/)
+    ? new Date(date).toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' })
+    : date
+
+  const dateParts = displayDate?.split(' ') || []
+  const weekday = dateParts[0] || ''
+  const dayMonth = dateParts.slice(1).join(' ') || ''
 
   return (
     <button
       onClick={onClick}
       type="button"
+      disabled={isFull}
       aria-pressed={isSelected}
-      aria-label={`${date} at ${time}${isNextAvailable ? ', Next available' : ''}`}
-      className={`
-        relative group flex flex-col items-center justify-center
-        py-2 px-1 w-full min-h-[60px]
-        rounded-2xl transition-all duration-200 ease-out
-        border select-none
-        ${isSelected 
-          ? 'bg-indigo-50 border-indigo-500 ring-2 ring-indigo-200 ring-offset-1 z-10 scale-[0.98]' 
-          : 'bg-gradient-to-br from-white to-gray-50 border-gray-200 hover:border-gray-300 hover:shadow-md hover:-translate-y-0.5 hover:to-white active:scale-95'
-        }
-        ${isNextAvailable && !isSelected ? 'ring-1 ring-amber-100 border-amber-200 bg-gradient-to-br from-amber-50/30 to-white' : ''}
-      `}
+      aria-label={`${displayDate} om ${time}${isNextAvailable ? ', aanbevolen' : ''}${isFull ? ', vol' : ''}`}
+      className={[
+        "relative group flex flex-col items-center justify-center",
+        "py-2.5 px-2 w-full min-h-[64px]",
+        "rounded-xl transition-all duration-200 ease-out",
+        "border select-none",
+        isFull
+          ? "opacity-40 cursor-not-allowed bg-white/[0.02] border-white/10"
+          : isSelected
+            ? "bg-[#c9a227]/15 border-[#c9a227]/60 ring-2 ring-[#c9a227]/25 z-10 scale-[0.98]"
+            : "bg-white/[0.03] border-white/10 hover:border-[#c9a227]/40 hover:bg-white/[0.05] active:scale-95",
+        isNextAvailable && !isSelected && !isFull
+          ? "ring-1 ring-[#c9a227]/30 border-[#c9a227]/30"
+          : "",
+      ].join(" ")}
     >
-      {/* Subtle top inner highlight for "glassy" 3D feel */}
-      <div className={`absolute inset-x-3 top-0 h-[1px] bg-white rounded-full transition-opacity ${isSelected ? 'opacity-0' : 'opacity-70'}`} />
-
       {/* Next Available Badge */}
-      {isNextAvailable && (
-        <div className={`
-          absolute -top-3 left-1/2 -translate-x-1/2 
-          bg-white border px-2 py-0.5 rounded-full flex items-center gap-0.5 shadow-sm 
-          transform transition-all duration-300 z-20 whitespace-nowrap
-          ${isSelected ? 'border-indigo-200 text-indigo-600' : 'border-amber-200 text-amber-700'}
-        `}>
-          {/* Shimmer effect container */}
-          <div className="absolute inset-0 rounded-full overflow-hidden">
-             <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-transparent via-white/60 to-transparent -translate-x-full animate-[shimmer_2s_infinite]"></div>
-          </div>
+      {isNextAvailable && !isFull && (
+        <div
+          className={[
+            "absolute -top-2.5 left-1/2 -translate-x-1/2",
+            "px-2 py-0.5 rounded-full flex items-center gap-1",
+            "text-[9px] font-bold uppercase tracking-wider",
+            "border shadow-sm z-20 whitespace-nowrap",
+            isSelected
+              ? "bg-[#c9a227] text-[#0b0b0b] border-[#c9a227]"
+              : "bg-[#c9a227]/20 text-[#c9a227] border-[#c9a227]/40",
+          ].join(" ")}
+        >
+          <Star className="w-2.5 h-2.5 fill-current" />
+          <span>Top</span>
+        </div>
+      )}
 
-          <Star className="w-2.5 h-2.5 fill-current relative z-10" />
-          <span className="text-[9px] font-bold uppercase tracking-wider leading-none relative z-10">Top</span>
+      {/* Almost Full Indicator */}
+      {isAlmostFull && !isSelected && !isFull && (
+        <div className="absolute -top-2 right-1 flex items-center gap-0.5 text-[9px] text-orange-300/80">
+          <AlertCircle className="w-2.5 h-2.5" />
+          <span className="font-medium">Bijna vol</span>
+        </div>
+      )}
+
+      {/* Full Indicator */}
+      {isFull && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-[10px] font-bold text-white/50 uppercase tracking-wider">Vol</span>
         </div>
       )}
 
       {/* Date */}
-      <span className={`
-        text-[11px] font-medium tracking-wide mb-0.5 uppercase
-        ${isSelected ? 'text-indigo-800' : 'text-gray-400 group-hover:text-gray-600'}
-      `}>
-        {date.split(' ')[0]} <span className="opacity-75">{date.split(' ').slice(1).join(' ')}</span>
-      </span>
+      {!isFull && (
+        <>
+          <span
+            className={[
+              "text-[10px] font-medium tracking-wide uppercase",
+              isSelected ? "text-[#c9a227]" : "text-white/50 group-hover:text-white/70",
+            ].join(" ")}
+          >
+            {weekday} <span className="opacity-75">{dayMonth}</span>
+          </span>
 
-      {/* Time */}
-      <span className={`
-        text-[15px] font-bold leading-none tracking-tight
-        ${isSelected ? 'text-indigo-600' : 'text-gray-900'}
-      `}>
-        {time}
-      </span>
-      
-      {/* Active state indicator dot */}
+          {/* Time */}
+          <span
+            className={[
+              "text-[15px] font-bold leading-tight tracking-tight mt-0.5",
+              isSelected ? "text-[#c9a227]" : "text-white",
+            ].join(" ")}
+          >
+            {time}
+          </span>
+        </>
+      )}
+
+      {/* Selected indicator dot */}
       {isSelected && (
-        <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 bg-indigo-500 rounded-full" />
+        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-[#c9a227] rounded-full shadow-sm shadow-[#c9a227]/50" />
       )}
     </button>
-  );
-};
+  )
+}

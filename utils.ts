@@ -10,7 +10,7 @@ export const isSlotAvailableForParty = (slot: Slot, wijk: Wijk | undefined, part
   // 1-2 people -> Needs 2-top (or 4-top, or 6-top if we allow upgrade)
   // 3-4 people -> Needs 4-top (or 6-top)
   // 5-6 people -> Needs 6-top
-  
+
   // Calculate remaining inventory
   const free2 = Math.max(0, wijk.count2tops - slot.booked2tops);
   const free4 = Math.max(0, wijk.count4tops - slot.booked4tops);
@@ -23,7 +23,7 @@ export const isSlotAvailableForParty = (slot: Slot, wijk: Wijk | undefined, part
   } else if (partySize <= 6) {
     return free6 > 0;
   }
-  
+
   return false; // > 6 not supported in this simple demo
 };
 
@@ -32,7 +32,7 @@ export const isSlotAvailableForParty = (slot: Slot, wijk: Wijk | undefined, part
  */
 export const formatDateToDutch = (isoDate: string): string => {
   if (!isoDate) return '';
-  
+
   const date = new Date(isoDate);
   if (isNaN(date.getTime())) return isoDate;
 
@@ -43,7 +43,7 @@ export const formatDateToDutch = (isoDate: string): string => {
   });
 
   const parts = formatter.formatToParts(date);
-  
+
   const weekday = parts.find(p => p.type === 'weekday')?.value || '';
   const day = parts.find(p => p.type === 'day')?.value || '';
   const month = parts.find(p => p.type === 'month')?.value || '';
@@ -56,15 +56,15 @@ const parseDutchDateToObj = (dutchDateStr: string, timeStr: string): Date | null
   try {
     const parts = dutchDateStr.split(' ');
     if (parts.length < 3) return null;
-    
+
     const day = parseInt(parts[1], 10);
     const monthStr = parts[2].toLowerCase().replace('.', '');
-    
+
     const months: Record<string, number> = {
       'jan': 0, 'feb': 1, 'mrt': 2, 'apr': 3, 'mei': 4, 'jun': 5,
       'jul': 6, 'aug': 7, 'sep': 8, 'okt': 9, 'nov': 10, 'dec': 11
     };
-    
+
     const month = months[monthStr];
     if (month === undefined) return null;
 
@@ -73,9 +73,9 @@ const parseDutchDateToObj = (dutchDateStr: string, timeStr: string): Date | null
     const now = new Date();
     let year = now.getFullYear();
     const candidate = new Date(year, month, day, hours, minutes);
-    
+
     if (candidate.getTime() < now.getTime() - (30 * 24 * 60 * 60 * 1000)) {
-        candidate.setFullYear(year + 1);
+      candidate.setFullYear(year + 1);
     }
 
     return candidate;
@@ -97,16 +97,26 @@ export const generateICalData = (events: EventData[], wijken: Wijk[]): string =>
 
   events.forEach(event => {
     event.slots.forEach(slot => {
-      const start = parseDutchDateToObj(slot.date, slot.time);
+      // P0-5 FIX: Support both ISO format (new) and Dutch format (legacy)
+      let start: Date | null;
+      if (slot.date?.match(/^\d{4}-\d{2}-\d{2}/)) {
+        // ISO format: "2026-01-20"
+        const [hours, minutes] = (slot.time || '12:00').split(':').map(n => parseInt(n, 10));
+        start = new Date(slot.date);
+        start.setHours(hours, minutes, 0, 0);
+      } else {
+        // Dutch format fallback: "Ma 21 jan"
+        start = parseDutchDateToObj(slot.date, slot.time);
+      }
       if (!start) return;
 
       const end = new Date(start.getTime() + (2 * 60 * 60 * 1000));
       const formatICalDate = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
       const wijkName = wijken.find(w => w.id === slot.wijkId)?.name || 'General';
-      
+
       const totalBookedTables = slot.booked2tops + slot.booked4tops + slot.booked6tops;
-      const totalCapacityTables = wijken.find(w => w.id === slot.wijkId) 
-        ? (wijken.find(w => w.id === slot.wijkId)!.count2tops + wijken.find(w => w.id === slot.wijkId)!.count4tops + wijken.find(w => w.id === slot.wijkId)!.count6tops) 
+      const totalCapacityTables = wijken.find(w => w.id === slot.wijkId)
+        ? (wijken.find(w => w.id === slot.wijkId)!.count2tops + wijken.find(w => w.id === slot.wijkId)!.count4tops + wijken.find(w => w.id === slot.wijkId)!.count6tops)
         : 0;
 
       icalContent.push('BEGIN:VEVENT');

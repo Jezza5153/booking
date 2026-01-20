@@ -6,7 +6,7 @@ import { CalendarManager } from './components/CalendarManager';
 import { LoginPage } from './components/LoginPage';
 import { EVENTS_DATA, WIJKEN_DATA } from './data';
 import { EventData, Wijk } from './types';
-import { API_BASE_URL, fetchWidgetData, RESTAURANT_ID } from './api';
+import { API_BASE_URL, fetchWidgetData, fetchAdminData, RESTAURANT_ID } from './api';
 import { Smartphone, Settings, BookOpen, Calendar as CalendarIcon, LogOut } from 'lucide-react';
 
 type ViewMode = 'widget' | 'admin' | 'guide' | 'calendar';
@@ -55,9 +55,13 @@ const App: React.FC = () => {
   }, []);
 
   // Load data from API when authenticated
+  // P0-3: Use admin endpoint for editing (raw ISO dates), widget endpoint for public view
   const loadDataFromAPI = async () => {
     try {
-      const data = await fetchWidgetData(RESTAURANT_ID);
+      // Authenticated users get admin endpoint with raw ISO dates for proper editing
+      const data = isAuthenticated
+        ? await fetchAdminData(RESTAURANT_ID)
+        : await fetchWidgetData(RESTAURANT_ID);
       setEvents(data.events);
       setWijken(data.zones);
       console.log('✅ Loaded data from API:', data.events.length, 'events');
