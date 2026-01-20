@@ -1030,6 +1030,7 @@ app.post('/api/admin/save', async (req, res) => {
 // Helper function to parse slot date/time
 // PREFERRED: ISO 8601 format (e.g., "2026-01-20T18:00:00" or "2026-01-20")
 // FALLBACK: Dutch format "Di 20 jan" for backwards compatibility
+// CRITICAL: All times are interpreted as Amsterdam local time
 function parseSlotDateTime(dateStr, timeStr) {
     try {
         // PREFERRED: Check if dateStr is already ISO format
@@ -1040,12 +1041,37 @@ function parseSlotDateTime(dateStr, timeStr) {
                 return new Date(dateStr);
             } else {
                 // ISO date only (YYYY-MM-DD), combine with timeStr
-                // CRITICAL FIX: Don't use new Date(dateStr) as it parses as UTC midnight
-                // Instead, construct the date in local time directly
+                // CRITICAL FIX: Create ISO string with explicit Amsterdam timezone
+                // This ensures the time is interpreted correctly regardless of server TZ
+                const time = timeStr || '12:00';
+
+                // Determine if DST is in effect for this date in Amsterdam
+                // CET = UTC+1, CEST (summer) = UTC+2
+                // DST in Netherlands: last Sunday of March to last Sunday of October
                 const [year, month, day] = dateStr.split('-').map(Number);
-                const [hours, minutes] = (timeStr || '12:00').split(':').map(Number);
-                // Month is 0-indexed in JS Date constructor
-                return new Date(year, month - 1, day, hours, minutes, 0, 0);
+                const testDate = new Date(year, month - 1, day);
+
+                // Simple DST check for Europe/Amsterdam
+                const jan = new Date(year, 0, 1);
+                const jul = new Date(year, 6, 1);
+                const stdOffset = Math.max(jan.getTimezoneOffset(), jul.getTimezoneOffset());
+                const isDST = testDate.getTimezoneOffset() < stdOffset;
+
+                // For a robust solution, just use the ISO format with Amsterdam offset
+                // Winter (CET) = +01:00, Summer (CEST) = +02:00
+                // We need to calculate if this specific date is in DST
+                const marchLast = new Date(year, 2, 31);
+                const marchLastSunday = new Date(marchLast.setDate(31 - marchLast.getDay()));
+                const octLast = new Date(year, 9, 31);
+                const octLastSunday = new Date(octLast.setDate(31 - octLast.getDay()));
+
+                const dateToCheck = new Date(year, month - 1, day);
+                const inDST = dateToCheck >= marchLastSunday && dateToCheck < octLastSunday;
+                const offset = inDST ? '+02:00' : '+01:00';
+
+                // Create ISO string with explicit timezone
+                const isoString = `${dateStr}T${time}:00${offset}`;
+                return new Date(isoString);
             }
         }
 
