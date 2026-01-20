@@ -117,9 +117,9 @@ app.get('/api/widget/:restaurantId', widgetRateLimiter, async (req, res) => {
             [restaurantId]
         );
 
-        // Get active events
+        // Get active events (SELECT * to handle pre/post migration gracefully)
         const eventsResult = await pool.query(
-            'SELECT id, title, description, price_per_person FROM events WHERE restaurant_id = $1 AND is_active = true',
+            `SELECT * FROM events WHERE restaurant_id = $1 AND is_active = true`,
             [restaurantId]
         );
 
@@ -510,9 +510,9 @@ app.get('/api/admin/data', async (req, res) => {
             [restaurantId]
         );
 
-        // Get events with slots (raw ISO dates)
+        // Get events with slots (SELECT * handles pre/post migration)
         const eventsResult = await pool.query(
-            'SELECT id, title, description, price_per_person FROM events WHERE restaurant_id = $1 AND is_active = true',
+            `SELECT * FROM events WHERE restaurant_id = $1 AND is_active = true`,
             [restaurantId]
         );
 
