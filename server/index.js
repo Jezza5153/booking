@@ -626,7 +626,7 @@ app.post('/api/admin/bookings/:id/cancel', async (req, res) => {
 });
 
 // Get all bookings for admin view with filtering, search, and pagination
-// Enhanced: from, to, status, q (search), limit, offset
+// Returns { bookings, total, limit, offset } for proper pagination
 app.get('/api/admin/bookings', async (req, res) => {
     const restaurantId = req.query.restaurantId || 'demo-restaurant';
     const from = req.query.from || null; // ISO date string
@@ -637,6 +637,28 @@ app.get('/api/admin/bookings', async (req, res) => {
     const offset = parseInt(req.query.offset) || 0;
 
     try {
+        // Get total count for pagination
+        const countResult = await pool.query(
+            `SELECT COUNT(*) as total
+             FROM bookings b
+             JOIN slots s ON s.id = b.slot_id
+             JOIN events e ON e.id = s.event_id
+             JOIN zones z ON z.id = s.zone_id
+             WHERE b.restaurant_id = $1
+               AND ($2::timestamptz IS NULL OR s.start_datetime >= $2)
+               AND ($3::timestamptz IS NULL OR s.start_datetime < $3)
+               AND ($4::text IS NULL OR b.status = $4)
+               AND ($5::text IS NULL OR (
+                   b.customer_name ILIKE '%' || $5 || '%'
+                   OR COALESCE(b.customer_email, '') ILIKE '%' || $5 || '%'
+                   OR COALESCE(b.customer_phone, '') ILIKE '%' || $5 || '%'
+                   OR COALESCE(b.remarks, '') ILIKE '%' || $5 || '%'
+               ))`,
+            [restaurantId, from, to, status, search]
+        );
+        const total = parseInt(countResult.rows[0]?.total) || 0;
+
+        // Get paginated results
         const result = await pool.query(
             `SELECT 
                 b.id,
@@ -670,10 +692,16 @@ app.get('/api/admin/bookings', async (req, res) => {
              LIMIT $6 OFFSET $7`,
             [restaurantId, from, to, status, search, limit, offset]
         );
-        res.json(result.rows);
+
+        res.json({
+            bookings: result.rows,
+            total,
+            limit,
+            offset
+        });
     } catch (error) {
         console.error('Bookings fetch error:', error.message);
-        res.status(500).json({ error: 'Failed to fetch bookings' });
+        res.status(500).json({ error: 'Kon boekingen niet ophalen' });
     }
 });
 

@@ -111,6 +111,8 @@ export interface BookingsFilter {
 
 export async function fetchBookings(filters: BookingsFilter = {}) {
     const token = localStorage.getItem('events_token');
+    if (!token) throw new Error('Niet ingelogd. Log opnieuw in.');
+
     const params = new URLSearchParams();
 
     params.set('restaurantId', filters.restaurantId || RESTAURANT_ID);
@@ -127,7 +129,8 @@ export async function fetchBookings(filters: BookingsFilter = {}) {
     );
 
     if (!response.ok) {
-        throw new Error('Failed to fetch bookings');
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || 'Kon boekingen niet ophalen.');
     }
     return response.json();
 }
