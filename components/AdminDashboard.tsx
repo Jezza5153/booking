@@ -228,9 +228,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
             onClick={handleSaveChanges}
             disabled={saving}
             className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition-all ${saveStatus === 'success' ? 'bg-green-600 text-white' :
-                saveStatus === 'error' ? 'bg-red-600 text-white' :
-                  saving ? 'bg-indigo-400 text-white cursor-wait' :
-                    'bg-indigo-600 text-white hover:bg-indigo-700'
+              saveStatus === 'error' ? 'bg-red-600 text-white' :
+                saving ? 'bg-indigo-400 text-white cursor-wait' :
+                  'bg-indigo-600 text-white hover:bg-indigo-700'
               }`}
           >
             {saving ? (
@@ -310,25 +310,35 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
                     <div className="space-y-3 pt-1">
                       {/* Date & Time & Zone */}
                       <div className="flex gap-2">
+                        {/* Date Picker */}
                         <div className="relative w-24">
                           <input
                             type="text"
                             value={slot.date}
-                            onChange={(e) => handleSlotChange(event.id, slot.id, 'date', e.target.value)}
-                            className="w-full text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded px-1.5 py-1"
+                            readOnly
+                            className="w-full text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded px-1.5 py-1 cursor-pointer"
+                            placeholder="Select date"
                           />
                           <input
                             type="date"
-                            className="absolute inset-0 opacity-0 cursor-pointer"
+                            className="absolute inset-0 opacity-0 cursor-pointer z-10"
                             onChange={(e) => handleDateSelect(event.id, slot.id, e.target.value)}
                           />
                         </div>
-                        <input
-                          type="text"
+                        {/* Time Dropdown */}
+                        <select
                           value={slot.time}
                           onChange={(e) => handleSlotChange(event.id, slot.id, 'time', e.target.value)}
-                          className="w-16 text-sm font-bold text-gray-900 bg-white border border-gray-200 rounded px-1.5 py-1 text-center"
-                        />
+                          className="w-20 text-sm font-bold text-gray-900 bg-white border border-gray-200 rounded px-1.5 py-1 text-center cursor-pointer"
+                        >
+                          {Array.from({ length: 48 }, (_, i) => {
+                            const hours = Math.floor(i / 4) + 12; // Start at 12:00
+                            const minutes = (i % 4) * 15;
+                            const time = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+                            return <option key={time} value={time}>{time}</option>;
+                          })}
+                        </select>
+                        {/* Zone Dropdown */}
                         <select
                           value={slot.wijkId || ''}
                           onChange={(e) => handleSlotChange(event.id, slot.id, 'wijkId', e.target.value)}
