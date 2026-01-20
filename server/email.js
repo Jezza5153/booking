@@ -6,9 +6,9 @@ dotenv.config();
 // Initialize Resend (optional - sends emails only if RESEND_API_KEY is set)
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
-// Admin notification email
-const ADMIN_EMAIL = process.env.BOOKING_NOTIFICATION_EMAIL || 'work@tafelaaramersfoort.nl';
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'bookings@tafelaaramersfoort.nl';
+// Admin notification email - sends booking alerts to the restaurant
+const ADMIN_EMAIL = process.env.BOOKING_NOTIFICATION_EMAIL || 'chef@tafelaaramersfoort.nl';
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'noreply@tafelaaramersfoort.nl';
 
 // P1-10: HTML escape helper to prevent XSS in emails
 const escapeHtml = (str) => {
