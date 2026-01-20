@@ -110,6 +110,10 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
     const [selected, setSelected] = useState<BookingRow | null>(null)
     const [isCancelling, setIsCancelling] = useState(false)
 
+    // Sorting
+    type SortOption = "recent" | "date" | "event"
+    const [sortBy, setSortBy] = useState<SortOption>("recent")
+
     const fetchData = async () => {
         setLoading(true)
         setError(null)
@@ -154,8 +158,34 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
         return { start, end }
     }, [total, offset, rows.length])
 
+    // Sorted rows based on sortBy
+    const sortedRows = useMemo(() => {
+        const sorted = [...rows]
+        switch (sortBy) {
+            case "recent":
+                // Sort by created_at descending (newest first)
+                return sorted.sort((a, b) =>
+                    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                )
+            case "date":
+                // Sort by start_datetime ascending (earliest first)
+                return sorted.sort((a, b) =>
+                    new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime()
+                )
+            case "event":
+                // Sort by event title alphabetically, then by date
+                return sorted.sort((a, b) => {
+                    const eventCompare = a.event_title.localeCompare(b.event_title)
+                    if (eventCompare !== 0) return eventCompare
+                    return new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime()
+                })
+            default:
+                return sorted
+        }
+    }, [rows, sortBy])
+
     const handleExport = () => {
-        const csv = toCsv(rows)
+        const csv = toCsv(sortedRows)
         const blob = new Blob([csv], { type: "text/csv;charset=utf-8" })
         const url = window.URL.createObjectURL(blob)
         const a = document.createElement("a")
@@ -237,6 +267,19 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                         </select>
                     </div>
 
+                    <div>
+                        <label className="text-xs font-semibold text-gray-500 uppercase">Sorteer op</label>
+                        <select
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value as SortOption)}
+                            className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 bg-white text-sm font-semibold"
+                        >
+                            <option value="recent">Nieuwste eerst</option>
+                            <option value="date">Datum (vroegste)</option>
+                            <option value="event">Event (A-Z)</option>
+                        </select>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-3">
                         <div>
                             <label className="text-xs font-semibold text-gray-500 uppercase">Vanaf</label>
@@ -311,10 +354,10 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                         <tbody className="divide-y divide-gray-100">
                             {loading ? (
                                 <tr><td className="px-4 py-6 text-gray-500" colSpan={9}>Bezig met laden…</td></tr>
-                            ) : rows.length === 0 ? (
+                            ) : sortedRows.length === 0 ? (
                                 <tr><td className="px-4 py-6 text-gray-500" colSpan={9}>Geen boekingen gevonden.</td></tr>
                             ) : (
-                                rows.map((b) => (
+                                sortedRows.map((b) => (
                                     <tr key={b.id} className="hover:bg-gray-50">
                                         <td className="px-4 py-3 font-semibold text-gray-900">{fmtDate(b.start_datetime)}</td>
                                         <td className="px-4 py-3 font-mono text-gray-900">{fmtTime(b.start_datetime)}</td>
