@@ -17,7 +17,10 @@ export interface BookingRequest {
     slot_id: string;
     table_type: '2' | '4' | '6';
     guest_count: number;
-    customer_email?: string;  // For booking confirmation email
+    customer_name: string;      // Required - customer's name
+    customer_email?: string;    // Optional - for booking confirmation email
+    customer_phone?: string;    // Optional - contact phone
+    remarks?: string;           // Optional - special requests/opmerkingen
 }
 
 export interface BookingResponse {

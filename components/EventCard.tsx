@@ -16,7 +16,10 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
   const [selectedTableType, setSelectedTableType] = useState<TableType | null>(null);
   const [guestCount, setGuestCount] = useState<number | null>(null);
+  const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerRemarks, setCustomerRemarks] = useState('');
   const [isBooking, setIsBooking] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
@@ -46,6 +49,10 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
 
   const handleBook = async () => {
     if (!selectedSlotId || !selectedTableType || !guestCount || selectedTableType === '7+') return;
+    if (!customerName.trim()) {
+      setBookingError('Vul alsjeblieft je naam in.');
+      return;
+    }
 
     setIsBooking(true);
     setBookingError(null);
@@ -55,7 +62,10 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
         slot_id: selectedSlotId,
         table_type: selectedTableType,
         guest_count: guestCount,
+        customer_name: customerName.trim(),
         customer_email: customerEmail || undefined,
+        customer_phone: customerPhone || undefined,
+        remarks: customerRemarks || undefined,
       };
 
       const result = await bookTable(booking);
@@ -72,7 +82,10 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
         setSelectedSlotId(null);
         setSelectedTableType(null);
         setGuestCount(null);
+        setCustomerName('');
         setCustomerEmail('');
+        setCustomerPhone('');
+        setCustomerRemarks('');
         setBookingSuccess(false);
       }, 3000);
 
@@ -278,17 +291,57 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
                             ))}
                       </div>
 
-                      {/* Email Input */}
+                      {/* Customer Details Form */}
                       {guestCount && (
-                        <div className="space-y-2 animate-in fade-in">
-                          <label className="text-xs font-medium text-gray-400">Your email (for confirmation)</label>
-                          <input
-                            type="email"
-                            value={customerEmail}
-                            onChange={(e) => setCustomerEmail(e.target.value)}
-                            placeholder="email@example.com"
-                            className="w-full px-4 py-3 rounded-xl bg-[#0f0f0f] border border-[#3a3a3a] text-white placeholder-gray-500 focus:border-[#c9a227] focus:ring-1 focus:ring-[#c9a227] outline-none transition-all"
-                          />
+                        <div className="space-y-3 animate-in fade-in">
+                          {/* Name (Required) */}
+                          <div>
+                            <label className="text-xs font-medium text-gray-400">Naam *</label>
+                            <input
+                              type="text"
+                              value={customerName}
+                              onChange={(e) => setCustomerName(e.target.value)}
+                              placeholder="Je naam"
+                              required
+                              className="w-full mt-1 px-4 py-3 rounded-xl bg-[#0f0f0f] border border-[#3a3a3a] text-white placeholder-gray-500 focus:border-[#c9a227] focus:ring-1 focus:ring-[#c9a227] outline-none transition-all"
+                            />
+                          </div>
+
+                          {/* Email (Optional) */}
+                          <div>
+                            <label className="text-xs font-medium text-gray-400">E-mail (voor bevestiging)</label>
+                            <input
+                              type="email"
+                              value={customerEmail}
+                              onChange={(e) => setCustomerEmail(e.target.value)}
+                              placeholder="email@voorbeeld.nl"
+                              className="w-full mt-1 px-4 py-3 rounded-xl bg-[#0f0f0f] border border-[#3a3a3a] text-white placeholder-gray-500 focus:border-[#c9a227] focus:ring-1 focus:ring-[#c9a227] outline-none transition-all"
+                            />
+                          </div>
+
+                          {/* Phone (Optional) */}
+                          <div>
+                            <label className="text-xs font-medium text-gray-400">Telefoon (optioneel)</label>
+                            <input
+                              type="tel"
+                              value={customerPhone}
+                              onChange={(e) => setCustomerPhone(e.target.value)}
+                              placeholder="06-12345678"
+                              className="w-full mt-1 px-4 py-3 rounded-xl bg-[#0f0f0f] border border-[#3a3a3a] text-white placeholder-gray-500 focus:border-[#c9a227] focus:ring-1 focus:ring-[#c9a227] outline-none transition-all"
+                            />
+                          </div>
+
+                          {/* Remarks (Optional) */}
+                          <div>
+                            <label className="text-xs font-medium text-gray-400">Opmerkingen (optioneel)</label>
+                            <textarea
+                              value={customerRemarks}
+                              onChange={(e) => setCustomerRemarks(e.target.value)}
+                              placeholder="Bijv. allergieen, verjaardag, kinderstoel..."
+                              rows={2}
+                              className="w-full mt-1 px-4 py-3 rounded-xl bg-[#0f0f0f] border border-[#3a3a3a] text-white placeholder-gray-500 focus:border-[#c9a227] focus:ring-1 focus:ring-[#c9a227] outline-none transition-all resize-none"
+                            />
+                          </div>
                         </div>
                       )}
 

@@ -150,7 +150,7 @@ setInterval(() => {
 
 // POST /api/book - Book a table (public, rate limited)
 app.post('/api/book', bookingRateLimiter, async (req, res) => {
-    const { slot_id, table_type, guest_count, customer_email, idempotency_key, _hp_field } = req.body;
+    const { slot_id, table_type, guest_count, customer_name, customer_email, customer_phone, remarks, idempotency_key, _hp_field } = req.body;
 
     // SECURITY: Honeypot field - bots fill this, humans don't
     if (_hp_field) {
@@ -168,6 +168,9 @@ app.post('/api/book', bookingRateLimiter, async (req, res) => {
     }
     if (!guest_count || typeof guest_count !== 'number' || guest_count < 1 || guest_count > 12) {
         return res.status(400).json({ error: 'Invalid guest_count, must be 1-12' });
+    }
+    if (!customer_name || typeof customer_name !== 'string' || customer_name.trim().length < 1) {
+        return res.status(400).json({ error: 'Customer name is required' });
     }
 
     // IDEMPOTENCY: Check for duplicate request
@@ -246,7 +249,10 @@ app.post('/api/book', bookingRateLimiter, async (req, res) => {
 
         // Send booking confirmation emails (non-blocking)
         sendBookingConfirmation({
+            customerName: sanitizeString(customer_name, 100),
             customerEmail: customer_email,
+            customerPhone: customer_phone ? sanitizeString(customer_phone, 20) : null,
+            remarks: remarks ? sanitizeString(remarks, 500) : null,
             eventTitle: slot.event_title || 'Event',
             slotTime: new Date(slot.start_datetime).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }),
             slotDate: new Date(slot.start_datetime).toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' }),
@@ -506,9 +512,19 @@ function parseSlotDateTime(dateStr, timeStr) {
         if (parts.length >= 3) {
             const day = parseInt(parts[1]);
             const month = months[parts[2].toLowerCase()] ?? 0;
-            const year = new Date().getFullYear();
+            let year = new Date().getFullYear();
             const [hours, minutes] = timeStr.split(':').map(Number);
-            return new Date(year, month, day, hours, minutes);
+
+            // Create date and check if it's in the past
+            let parsedDate = new Date(year, month, day, hours, minutes);
+            const now = new Date();
+
+            // If the date is more than 1 day in the past, it's probably next year
+            if (parsedDate < now && (now - parsedDate) > 24 * 60 * 60 * 1000) {
+                parsedDate = new Date(year + 1, month, day, hours, minutes);
+            }
+
+            return parsedDate;
         }
         // Fallback: return current date with the time
         const [hours, minutes] = timeStr.split(':').map(Number);

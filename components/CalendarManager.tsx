@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { EventData, Wijk } from '../types';
-import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, ArrowUpRight, Download, Smartphone, Filter, ExternalLink, Copy, Check } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, ArrowUpRight, Download, Smartphone, Filter, ExternalLink, Copy, Check, X, Users } from 'lucide-react';
 import { generateICalData } from '../utils';
 import { getCalendarUrl, RESTAURANT_ID } from '../api';
 
@@ -13,6 +13,7 @@ export const CalendarManager: React.FC<CalendarManagerProps> = ({ events, wijken
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [bookedOnly, setBookedOnly] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
+  const [selectedSlotDetails, setSelectedSlotDetails] = useState<any | null>(null);
 
   // 1. Flatten all slots into a single array with event metadata
   const allSlots = events.flatMap(event =>
@@ -86,8 +87,8 @@ export const CalendarManager: React.FC<CalendarManagerProps> = ({ events, wijken
           <button
             onClick={() => setBookedOnly(!bookedOnly)}
             className={`w-full flex items-center gap-3 px-3 py-2.5 border shadow-sm rounded-lg text-sm font-medium transition-all group ${bookedOnly
-                ? 'bg-amber-50 border-amber-200 text-amber-700'
-                : 'bg-white border-gray-200 text-gray-700 hover:border-indigo-200'
+              ? 'bg-amber-50 border-amber-200 text-amber-700'
+              : 'bg-white border-gray-200 text-gray-700 hover:border-indigo-200'
               }`}
           >
             <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-transform ${bookedOnly ? 'bg-amber-100 text-amber-600' : 'bg-gray-100 text-gray-500 group-hover:scale-110'
@@ -209,7 +210,10 @@ export const CalendarManager: React.FC<CalendarManagerProps> = ({ events, wijken
                             </div>
                           </div>
 
-                          <button className="text-sm font-medium text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 hover:underline">
+                          <button
+                            onClick={() => setSelectedSlotDetails(slot)}
+                            className="text-sm font-medium text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 hover:underline"
+                          >
                             Manage <ArrowUpRight className="w-3 h-3" />
                           </button>
                         </div>
@@ -293,6 +297,61 @@ export const CalendarManager: React.FC<CalendarManagerProps> = ({ events, wijken
                 className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-semibold transition-all"
               >
                 Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Slot Details Modal */}
+      {selectedSlotDetails && (
+        <div className="absolute inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">{selectedSlotDetails.eventTitle}</h3>
+                <p className="text-sm text-gray-500">{selectedSlotDetails.date} at {selectedSlotDetails.time}</p>
+              </div>
+              <button
+                onClick={() => setSelectedSlotDetails(null)}
+                className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+
+            <div className="border-t border-gray-100 pt-4 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                  <MapPin className="w-4 h-4 text-gray-500" />
+                </div>
+                <div>
+                  <div className="text-xs text-gray-400 uppercase">Zone</div>
+                  <div className="font-medium text-gray-900">{selectedSlotDetails.wijkName}</div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
+                  <Users className="w-4 h-4 text-indigo-600" />
+                </div>
+                <div>
+                  <div className="text-xs text-gray-400 uppercase">Current Bookings</div>
+                  <div className="font-medium text-gray-900">
+                    2-tops: {selectedSlotDetails.booked2tops}/{selectedSlotDetails.max2} •
+                    4-tops: {selectedSlotDetails.booked4tops}/{selectedSlotDetails.max4} •
+                    6-tops: {selectedSlotDetails.booked6tops}/{selectedSlotDetails.max6}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setSelectedSlotDetails(null)}
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl font-semibold transition-all"
+              >
+                Close
               </button>
             </div>
           </div>
