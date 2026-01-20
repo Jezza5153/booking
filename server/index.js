@@ -133,9 +133,30 @@ app.get('/api/widget/:restaurantId', widgetRateLimiter, async (req, res) => {
     }
 });
 
+// ============================================
+// BOOKING: Idempotency cache (in-memory, for demo)
+// ============================================
+const idempotencyCache = new Map();
+const IDEMPOTENCY_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+// Cleanup old entries periodically
+setInterval(() => {
+    const now = Date.now();
+    for (const [key, entry] of idempotencyCache) {
+        if (now > entry.expiresAt) idempotencyCache.delete(key);
+    }
+}, 60 * 1000);
+
 // POST /api/book - Book a table (public, rate limited)
 app.post('/api/book', bookingRateLimiter, async (req, res) => {
-    const { slot_id, table_type, guest_count } = req.body;
+    const { slot_id, table_type, guest_count, idempotency_key, _hp_field } = req.body;
+
+    // SECURITY: Honeypot field - bots fill this, humans don't
+    if (_hp_field) {
+        console.log(`[${req.requestId}] Bot detected via honeypot`);
+        // Silently accept but do nothing (confuse bots)
+        return res.status(201).json({ success: true, message: 'Booking confirmed' });
+    }
 
     // Input validation
     if (!slot_id || typeof slot_id !== 'string' || slot_id.length > 64) {
@@ -146,6 +167,15 @@ app.post('/api/book', bookingRateLimiter, async (req, res) => {
     }
     if (!guest_count || typeof guest_count !== 'number' || guest_count < 1 || guest_count > 12) {
         return res.status(400).json({ error: 'Invalid guest_count, must be 1-12' });
+    }
+
+    // IDEMPOTENCY: Check for duplicate request
+    if (idempotency_key && typeof idempotency_key === 'string') {
+        const cached = idempotencyCache.get(idempotency_key);
+        if (cached) {
+            console.log(`[${req.requestId}] Idempotent request, returning cached response`);
+            return res.status(cached.status).json(cached.body);
+        }
     }
 
     const client = await pool.connect();
@@ -170,6 +200,15 @@ app.post('/api/book', bookingRateLimiter, async (req, res) => {
         }
 
         const slot = slotResult.rows[0];
+
+        // SECURITY: Prevent booking in the past
+        const slotTime = new Date(slot.start_datetime);
+        const now = new Date();
+        if (slotTime < now) {
+            await client.query('ROLLBACK');
+            return res.status(422).json({ error: 'Cannot book a slot in the past' });
+        }
+
         let canBook = false;
         let updateField = '';
 
@@ -204,14 +243,25 @@ app.post('/api/book', bookingRateLimiter, async (req, res) => {
 
         await client.query('COMMIT');
 
-        res.json({
+        const responseBody = {
             success: true,
             handoff_url: `${restaurantResult.rows[0].handoff_url_base}?slot=${slot_id}&guests=${guest_count}`,
             message: `Booking confirmed for ${guest_count} guests`
-        });
+        };
+
+        // Store in idempotency cache
+        if (idempotency_key) {
+            idempotencyCache.set(idempotency_key, {
+                status: 201,
+                body: responseBody,
+                expiresAt: Date.now() + IDEMPOTENCY_TTL_MS
+            });
+        }
+
+        res.status(201).json(responseBody);
     } catch (error) {
         await client.query('ROLLBACK');
-        console.error('Booking error:', error);
+        console.error(`[${req.requestId}] Booking error:`, error.message);
         res.status(500).json({ error: 'Internal server error' });
     } finally {
         client.release();
@@ -262,6 +312,12 @@ app.get('/api/calendar/:restaurantId.ics', async (req, res) => {
             'X-WR-TIMEZONE:Europe/Amsterdam'
         ];
 
+        // ICS sanitization helper - prevent injection
+        const sanitizeICS = (str) => String(str)
+            .replace(/[\r\n]/g, ' ')      // No newlines in field values
+            .replace(/[;,\\]/g, '\\$&')   // Escape special chars
+            .slice(0, 200);               // Length limit
+
         for (const slot of slots) {
             const start = new Date(slot.start_datetime);
             const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
@@ -274,9 +330,9 @@ app.get('/api/calendar/:restaurantId.ics', async (req, res) => {
             icalContent.push(`DTSTAMP:${formatICalDate(new Date())}`);
             icalContent.push(`DTSTART:${formatICalDate(start)}`);
             icalContent.push(`DTEND:${formatICalDate(end)}`);
-            icalContent.push(`SUMMARY:(${totalBooked}/${totalCapacity}) ${slot.event_title}`);
-            icalContent.push(`DESCRIPTION:Zone: ${slot.zone_name}\\n2-Tops: ${slot.booked_count_2_tops}\\n4-Tops: ${slot.booked_count_4_tops}\\n6-Tops: ${slot.booked_count_6_tops}`);
-            icalContent.push(`LOCATION:${restaurant.name} - ${slot.zone_name}`);
+            icalContent.push(`SUMMARY:(${totalBooked}/${totalCapacity}) ${sanitizeICS(slot.event_title)}`);
+            icalContent.push(`DESCRIPTION:Zone: ${sanitizeICS(slot.zone_name)}\\n2-Tops: ${slot.booked_count_2_tops}\\n4-Tops: ${slot.booked_count_4_tops}\\n6-Tops: ${slot.booked_count_6_tops}`);
+            icalContent.push(`LOCATION:${sanitizeICS(restaurant.name)} - ${sanitizeICS(slot.zone_name)}`);
             icalContent.push('STATUS:CONFIRMED');
             icalContent.push('END:VEVENT');
         }

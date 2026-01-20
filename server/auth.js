@@ -69,13 +69,20 @@ export const widgetRateLimiter = createRateLimiter(60, 60 * 1000);    // 60 per 
 // Authentication
 // ============================================
 
-// Verify login credentials
-export function verifyCredentials(username, password) {
+// Verify login credentials (async for bcrypt)
+export async function verifyCredentials(username, password) {
     if (username !== ADMIN_USERNAME) {
         return false;
     }
-    // TODO: In production, store hashed password and use bcrypt.compare
-    // For now, using plain text comparison
+
+    // Check if password is bcrypt hashed (starts with $2)
+    if (ADMIN_PASSWORD.startsWith('$2')) {
+        // Compare with bcrypt
+        return await bcrypt.compare(password, ADMIN_PASSWORD);
+    }
+
+    // MIGRATION: Plain text fallback - log warning
+    console.warn('⚠️  ADMIN_PASSWORD is not hashed. Hash it with: npx bcrypt-cli hash "yourpassword"');
     return password === ADMIN_PASSWORD;
 }
 
@@ -109,7 +116,7 @@ export function authMiddleware(req, res, next) {
 }
 
 // Login route handler
-export function loginHandler(req, res) {
+export async function loginHandler(req, res) {
     const { username, password } = req.body;
 
     if (!username || !password) {
@@ -117,7 +124,8 @@ export function loginHandler(req, res) {
     }
 
     // Security: Don't reveal whether username or password was wrong
-    if (!verifyCredentials(username, password)) {
+    const isValid = await verifyCredentials(username, password);
+    if (!isValid) {
         return res.status(401).json({ error: 'Invalid credentials' });
     }
 
