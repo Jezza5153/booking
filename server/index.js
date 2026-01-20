@@ -225,6 +225,18 @@ app.post('/api/book', bookingRateLimiter, async (req, res) => {
     try {
         await client.query('BEGIN');
 
+        // IDEMPOTENCY: Check for existing booking FIRST (before any counter updates)
+        if (idem) {
+            const existingBooking = await client.query(
+                'SELECT id FROM bookings WHERE idempotency_key = $1 LIMIT 1',
+                [idem]
+            );
+            if (existingBooking.rows.length > 0) {
+                await client.query('COMMIT');
+                console.log(`[${req.requestId}] Idempotent request - returning existing booking`);
+                return res.status(200).json({ success: true, booking_id: existingBooking.rows[0].id });
+            }
+        }
         // Lock slot + fetch capacities via zone
         const slotQ = await client.query(
             `SELECT s.id, s.zone_id, s.start_datetime,
