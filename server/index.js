@@ -599,15 +599,26 @@ app.post('/api/admin/save', async (req, res) => {
         const newZoneCount = (zones || []).length;
         const newEventCount = (events || []).length;
 
-        // SAFETY: Warn if deleting more than 50% of data
-        const zoneDeleteRatio = currentZoneCount > 0 ? (currentZoneCount - newZoneCount) / currentZoneCount : 0;
-        const eventDeleteRatio = currentEventCount > 0 ? (currentEventCount - newEventCount) / currentEventCount : 0;
+        // SAFETY: Calculate deletions
+        const zoneDeleteCount = Math.max(0, currentZoneCount - newZoneCount);
+        const eventDeleteCount = Math.max(0, currentEventCount - newEventCount);
+        const zoneDeleteRatio = currentZoneCount > 0 ? zoneDeleteCount / currentZoneCount : 0;
+        const eventDeleteRatio = currentEventCount > 0 ? eventDeleteCount / currentEventCount : 0;
 
-        if ((zoneDeleteRatio > 0.5 || eventDeleteRatio > 0.5) && !force) {
+        // SAFETY RAILS (Fix 5): Block dangerous deletions unless force=true
+        // Rule 1: Block if deleting >50% of data
+        // Rule 2: Block if deleting more than 2 events (absolute threshold)
+        // Rule 3: Block if deleting more than 5 zones (absolute threshold)
+        const isDangerousRatio = (zoneDeleteRatio > 0.5 || eventDeleteRatio > 0.5);
+        const isDangerousAbsolute = (eventDeleteCount > 2 || zoneDeleteCount > 5);
+
+        if ((isDangerousRatio || isDangerousAbsolute) && !force) {
             await client.query('ROLLBACK');
             return res.status(400).json({
-                error: 'Dangerous operation blocked. More than 50% of data would be deleted.',
-                warning: `Current: ${currentZoneCount} zones, ${currentEventCount} events. New: ${newZoneCount} zones, ${newEventCount} events.`,
+                error: 'Dangerous operation blocked.',
+                warning: `Would delete ${eventDeleteCount} events and ${zoneDeleteCount} zones.`,
+                current: { zones: currentZoneCount, events: currentEventCount },
+                new: { zones: newZoneCount, events: newEventCount },
                 hint: 'Send force=true to confirm this operation.'
             });
         }

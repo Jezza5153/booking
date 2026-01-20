@@ -1,20 +1,25 @@
+// Types matching the persisted database schema
+// These types represent what is STORED, not what is DISPLAYED
+
 export interface Wijk {
   id: string;
   name: string;
-  // Table Inventory
-  count2tops: number; // Max 2 people
-  count4tops: number; // 3-4 people
-  count6tops: number; // 5-6 people
+  // Table Inventory (maps to DB capacity_X_tops columns)
+  count2tops: number;
+  count4tops: number;
+  count6tops: number;
 }
 
 export interface Slot {
   id: string;
-  date: string; // e.g., "Ma 12 okt"
-  time: string; // e.g., "19:00"
+  // PERSISTENCE: ISO 8601 date string (YYYY-MM-DD) - NOT display format
+  // The display format "Ma 12 okt" is derived in UI, not stored
+  date: string;
+  time: string; // HH:MM format, e.g., "19:00"
   isNextAvailable?: boolean;
-  wijkId?: string; // Links to a Wijk
-  
-  // Current Booking State
+  wijkId?: string; // Links to a Wijk/Zone
+
+  // Current Booking State (from DB booked_count_X_tops)
   booked2tops: number;
   booked4tops: number;
   booked6tops: number;
@@ -24,4 +29,16 @@ export interface EventData {
   id: string;
   title: string;
   slots: Slot[];
+}
+
+// Type for what the backend actually stores (start_datetime as full ISO)
+export interface SlotPersisted {
+  id: string;
+  event_id: string;
+  zone_id: string;
+  start_datetime: string; // Full ISO 8601: "2026-01-20T18:00:00.000Z"
+  is_highlighted: boolean;
+  booked_count_2_tops: number;
+  booked_count_4_tops: number;
+  booked_count_6_tops: number;
 }

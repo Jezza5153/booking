@@ -11,9 +11,10 @@ interface AdminDashboardProps {
   onDeleteEvent: (id: string) => void;
   wijken: Wijk[];
   setWijken: React.Dispatch<React.SetStateAction<Wijk[]>>;
+  onRefresh?: () => Promise<void>; // CRITICAL: refetch from server after save
 }
 
-export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvents, onAddEvent, onDeleteEvent, wijken, setWijken }) => {
+export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvents, onAddEvent, onDeleteEvent, wijken, setWijken, onRefresh }) => {
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [saveMessage, setSaveMessage] = useState('');
@@ -28,6 +29,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
         zones: wijken,
         events: events
       });
+
+      // CRITICAL FIX: Rehydrate state from server to prevent drift
+      if (onRefresh) {
+        await onRefresh();
+      }
+
       setSaveStatus('success');
       setSaveMessage('Changes saved successfully!');
       setTimeout(() => setSaveStatus('idle'), 3000);
@@ -84,9 +91,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
     setEvents(prev => prev.map(event => {
       if (event.id !== eventId) return event;
       const defaultWijk = wijken[0];
+
+      // FIX: Build date in Amsterdam local time to prevent midnight shift
+      // new Date().toISOString().split('T')[0] is UTC and can shift the day around midnight
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const localDate = `${year}-${month}-${day}`; // Local YYYY-MM-DD
+
       const newSlot: Slot = {
         id: `s-${Date.now()}`,
-        date: new Date().toISOString().split('T')[0], // ISO date format: YYYY-MM-DD
+        date: localDate,
         time: '18:00',
         booked2tops: 0,
         booked4tops: 0,

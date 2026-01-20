@@ -238,6 +238,7 @@ const App: React.FC = () => {
               onDeleteEvent={handleDeleteEvent}
               wijken={wijken}
               setWijken={setWijken}
+              onRefresh={loadDataFromAPI}
             />
           </div>
         )}
