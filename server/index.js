@@ -381,6 +381,20 @@ app.get('/api/admin/events', async (req, res) => {
     }
 });
 
+// Clear all events and slots (Admin - for fresh start)
+app.delete('/api/admin/clear', async (req, res) => {
+    try {
+        // Delete in order: slots -> events (due to foreign keys)
+        await pool.query('DELETE FROM slots');
+        await pool.query('DELETE FROM events');
+        console.log('✅ All events and slots cleared');
+        res.json({ success: true, message: 'All events and slots cleared' });
+    } catch (error) {
+        console.error('Clear failed:', error.message);
+        res.status(500).json({ error: 'Failed to clear data' });
+    }
+});
+
 // Save zones and events (Admin)
 app.post('/api/admin/save', async (req, res) => {
     const { restaurantId, zones, events } = req.body;
