@@ -395,7 +395,7 @@ app.delete('/api/admin/clear', async (req, res) => {
     }
 });
 
-// Save zones and events (Admin)
+// Save zones and events (Admin) - FULL SYNC (delete missing, upsert present)
 app.post('/api/admin/save', async (req, res) => {
     const { restaurantId, zones, events } = req.body;
     const targetRestaurantId = restaurantId || 'demo-restaurant';
@@ -404,78 +404,80 @@ app.post('/api/admin/save', async (req, res) => {
     try {
         await client.query('BEGIN');
 
-        // Update zones
+        // --- ZONES: Upsert all zones from payload ---
+        const zoneIds = (zones || []).map(z => z.id);
         for (const zone of zones || []) {
-            const existingZone = await client.query('SELECT id FROM zones WHERE id = $1', [zone.id]);
-
-            if (existingZone.rows.length > 0) {
-                // Update existing zone
-                await client.query(
-                    `UPDATE zones SET name = $1, capacity_2_tops = $2, capacity_4_tops = $3, capacity_6_tops = $4 WHERE id = $5`,
-                    [zone.name, zone.count2tops || 0, zone.count4tops || 0, zone.count6tops || 0, zone.id]
-                );
-            } else {
-                // Insert new zone
-                await client.query(
-                    `INSERT INTO zones (id, restaurant_id, name, capacity_2_tops, capacity_4_tops, capacity_6_tops) VALUES ($1, $2, $3, $4, $5, $6)`,
-                    [zone.id, targetRestaurantId, zone.name, zone.count2tops || 0, zone.count4tops || 0, zone.count6tops || 0]
-                );
-            }
+            await client.query(
+                `INSERT INTO zones (id, restaurant_id, name, capacity_2_tops, capacity_4_tops, capacity_6_tops)
+                 VALUES ($1, $2, $3, $4, $5, $6)
+                 ON CONFLICT (id) DO UPDATE SET
+                   name = $3, capacity_2_tops = $4, capacity_4_tops = $5, capacity_6_tops = $6`,
+                [zone.id, targetRestaurantId, zone.name, zone.count2tops || 0, zone.count4tops || 0, zone.count6tops || 0]
+            );
         }
 
-        // Update events
-        for (const event of events || []) {
-            const existingEvent = await client.query('SELECT id FROM events WHERE id = $1', [event.id]);
+        // --- EVENTS: Get current event IDs then delete those not in payload ---
+        const eventIds = (events || []).map(e => e.id);
+        if (eventIds.length > 0) {
+            // Delete events NOT in the payload
+            await client.query(
+                `DELETE FROM slots WHERE event_id IN (SELECT id FROM events WHERE restaurant_id = $1 AND id != ALL($2::text[]))`,
+                [targetRestaurantId, eventIds]
+            );
+            await client.query(
+                `DELETE FROM events WHERE restaurant_id = $1 AND id != ALL($2::text[])`,
+                [targetRestaurantId, eventIds]
+            );
+        } else {
+            // No events in payload = delete all
+            await client.query(`DELETE FROM slots WHERE event_id IN (SELECT id FROM events WHERE restaurant_id = $1)`, [targetRestaurantId]);
+            await client.query(`DELETE FROM events WHERE restaurant_id = $1`, [targetRestaurantId]);
+        }
 
-            if (existingEvent.rows.length > 0) {
-                // Update existing event
+        // --- EVENTS: Upsert each event ---
+        for (const event of events || []) {
+            await client.query(
+                `INSERT INTO events (id, restaurant_id, title, is_active)
+                 VALUES ($1, $2, $3, true)
+                 ON CONFLICT (id) DO UPDATE SET title = $3`,
+                [event.id, targetRestaurantId, event.title]
+            );
+
+            // --- SLOTS: For this event, sync slots ---
+            const slotIds = (event.slots || []).map(s => s.id);
+            if (slotIds.length > 0) {
+                // Delete slots NOT in this event's payload
                 await client.query(
-                    `UPDATE events SET title = $1 WHERE id = $2`,
-                    [event.title, event.id]
+                    `DELETE FROM slots WHERE event_id = $1 AND id != ALL($2::text[])`,
+                    [event.id, slotIds]
                 );
             } else {
-                // Insert new event
-                await client.query(
-                    `INSERT INTO events (id, restaurant_id, title, is_active) VALUES ($1, $2, $3, true)`,
-                    [event.id, targetRestaurantId, event.title]
-                );
+                // No slots = delete all for this event
+                await client.query(`DELETE FROM slots WHERE event_id = $1`, [event.id]);
             }
 
-            // Handle slots for this event
+            // Upsert each slot
             for (const slot of event.slots || []) {
-                const existingSlot = await client.query('SELECT id FROM slots WHERE id = $1', [slot.id]);
-
-                // Parse date/time to datetime
                 const startDatetime = parseSlotDateTime(slot.date, slot.time);
-
-                if (existingSlot.rows.length > 0) {
-                    // Update existing slot
-                    await client.query(
-                        `UPDATE slots SET zone_id = $1, start_datetime = $2, is_highlighted = $3, 
-                         booked_count_2_tops = $4, booked_count_4_tops = $5, booked_count_6_tops = $6 
-                         WHERE id = $7`,
-                        [slot.wijkId, startDatetime, slot.isNextAvailable || false,
-                        slot.booked2tops || 0, slot.booked4tops || 0, slot.booked6tops || 0, slot.id]
-                    );
-                } else {
-                    // Insert new slot
-                    await client.query(
-                        `INSERT INTO slots (id, event_id, zone_id, start_datetime, is_highlighted, 
-                         booked_count_2_tops, booked_count_4_tops, booked_count_6_tops) 
-                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-                        [slot.id, event.id, slot.wijkId, startDatetime, slot.isNextAvailable || false,
-                        slot.booked2tops || 0, slot.booked4tops || 0, slot.booked6tops || 0]
-                    );
-                }
+                await client.query(
+                    `INSERT INTO slots (id, event_id, zone_id, start_datetime, is_highlighted, booked_count_2_tops, booked_count_4_tops, booked_count_6_tops)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                     ON CONFLICT (id) DO UPDATE SET
+                       zone_id = $3, start_datetime = $4, is_highlighted = $5,
+                       booked_count_2_tops = $6, booked_count_4_tops = $7, booked_count_6_tops = $8`,
+                    [slot.id, event.id, slot.wijkId, startDatetime, slot.isNextAvailable || false,
+                    slot.booked2tops || 0, slot.booked4tops || 0, slot.booked6tops || 0]
+                );
             }
         }
 
         await client.query('COMMIT');
+        console.log('✅ Admin save: synced', (events || []).length, 'events');
         res.json({ success: true, message: 'Changes saved successfully' });
     } catch (error) {
         await client.query('ROLLBACK');
-        console.error('Save error:', error.message); // Log without full stack in prod
-        res.status(500).json({ error: 'Failed to save changes' }); // Don't leak details
+        console.error('Save error:', error.message);
+        res.status(500).json({ error: 'Failed to save changes' });
     } finally {
         client.release();
     }
