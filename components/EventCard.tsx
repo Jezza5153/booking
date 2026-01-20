@@ -118,17 +118,8 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
       // Silent refresh in background (no loading overlay for user)
       onBookingComplete?.()
 
-      setTimeout(() => {
-        setSelectedSlotId(null)
-        setSelectedTableType(null)
-        setGuestCount(null)
-        setCustomerName("")
-        setCustomerEmail("")
-        setCustomerPhone("")
-        setCustomerRemarks("")
-        setBookingSuccess(false)
-        setBookingResponse(null)
-      }, 2500)
+      // REMOVED: Auto-close timeout - let user view and close manually
+      // The confirmation screen now stays until user clicks "Sluiten"
     } catch (error: any) {
       setBookingError(error?.message || "Reserveren lukt nu even niet. Probeer het opnieuw.")
     } finally {
