@@ -1,11 +1,20 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import crypto from 'crypto';
 import pool from './db-postgres.js';
 import { loginHandler, authMiddleware, loginRateLimiter, bookingRateLimiter, widgetRateLimiter } from './auth.js';
 import { sendBookingConfirmation } from './email.js';
 
 dotenv.config();
+
+// ============================================
+// NON-NEGOTIABLE: Fail fast if JWT_SECRET missing
+// ============================================
+if (!process.env.JWT_SECRET) {
+    console.error('❌ FATAL: JWT_SECRET environment variable is required');
+    process.exit(1);
+}
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -13,6 +22,10 @@ const PORT = process.env.PORT || 3001;
 // ============================================
 // SECURITY: Middleware
 // ============================================
+
+// Trust proxy for Cloudflare + Railway (required for rate limiting to work correctly)
+app.set('trust proxy', 1);
+
 app.use(cors());
 app.use(express.json({ limit: '16kb' }));
 
@@ -149,160 +162,153 @@ setInterval(() => {
 }, 60 * 1000);
 
 // POST /api/book - Book a table (public, rate limited)
+// Uses atomic capacity update and DB-level idempotency
 app.post('/api/book', bookingRateLimiter, async (req, res) => {
     const { slot_id, table_type, guest_count, customer_name, customer_email, customer_phone, remarks, idempotency_key, _hp_field } = req.body;
 
     // SECURITY: Honeypot field - bots fill this, humans don't
     if (_hp_field) {
         console.log(`[${req.requestId}] Bot detected via honeypot`);
-        // Silently accept but do nothing (confuse bots)
         return res.status(201).json({ success: true, message: 'Booking confirmed' });
     }
 
-    // Input validation
+    // Input validation with proper 422 responses
+    const name = (customer_name || '').trim();
+    if (!name) return res.status(422).json({ error: 'customer_name is required' });
+    if (name.length > 120) return res.status(422).json({ error: 'customer_name too long' });
+
+    const email = (customer_email || '').trim();
+    if (email && email.length > 254) return res.status(422).json({ error: 'customer_email too long' });
+
+    const phone = (customer_phone || '').trim();
+    if (phone && phone.length > 30) return res.status(422).json({ error: 'customer_phone too long' });
+
+    const note = (remarks || '').trim();
+    if (note && note.length > 1000) return res.status(422).json({ error: 'remarks too long' });
+
     if (!slot_id || typeof slot_id !== 'string' || slot_id.length > 64) {
-        return res.status(400).json({ error: 'Invalid slot_id' });
+        return res.status(422).json({ error: 'slot_id is required' });
     }
     if (!['2', '4', '6'].includes(table_type)) {
-        return res.status(400).json({ error: 'Invalid table_type, must be 2, 4, or 6' });
+        return res.status(422).json({ error: 'table_type must be 2, 4, or 6' });
     }
-    if (!guest_count || typeof guest_count !== 'number' || guest_count < 1 || guest_count > 12) {
-        return res.status(400).json({ error: 'Invalid guest_count, must be 1-12' });
-    }
-    if (!customer_name || typeof customer_name !== 'string' || customer_name.trim().length < 1) {
-        return res.status(400).json({ error: 'Customer name is required' });
+    if (!guest_count || typeof guest_count !== 'number' || guest_count < 1 || guest_count > 20) {
+        return res.status(422).json({ error: 'guest_count must be 1-20' });
     }
 
-    // IDEMPOTENCY: Check for duplicate request
-    if (idempotency_key && typeof idempotency_key === 'string') {
-        const cached = idempotencyCache.get(idempotency_key);
-        if (cached) {
-            console.log(`[${req.requestId}] Idempotent request, returning cached response`);
-            return res.status(cached.status).json(cached.body);
-        }
-    }
+    const idem = (idempotency_key || '').trim() || null;
 
     const client = await pool.connect();
     try {
-        // Use SERIALIZABLE isolation for booking atomicity
-        await client.query('BEGIN ISOLATION LEVEL SERIALIZABLE');
+        await client.query('BEGIN');
 
-        // Get slot with zone capacity - with row lock
-        const slotResult = await client.query(
-            `SELECT s.*, z.capacity_2_tops, z.capacity_4_tops, z.capacity_6_tops, e.restaurant_id
-       FROM slots s
-       JOIN zones z ON s.zone_id = z.id
-       JOIN events e ON s.event_id = e.id
-       WHERE s.id = $1
-       FOR UPDATE OF s`, // Row lock
+        // Lock slot + fetch capacities via zone
+        const slotQ = await client.query(
+            `SELECT s.id, s.zone_id, s.start_datetime,
+                    s.booked_count_2_tops, s.booked_count_4_tops, s.booked_count_6_tops,
+                    z.capacity_2_tops, z.capacity_4_tops, z.capacity_6_tops,
+                    e.restaurant_id, e.title as event_title, z.name as zone_name
+             FROM slots s
+             JOIN zones z ON z.id = s.zone_id
+             JOIN events e ON e.id = s.event_id
+             WHERE s.id = $1
+             FOR UPDATE`,
             [slot_id]
         );
 
-        if (slotResult.rows.length === 0) {
+        if (slotQ.rowCount === 0) {
             await client.query('ROLLBACK');
-            return res.status(404).json({ error: 'Slot not found' });
+            return res.status(404).json({ error: 'slot not found' });
         }
 
-        const slot = slotResult.rows[0];
+        const slot = slotQ.rows[0];
 
-        // SECURITY: Prevent booking in the past
+        // Prevent booking in the past
         const slotTime = new Date(slot.start_datetime);
-        const now = new Date();
-        if (slotTime < now) {
+        if (slotTime < new Date()) {
             await client.query('ROLLBACK');
-            return res.status(422).json({ error: 'Cannot book a slot in the past' });
+            return res.status(422).json({ error: 'cannot book a slot in the past' });
         }
 
-        let canBook = false;
-        let updateField = '';
+        // Determine column and capacity
+        const col =
+            table_type === '2' ? 'booked_count_2_tops' :
+                table_type === '4' ? 'booked_count_4_tops' :
+                    table_type === '6' ? 'booked_count_6_tops' : null;
 
-        if (table_type === '2') {
-            canBook = slot.booked_count_2_tops < slot.capacity_2_tops;
-            updateField = 'booked_count_2_tops';
-        } else if (table_type === '4') {
-            canBook = slot.booked_count_4_tops < slot.capacity_4_tops;
-            updateField = 'booked_count_4_tops';
-        } else if (table_type === '6') {
-            canBook = slot.booked_count_6_tops < slot.capacity_6_tops;
-            updateField = 'booked_count_6_tops';
-        } else {
+        const cap =
+            table_type === '2' ? slot.capacity_2_tops :
+                table_type === '4' ? slot.capacity_4_tops :
+                    table_type === '6' ? slot.capacity_6_tops : null;
+
+        if (!col || cap == null) {
             await client.query('ROLLBACK');
-            return res.status(400).json({ error: 'Invalid table_type' });
+            return res.status(422).json({ error: 'invalid table_type' });
         }
 
-        if (!canBook) {
+        // ATOMIC capacity update - only succeeds if capacity remains
+        const upd = await client.query(
+            `UPDATE slots SET ${col} = ${col} + 1 WHERE id = $1 AND ${col} < $2 RETURNING id`,
+            [slot_id, cap]
+        );
+
+        if (upd.rowCount === 0) {
             await client.query('ROLLBACK');
-            return res.status(409).json({ error: 'No availability for this table size' });
+            return res.status(409).json({ error: 'capacity exceeded' });
         }
 
-        await client.query(
-            `UPDATE slots SET ${updateField} = ${updateField} + 1 WHERE id = $1`,
-            [slot_id]
-        );
+        // Generate booking ID
+        const bookingId = crypto.randomUUID();
 
-        // Generate unique booking ID
-        const bookingId = `bkg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-        // Insert booking record for audit trail
-        await client.query(
-            `INSERT INTO bookings (id, restaurant_id, slot_id, table_type, guest_count, customer_name, customer_email, customer_phone, remarks, idempotency_key)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-            [
-                bookingId,
-                slot.restaurant_id,
-                slot_id,
-                table_type,
-                guest_count,
-                sanitizeString(customer_name, 100),
-                customer_email || null,
-                customer_phone ? sanitizeString(customer_phone, 20) : null,
-                remarks ? sanitizeString(remarks, 500) : null,
-                idempotency_key || null
-            ]
-        );
-
-        const restaurantResult = await client.query(
-            'SELECT handoff_url_base FROM restaurants WHERE id = $1',
-            [slot.restaurant_id]
-        );
+        // Insert booking record (idempotency via unique index)
+        let insertedBookingId;
+        try {
+            const inserted = await client.query(
+                `INSERT INTO bookings (id, restaurant_id, slot_id, table_type, guest_count,
+                                       customer_name, customer_email, customer_phone, remarks, idempotency_key)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                 RETURNING id`,
+                [bookingId, slot.restaurant_id, slot_id, table_type, guest_count,
+                    name, email || null, phone || null, note || null, idem]
+            );
+            insertedBookingId = inserted.rows[0].id;
+        } catch (e) {
+            // If idempotency conflict (unique violation), fetch existing booking
+            if (idem && String(e.code) === '23505') {
+                const existing = await client.query(
+                    'SELECT id FROM bookings WHERE idempotency_key = $1 LIMIT 1',
+                    [idem]
+                );
+                await client.query('COMMIT');
+                console.log(`[${req.requestId}] Idempotent request, returning existing booking`);
+                return res.status(200).json({ success: true, booking_id: existing.rows[0]?.id });
+            }
+            throw e;
+        }
 
         await client.query('COMMIT');
 
-        console.log(`[${req.requestId}] Booking ${bookingId} created for slot ${slot_id}`);
+        console.log(`[${req.requestId}] Booking ${insertedBookingId} created for slot ${slot_id}`);
 
-        // Send booking confirmation emails (non-blocking)
+        // Send emails async (never block response)
         sendBookingConfirmation({
-            customerName: sanitizeString(customer_name, 100),
-            customerEmail: customer_email,
-            customerPhone: customer_phone ? sanitizeString(customer_phone, 20) : null,
-            remarks: remarks ? sanitizeString(remarks, 500) : null,
+            customerName: name,
+            customerEmail: email || null,
+            customerPhone: phone || null,
+            remarks: note || null,
             eventTitle: slot.event_title || 'Event',
-            slotTime: new Date(slot.start_datetime).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }),
-            slotDate: new Date(slot.start_datetime).toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' }),
+            slotTime: slotTime.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }),
+            slotDate: slotTime.toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' }),
             guestCount: guest_count,
             tableType: table_type,
             zoneName: slot.zone_name || 'Main',
         }).catch(err => console.error('Email sending failed:', err));
 
-        const responseBody = {
-            success: true,
-            message: `Booking confirmed for ${guest_count} guests`
-        };
-
-        // Store in idempotency cache
-        if (idempotency_key) {
-            idempotencyCache.set(idempotency_key, {
-                status: 201,
-                body: responseBody,
-                expiresAt: Date.now() + IDEMPOTENCY_TTL_MS
-            });
-        }
-
-        res.status(201).json(responseBody);
+        return res.status(201).json({ success: true, booking_id: insertedBookingId });
     } catch (error) {
         await client.query('ROLLBACK');
         console.error(`[${req.requestId}] Booking error:`, error.message);
-        res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({ error: 'internal error' });
     } finally {
         client.release();
     }
@@ -421,6 +427,87 @@ app.delete('/api/admin/clear', async (req, res) => {
     } catch (error) {
         console.error('Clear failed:', error.message);
         res.status(500).json({ error: 'Failed to clear data' });
+    }
+});
+
+// Cancel a booking (Admin only) - marks cancelled, decrements slot counter
+app.post('/api/admin/bookings/:id/cancel', async (req, res) => {
+    const bookingId = req.params.id;
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // Get and lock the booking
+        const bookingResult = await client.query(
+            `SELECT b.*, s.booked_count_2_tops, s.booked_count_4_tops, s.booked_count_6_tops
+             FROM bookings b
+             JOIN slots s ON s.id = b.slot_id
+             WHERE b.id = $1
+             FOR UPDATE OF b`,
+            [bookingId]
+        );
+
+        if (bookingResult.rowCount === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: 'booking not found' });
+        }
+
+        const booking = bookingResult.rows[0];
+
+        if (booking.status === 'cancelled') {
+            await client.query('ROLLBACK');
+            return res.status(409).json({ error: 'booking already cancelled' });
+        }
+
+        // Mark as cancelled
+        await client.query(
+            `UPDATE bookings SET status = 'cancelled', cancelled_at = now() WHERE id = $1`,
+            [bookingId]
+        );
+
+        // Decrement slot counter (only if currently > 0)
+        const col =
+            booking.table_type === '2' ? 'booked_count_2_tops' :
+                booking.table_type === '4' ? 'booked_count_4_tops' :
+                    booking.table_type === '6' ? 'booked_count_6_tops' : null;
+
+        if (col) {
+            await client.query(
+                `UPDATE slots SET ${col} = GREATEST(0, ${col} - 1) WHERE id = $1`,
+                [booking.slot_id]
+            );
+        }
+
+        await client.query('COMMIT');
+        console.log(`[${req.requestId}] Booking ${bookingId} cancelled`);
+
+        return res.status(200).json({ success: true, message: 'Booking cancelled' });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error(`[${req.requestId}] Cancel error:`, error.message);
+        return res.status(500).json({ error: 'internal error' });
+    } finally {
+        client.release();
+    }
+});
+
+// Get all bookings for admin view
+app.get('/api/admin/bookings', async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT b.*, s.start_datetime, e.title as event_title, z.name as zone_name
+             FROM bookings b
+             JOIN slots s ON s.id = b.slot_id
+             JOIN events e ON e.id = s.event_id
+             JOIN zones z ON z.id = s.zone_id
+             ORDER BY b.created_at DESC
+             LIMIT 100`
+        );
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Bookings fetch error:', error.message);
+        res.status(500).json({ error: 'Failed to fetch bookings' });
     }
 });
 
