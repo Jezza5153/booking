@@ -65,17 +65,13 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
         onBookingComplete();
       }
 
-      // Redirect after short delay
+      // Show success and reset after delay (no redirect)
       setTimeout(() => {
-        if (result.handoff_url) {
-          window.open(result.handoff_url, '_blank');
-        }
-        // Reset state
         setSelectedSlotId(null);
         setSelectedTableType(null);
         setGuestCount(null);
         setBookingSuccess(false);
-      }, 1500);
+      }, 3000);
 
     } catch (error: any) {
       setBookingError(error.message || 'Booking failed. Please try again.');
@@ -146,7 +142,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
                 <CheckCircle className="w-10 h-10 text-emerald-600" />
               </div>
               <div className="text-lg font-bold text-emerald-700">Booking Confirmed!</div>
-              <div className="text-sm text-gray-500">Redirecting...</div>
+              <div className="text-sm text-gray-500">You're all set 🎉</div>
             </div>
           )}
 
