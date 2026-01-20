@@ -173,7 +173,7 @@ const App: React.FC = () => {
 
               {/* The Live Widget Instance */}
               <div className="bg-white rounded-3xl border border-gray-200 shadow-2xl shadow-gray-200 overflow-hidden relative min-h-[600px] h-[600px]">
-                <EventsWidget events={events} wijken={wijken} />
+                <EventsWidget events={events} wijken={wijken} useApi={true} />
               </div>
 
               <div className="absolute -bottom-6 right-4 text-xs font-mono text-gray-400 select-none">

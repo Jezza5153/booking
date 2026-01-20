@@ -47,3 +47,29 @@ export function getCalendarUrl(restaurantId: string, bookedOnly: boolean = false
     const url = `${API_BASE_URL}/api/calendar/${restaurantId}.ics`;
     return bookedOnly ? `${url}?booked_only=true` : url;
 }
+
+// Save admin data (zones and events)
+export interface SaveAdminDataRequest {
+    restaurantId: string;
+    zones: any[];
+    events: any[];
+}
+
+export async function saveAdminData(data: SaveAdminDataRequest): Promise<{ success: boolean; message: string }> {
+    const token = localStorage.getItem('events_token');
+    const response = await fetch(`${API_BASE_URL}/api/admin/save`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Save failed');
+    }
+
+    return response.json();
+}

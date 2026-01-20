@@ -272,6 +272,118 @@ app.get('/api/admin/events', async (req, res) => {
     }
 });
 
+// Save zones and events (Admin)
+app.post('/api/admin/save', async (req, res) => {
+    const { restaurantId, zones, events } = req.body;
+    const targetRestaurantId = restaurantId || 'demo-restaurant';
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // Update zones
+        for (const zone of zones || []) {
+            const existingZone = await client.query('SELECT id FROM zones WHERE id = $1', [zone.id]);
+
+            if (existingZone.rows.length > 0) {
+                // Update existing zone
+                await client.query(
+                    `UPDATE zones SET name = $1, capacity_2_tops = $2, capacity_4_tops = $3, capacity_6_tops = $4 WHERE id = $5`,
+                    [zone.name, zone.count2tops || 0, zone.count4tops || 0, zone.count6tops || 0, zone.id]
+                );
+            } else {
+                // Insert new zone
+                await client.query(
+                    `INSERT INTO zones (id, restaurant_id, name, capacity_2_tops, capacity_4_tops, capacity_6_tops) VALUES ($1, $2, $3, $4, $5, $6)`,
+                    [zone.id, targetRestaurantId, zone.name, zone.count2tops || 0, zone.count4tops || 0, zone.count6tops || 0]
+                );
+            }
+        }
+
+        // Update events
+        for (const event of events || []) {
+            const existingEvent = await client.query('SELECT id FROM events WHERE id = $1', [event.id]);
+
+            if (existingEvent.rows.length > 0) {
+                // Update existing event
+                await client.query(
+                    `UPDATE events SET title = $1 WHERE id = $2`,
+                    [event.title, event.id]
+                );
+            } else {
+                // Insert new event
+                await client.query(
+                    `INSERT INTO events (id, restaurant_id, title, is_active) VALUES ($1, $2, $3, true)`,
+                    [event.id, targetRestaurantId, event.title]
+                );
+            }
+
+            // Handle slots for this event
+            for (const slot of event.slots || []) {
+                const existingSlot = await client.query('SELECT id FROM slots WHERE id = $1', [slot.id]);
+
+                // Parse date/time to datetime
+                const startDatetime = parseSlotDateTime(slot.date, slot.time);
+
+                if (existingSlot.rows.length > 0) {
+                    // Update existing slot
+                    await client.query(
+                        `UPDATE slots SET zone_id = $1, start_datetime = $2, is_highlighted = $3, 
+                         booked_count_2_tops = $4, booked_count_4_tops = $5, booked_count_6_tops = $6 
+                         WHERE id = $7`,
+                        [slot.wijkId, startDatetime, slot.isNextAvailable || false,
+                        slot.booked2tops || 0, slot.booked4tops || 0, slot.booked6tops || 0, slot.id]
+                    );
+                } else {
+                    // Insert new slot
+                    await client.query(
+                        `INSERT INTO slots (id, event_id, zone_id, start_datetime, is_highlighted, 
+                         booked_count_2_tops, booked_count_4_tops, booked_count_6_tops) 
+                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+                        [slot.id, event.id, slot.wijkId, startDatetime, slot.isNextAvailable || false,
+                        slot.booked2tops || 0, slot.booked4tops || 0, slot.booked6tops || 0]
+                    );
+                }
+            }
+        }
+
+        await client.query('COMMIT');
+        res.json({ success: true, message: 'Changes saved successfully' });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Save error:', error);
+        res.status(500).json({ error: 'Failed to save changes', details: error.message });
+    } finally {
+        client.release();
+    }
+});
+
+// Helper function to parse Dutch date format
+function parseSlotDateTime(dateStr, timeStr) {
+    try {
+        // Handle formats like "Di 20 jan" or "Ma 14 okt"
+        const months = {
+            'jan': 0, 'feb': 1, 'mrt': 2, 'apr': 3, 'mei': 4, 'jun': 5,
+            'jul': 6, 'aug': 7, 'sep': 8, 'okt': 9, 'nov': 10, 'dec': 11
+        };
+        const parts = dateStr.split(' ');
+        if (parts.length >= 3) {
+            const day = parseInt(parts[1]);
+            const month = months[parts[2].toLowerCase()] ?? 0;
+            const year = new Date().getFullYear();
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            return new Date(year, month, day, hours, minutes);
+        }
+        // Fallback: return current date with the time
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        const now = new Date();
+        now.setHours(hours, minutes, 0, 0);
+        return now;
+    } catch (e) {
+        return new Date();
+    }
+}
+
 // Start server
 app.listen(PORT, () => {
     console.log(`🚀 EVENTS API server running on http://localhost:${PORT}`);
