@@ -64,7 +64,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
   };
 
   const handleUpdateWijk = (id: string, field: keyof Wijk, value: any) => {
-    setWijken(wijken.map(w => w.id === id ? { ...w, [field]: value } : w));
+    setWijken(wijken.map(w => {
+      if (w.id !== id) return w;
+
+      // Create updated zone with the new field value
+      const updated = { ...w, [field]: value };
+
+      // If a table count changed, recalculate maxCouverts IF it was auto-calculated
+      if (field === 'count2tops' || field === 'count4tops' || field === 'count6tops') {
+        const oldCalculated = (w.count2tops * 2) + (w.count4tops * 4) + (w.count6tops * 6);
+        const newCalculated = (updated.count2tops * 2) + (updated.count4tops * 4) + (updated.count6tops * 6);
+
+        // If maxCouverts was equal to calculated value, keep it in sync
+        // Otherwise user has manually set a different value, so leave it
+        if (!w.maxCouverts || w.maxCouverts === oldCalculated) {
+          updated.maxCouverts = newCalculated;
+        }
+      }
+
+      return updated;
+    }));
   };
 
   const handleDeleteWijk = (id: string) => {

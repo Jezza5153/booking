@@ -196,6 +196,80 @@ setInterval(() => {
     }
 }, 60 * 1000);
 
+// ============================================
+// TABLE ALLOCATION: Greedy algorithm for large groups
+// ============================================
+// Finds optimal table combination for guest_count
+// Returns: { tables: [{seats: 6, count: 1}, {seats: 4, count: 1}], totalSeats: 10 } or null if impossible
+function allocateTables(guestCount, available2, available4, available6) {
+    // Greedy: prefer larger tables first to minimize table count
+    const tables = [];
+    let remaining = guestCount;
+
+    // Use 6-tops first
+    const need6 = Math.min(Math.floor(remaining / 6), available6);
+    if (need6 > 0) {
+        tables.push({ seats: 6, count: need6 });
+        remaining -= need6 * 6;
+    }
+
+    // Use 4-tops next
+    const need4 = Math.min(Math.floor(remaining / 4), available4);
+    if (need4 > 0) {
+        tables.push({ seats: 4, count: need4 });
+        remaining -= need4 * 4;
+    }
+
+    // Use 2-tops for remainder
+    const need2 = Math.min(Math.ceil(remaining / 2), available2);
+    if (need2 > 0) {
+        tables.push({ seats: 2, count: need2 });
+        remaining -= need2 * 2;
+    }
+
+    // Check if we can fit everyone (allow slight overflow from last table)
+    if (remaining > 0) {
+        // Not enough tables - try different approach with partial 4-top or 6-top
+        // Reset and try filling with partial larger tables
+        remaining = guestCount;
+        tables.length = 0;
+
+        // Calculate minimum tables needed with overfill allowed
+        let use6 = Math.min(Math.ceil(remaining / 6), available6);
+        if (use6 * 6 >= remaining) {
+            tables.push({ seats: 6, count: use6 });
+            remaining = 0;
+        } else {
+            if (use6 > 0) {
+                tables.push({ seats: 6, count: use6 });
+                remaining -= use6 * 6;
+            }
+            let use4 = Math.min(Math.ceil(remaining / 4), available4);
+            if (use4 * 4 >= remaining) {
+                tables.push({ seats: 4, count: use4 });
+                remaining = 0;
+            } else {
+                if (use4 > 0) {
+                    tables.push({ seats: 4, count: use4 });
+                    remaining -= use4 * 4;
+                }
+                let use2 = Math.min(Math.ceil(remaining / 2), available2);
+                if (use2 * 2 >= remaining) {
+                    tables.push({ seats: 2, count: use2 });
+                    remaining = 0;
+                }
+            }
+        }
+    }
+
+    if (remaining > 0) {
+        return null; // Cannot allocate - not enough tables
+    }
+
+    const totalSeats = tables.reduce((sum, t) => sum + t.seats * t.count, 0);
+    return { tables, totalSeats };
+}
+
 // POST /api/book - Book a table (public, rate limited)
 // Uses atomic capacity update and DB-level idempotency
 // Supports both regular bookings (1-6) and large groups (7+)
@@ -300,7 +374,14 @@ app.post('/api/book', bookingRateLimiter, async (req, res) => {
             return res.status(409).json({ error: 'max_couverts exceeded for this slot' });
         }
 
-        // For regular bookings: check and update table counters
+        // Calculate available tables
+        const available2 = slot.capacity_2_tops - slot.booked_count_2_tops;
+        const available4 = slot.capacity_4_tops - slot.booked_count_4_tops;
+        const available6 = slot.capacity_6_tops - slot.booked_count_6_tops;
+
+        let tablesAllocated = null;
+
+        // For regular bookings (1-6): check and update single table counter
         if (!isLargeGroup && effectiveTableType) {
             const col =
                 effectiveTableType === '2' ? 'booked_count_2_tops' :
@@ -327,6 +408,29 @@ app.post('/api/book', bookingRateLimiter, async (req, res) => {
                 await client.query('ROLLBACK');
                 return res.status(409).json({ error: 'capacity exceeded' });
             }
+        } else if (isLargeGroup) {
+            // For large groups (7+): auto-allocate tables using greedy algorithm
+            const allocation = allocateTables(guest_count, available2, available4, available6);
+
+            if (!allocation) {
+                await client.query('ROLLBACK');
+                return res.status(409).json({ error: 'not enough tables available for this group size' });
+            }
+
+            tablesAllocated = allocation.tables;
+
+            // Update table counters for each allocated table type
+            for (const table of allocation.tables) {
+                const col = table.seats === 2 ? 'booked_count_2_tops' :
+                    table.seats === 4 ? 'booked_count_4_tops' : 'booked_count_6_tops';
+
+                await client.query(
+                    `UPDATE slots SET ${col} = ${col} + $1 WHERE id = $2`,
+                    [table.count, slot_id]
+                );
+            }
+
+            console.log(`[${req.requestId}] Large group (${guest_count}) allocated: ${JSON.stringify(allocation.tables)}`);
         }
 
         // Update current_couverts counter
@@ -338,17 +442,18 @@ app.post('/api/book', bookingRateLimiter, async (req, res) => {
         // Generate booking ID
         const bookingId = crypto.randomUUID();
 
-        // Insert booking record with is_large_group flag
+        // Insert booking record with is_large_group flag and tables_allocated
         let insertedBookingId;
         try {
             const inserted = await client.query(
                 `INSERT INTO bookings (id, restaurant_id, slot_id, table_type, guest_count,
                                        customer_name, customer_email, customer_phone, remarks, 
-                                       idempotency_key, is_large_group)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                                       idempotency_key, is_large_group, tables_allocated)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
                  RETURNING id`,
                 [bookingId, slot.restaurant_id, slot_id, effectiveTableType, guest_count,
-                    name, email || null, phone || null, note || null, idem, isLargeGroup]
+                    name, email || null, phone || null, note || null, idem, isLargeGroup,
+                    tablesAllocated ? JSON.stringify(tablesAllocated) : null]
             );
             insertedBookingId = inserted.rows[0].id;
         } catch (e) {
