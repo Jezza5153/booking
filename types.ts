@@ -8,6 +8,8 @@ export interface Wijk {
   count2tops: number;
   count4tops: number;
   count6tops: number;
+  // Maximum covers/seats per slot (optional - calculated from tables if not set)
+  maxCouverts?: number;
 }
 
 export interface Slot {

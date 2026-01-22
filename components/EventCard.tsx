@@ -13,10 +13,22 @@ interface EventCardProps {
 
 type TableType = "2" | "4" | "6" | "7+"
 
+// Helper: Calculate table type from guest count
+function guestCountToTableType(count: number): TableType {
+  if (count <= 2) return "2"
+  if (count <= 4) return "4"
+  if (count <= 6) return "6"
+  return "7+"
+}
+
 export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingComplete, bookingEmail }) => {
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null)
-  const [selectedTableType, setSelectedTableType] = useState<TableType | null>(null)
   const [guestCount, setGuestCount] = useState<number | null>(null)
+  const [largeGroupInput, setLargeGroupInput] = useState<string>("") // For 7+ groups
+
+  // Auto-calculate table type from guest count
+  const selectedTableType: TableType | null = guestCount ? guestCountToTableType(guestCount) : null
+  const isLargeGroup = guestCount && guestCount >= 7
 
   const [customerName, setCustomerName] = useState("")
   const [customerEmail, setCustomerEmail] = useState("")
@@ -55,23 +67,49 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
   const handleSlotClick = (id: string) => {
     if (selectedSlotId === id) {
       setSelectedSlotId(null)
-      setSelectedTableType(null)
       setGuestCount(null)
+      setLargeGroupInput("")
       setBookingError(null)
       setBookingSuccess(false)
       return
     }
     setSelectedSlotId(id)
-    setSelectedTableType(null)
     setGuestCount(null)
+    setLargeGroupInput("")
     setBookingError(null)
     setBookingSuccess(false)
   }
 
-  const handleTableTypeSelect = (type: TableType) => {
-    setSelectedTableType(type)
-    setGuestCount(null)
+  // Check if calculated table type has availability
+  const tableTypeHasCapacity = (tableType: TableType): boolean => {
+    if (tableType === "2") return availability.free2 > 0
+    if (tableType === "4") return availability.free4 > 0
+    if (tableType === "6") return availability.free6 > 0
+    return true // 7+ always returns true (handled via email)
+  }
+
+  // Handle guest count selection
+  const handleGuestCountSelect = (count: number) => {
+    if (count === 7) {
+      // 7+ selected, use input field
+      setGuestCount(7)
+      setLargeGroupInput("7")
+    } else {
+      setGuestCount(count)
+      setLargeGroupInput("")
+    }
     setBookingError(null)
+  }
+
+  // Handle large group input change
+  const handleLargeGroupInputChange = (value: string) => {
+    setLargeGroupInput(value)
+    const num = parseInt(value)
+    if (!isNaN(num) && num >= 7 && num <= 50) {
+      setGuestCount(num)
+    } else if (value === "") {
+      setGuestCount(7)
+    }
   }
 
   const emailLooksValid = useMemo(() => {
@@ -81,15 +119,22 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
 
   const canSubmit = useMemo(() => {
     if (!selectedSlotId) return false
-    if (!selectedTableType || selectedTableType === "7+") return false
     if (!guestCount) return false
+    if (guestCount > 50) return false
+    // For 1-6: check table capacity
+    if (guestCount <= 6) {
+      const tableType = guestCountToTableType(guestCount)
+      if (!tableTypeHasCapacity(tableType)) return false
+    }
+    // For 7+: always allow (manual handling)
     if (!customerName.trim()) return false
     if (!emailLooksValid) return false
     return true
-  }, [selectedSlotId, selectedTableType, guestCount, customerName, emailLooksValid])
+  }, [selectedSlotId, guestCount, customerName, emailLooksValid, availability])
 
   const handleBook = async () => {
-    if (!canSubmit || !selectedSlotId || !selectedTableType || !guestCount || selectedTableType === "7+") return
+    if (!canSubmit || !selectedSlotId || !guestCount) return
+    const tableType = guestCount <= 6 ? guestCountToTableType(guestCount) : null
 
     setIsBooking(true)
     setBookingError(null)
@@ -97,7 +142,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
     try {
       const booking: BookingRequest = {
         slot_id: selectedSlotId,
-        table_type: selectedTableType,
+        table_type: tableType as "2" | "4" | "6" | undefined,
         guest_count: guestCount,
         customer_name: customerName.trim(),
         customer_email: customerEmail.trim() || undefined,
@@ -128,13 +173,6 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
   }
 
   const groupEmail = bookingEmail || "reserveren@tafelaaramersfoort.nl"
-
-  const guestOptions = useMemo(() => {
-    if (selectedTableType === "2") return [1, 2]
-    if (selectedTableType === "4") return [3, 4]
-    if (selectedTableType === "6") return [5, 6]
-    return []
-  }, [selectedTableType])
 
   const slotCount = event.slots.length
 
@@ -242,8 +280,8 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
                   <button
                     onClick={() => {
                       setSelectedSlotId(null)
-                      setSelectedTableType(null)
                       setGuestCount(null)
+                      setLargeGroupInput("")
                       setCustomerName("")
                       setCustomerEmail("")
                       setCustomerPhone("")
@@ -265,175 +303,234 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
                     </div>
                   )}
 
-                  {/* Step 1: table */}
+                  {/* Step 1: Aantal personen */}
                   <div className="space-y-3">
                     <div className="flex items-center gap-2 text-[11px] font-bold tracking-widest text-white/50 uppercase">
-                      <Armchair className="w-3.5 h-3.5" />
-                      Kies je tafel
+                      <Users className="w-3.5 h-3.5" />
+                      Hoeveel personen?
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {([
-                        { type: "2" as const, label: "2 pers", free: availability.free2 },
-                        { type: "4" as const, label: "4 pers", free: availability.free4 },
-                        { type: "6" as const, label: "6 pers", free: availability.free6 },
-                      ]).map((t) => {
-                        const disabled = t.free === 0
-                        const selected = selectedTableType === t.type
+                    <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+                      {[1, 2, 3, 4, 5, 6].map((num) => {
+                        const tableType = guestCountToTableType(num)
+                        const hasCapacity = tableType === "2" ? availability.free2 > 0 :
+                          tableType === "4" ? availability.free4 > 0 :
+                            availability.free6 > 0
+                        const selected = guestCount === num
                         return (
                           <button
-                            key={t.type}
-                            onClick={() => handleTableTypeSelect(t.type)}
-                            disabled={disabled}
+                            key={num}
+                            onClick={() => handleGuestCountSelect(num)}
+                            disabled={!hasCapacity}
                             className={[
-                              "rounded-xl border px-3 py-3 text-left transition",
-                              disabled ? "opacity-40 cursor-not-allowed border-white/10 bg-white/[0.02]" : "border-white/10 hover:border-[#c9a227]/40 bg-white/[0.02]",
-                              selected ? "border-[#c9a227]/60 bg-[#c9a227]/10" : "",
+                              "w-full h-12 rounded-xl border flex items-center justify-center text-base font-bold transition",
+                              !hasCapacity ? "opacity-40 cursor-not-allowed border-white/10 bg-white/[0.02] text-white/50" : "border-white/10 hover:border-[#c9a227]/40 bg-white/[0.02] text-white",
+                              selected ? "border-[#c9a227]/60 bg-[#c9a227] text-[#0b0b0b] shadow-lg" : "",
                             ].join(" ")}
                           >
-                            <div className="text-sm font-bold text-white">{t.label}</div>
-                            <div className="text-[11px] text-white/55">
-                              {disabled ? "Vol" : `Nog ${t.free} vrij`}
-                            </div>
+                            {num}
                           </button>
                         )
                       })}
 
                       <button
-                        onClick={() => handleTableTypeSelect("7+")}
+                        onClick={() => handleGuestCountSelect(7)}
                         className={[
-                          "rounded-xl border px-3 py-3 text-left transition",
-                          selectedTableType === "7+" ? "border-[#c9a227]/60 bg-[#c9a227]/10" : "border-white/10 hover:border-[#c9a227]/40 bg-white/[0.02]",
+                          "w-full h-12 rounded-xl border flex items-center justify-center text-base font-bold transition",
+                          guestCount && guestCount >= 7 ? "border-[#c9a227]/60 bg-[#c9a227]/10 text-[#c9a227]" : "border-white/10 hover:border-[#c9a227]/40 bg-white/[0.02] text-white",
                         ].join(" ")}
                       >
-                        <div className="text-sm font-bold text-white">7+ groep</div>
-                        <div className="text-[11px] text-white/55">Op aanvraag</div>
+                        7+
                       </button>
                     </div>
+
+                    {/* Show selected table info for 1-6, or input for 7+ */}
+                    {guestCount && guestCount <= 6 && (
+                      <div className="text-[11px] text-white/50 flex items-center gap-1.5">
+                        <Armchair className="w-3 h-3" />
+                        <span>Automatisch: <span className="text-white/70 font-medium">{guestCountToTableType(guestCount)}-persoonstafel</span></span>
+                      </div>
+                    )}
+
+                    {guestCount && guestCount >= 7 && (
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-white/60">Exacte aantal personen (7-50)</label>
+                        <input
+                          type="number"
+                          min={7}
+                          max={50}
+                          value={largeGroupInput}
+                          onChange={(e) => handleLargeGroupInputChange(e.target.value)}
+                          placeholder="bijv. 12"
+                          className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-white/35 focus:border-[#c9a227]/60 focus:ring-1 focus:ring-[#c9a227]/30 outline-none text-center text-lg font-bold"
+                        />
+                        <div className="text-[11px] text-white/40">
+                          Voor groepen van 7+ nemen we contact met je op om de beste plek te regelen.
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Step 2 */}
-                  {selectedTableType && (
+                  {/* Step 2: Customer details or 7+ message */}
+                  {guestCount && (
                     <div className="pt-1">
-                      {selectedTableType !== "7+" ? (
+                      {guestCount <= 6 ? (
                         <div className="space-y-4">
-                          <div className="flex items-center gap-2 text-[11px] font-bold tracking-widest text-white/50 uppercase">
-                            <Users className="w-3.5 h-3.5" />
-                            Aantal personen
-                          </div>
 
-                          <div className="flex gap-2">
-                            {guestOptions.map((num) => (
-                              <button
-                                key={num}
-                                onClick={() => setGuestCount(num)}
-                                className={[
-                                  "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition",
-                                  guestCount === num
-                                    ? "bg-[#c9a227] text-[#0b0b0b] shadow-lg"
-                                    : "bg-white/[0.02] border border-white/10 text-white hover:border-[#c9a227]/40",
-                                ].join(" ")}
-                              >
-                                {num}
-                              </button>
-                            ))}
-                          </div>
-
-                          {guestCount && (
-                            <div className="space-y-3">
-                              <div className="text-[11px] text-white/40 mb-3">
-                                Je gegevens worden alleen gebruikt voor deze reservering.
-                              </div>
-                              <div>
-                                <label className="text-xs font-medium text-white/60">Naam *</label>
-                                <input
-                                  type="text"
-                                  value={customerName}
-                                  onChange={(e) => setCustomerName(e.target.value)}
-                                  placeholder="Je naam"
-                                  className="w-full mt-1 px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-white/35 focus:border-[#c9a227]/60 focus:ring-1 focus:ring-[#c9a227]/30 outline-none"
-                                />
-                                {!customerName.trim() && (
-                                  <div className="mt-1 text-[11px] text-white/40">Vul je naam in om door te gaan.</div>
-                                )}
-                              </div>
-
-                              <div>
-                                <label className="text-xs font-medium text-white/60">E-mail (optioneel, alleen voor bevestiging)</label>
-                                <input
-                                  type="email"
-                                  value={customerEmail}
-                                  onChange={(e) => setCustomerEmail(e.target.value)}
-                                  placeholder="email@voorbeeld.nl"
-                                  className="w-full mt-1 px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-white/35 focus:border-[#c9a227]/60 focus:ring-1 focus:ring-[#c9a227]/30 outline-none"
-                                />
-                                {!emailLooksValid && (
-                                  <div className="mt-1 text-[11px] text-red-200/80">Dit e-mailadres lijkt niet te kloppen.</div>
-                                )}
-                              </div>
-
-                              <div>
-                                <label className="text-xs font-medium text-white/60">Telefoon (optioneel)</label>
-                                <input
-                                  type="tel"
-                                  value={customerPhone}
-                                  onChange={(e) => setCustomerPhone(e.target.value)}
-                                  placeholder="06 12345678"
-                                  className="w-full mt-1 px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-white/35 focus:border-[#c9a227]/60 focus:ring-1 focus:ring-[#c9a227]/30 outline-none"
-                                />
-                              </div>
-
-                              <div>
-                                <label className="text-xs font-medium text-white/60">Opmerkingen (optioneel)</label>
-                                <textarea
-                                  value={customerRemarks}
-                                  onChange={(e) => setCustomerRemarks(e.target.value)}
-                                  placeholder="Allergieën? Zet ze hier, dan houden we rekening."
-                                  rows={2}
-                                  className="w-full mt-1 px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-white/35 focus:border-[#c9a227]/60 focus:ring-1 focus:ring-[#c9a227]/30 outline-none resize-none"
-                                />
-                              </div>
+                          <div className="space-y-3">
+                            <div className="text-[11px] text-white/40 mb-3">
+                              Je gegevens worden alleen gebruikt voor deze reservering.
                             </div>
-                          )}
-
-                          {guestCount && (
-                            <button
-                              onClick={handleBook}
-                              disabled={isBooking || !canSubmit}
-                              className={[
-                                "w-full rounded-xl px-4 py-4 text-base font-bold transition flex items-center justify-center gap-2",
-                                "bg-gradient-to-r from-[#c9a227] to-[#8f6f17] text-[#0b0b0b]",
-                                "hover:from-[#d4af37] hover:to-[#a8831d]",
-                                (isBooking || !canSubmit) ? "opacity-60 cursor-not-allowed" : "",
-                              ].join(" ")}
-                            >
-                              {isBooking ? (
-                                <>
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                  Bezig met reserveren…
-                                </>
-                              ) : (
-                                <>
-                                  Bevestig reservering <span className="opacity-80">({selectedSlot?.time})</span>
-                                  <ArrowRight className="w-4 h-4" />
-                                </>
+                            <div>
+                              <label className="text-xs font-medium text-white/60">Naam *</label>
+                              <input
+                                type="text"
+                                value={customerName}
+                                onChange={(e) => setCustomerName(e.target.value)}
+                                placeholder="Je naam"
+                                className="w-full mt-1 px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-white/35 focus:border-[#c9a227]/60 focus:ring-1 focus:ring-[#c9a227]/30 outline-none"
+                              />
+                              {!customerName.trim() && (
+                                <div className="mt-1 text-[11px] text-white/40">Vul je naam in om door te gaan.</div>
                               )}
-                            </button>
-                          )}
+                            </div>
+
+                            <div>
+                              <label className="text-xs font-medium text-white/60">E-mail (optioneel, alleen voor bevestiging)</label>
+                              <input
+                                type="email"
+                                value={customerEmail}
+                                onChange={(e) => setCustomerEmail(e.target.value)}
+                                placeholder="email@voorbeeld.nl"
+                                className="w-full mt-1 px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-white/35 focus:border-[#c9a227]/60 focus:ring-1 focus:ring-[#c9a227]/30 outline-none"
+                              />
+                              {!emailLooksValid && (
+                                <div className="mt-1 text-[11px] text-red-200/80">Dit e-mailadres lijkt niet te kloppen.</div>
+                              )}
+                            </div>
+
+                            <div>
+                              <label className="text-xs font-medium text-white/60">Telefoon (optioneel)</label>
+                              <input
+                                type="tel"
+                                value={customerPhone}
+                                onChange={(e) => setCustomerPhone(e.target.value)}
+                                placeholder="06 12345678"
+                                className="w-full mt-1 px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-white/35 focus:border-[#c9a227]/60 focus:ring-1 focus:ring-[#c9a227]/30 outline-none"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="text-xs font-medium text-white/60">Opmerkingen (optioneel)</label>
+                              <textarea
+                                value={customerRemarks}
+                                onChange={(e) => setCustomerRemarks(e.target.value)}
+                                placeholder="Allergieën? Zet ze hier, dan houden we rekening."
+                                rows={2}
+                                className="w-full mt-1 px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-white/35 focus:border-[#c9a227]/60 focus:ring-1 focus:ring-[#c9a227]/30 outline-none resize-none"
+                              />
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={handleBook}
+                            disabled={isBooking || !canSubmit}
+                            className={[
+                              "w-full rounded-xl px-4 py-4 text-base font-bold transition flex items-center justify-center gap-2",
+                              "bg-gradient-to-r from-[#c9a227] to-[#8f6f17] text-[#0b0b0b]",
+                              "hover:from-[#d4af37] hover:to-[#a8831d]",
+                              (isBooking || !canSubmit) ? "opacity-60 cursor-not-allowed" : "",
+                            ].join(" ")}
+                          >
+                            {isBooking ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Bezig met reserveren…
+                              </>
+                            ) : (
+                              <>
+                                Bevestig reservering <span className="opacity-80">({selectedSlot?.time})</span>
+                                <ArrowRight className="w-4 h-4" />
+                              </>
+                            )}
+                          </button>
                         </div>
                       ) : (
-                        <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 text-center space-y-3">
-                          <div className="text-sm text-white/80 font-semibold">
-                            Voor 7+ maken we graag iets passends. Mail ons even, dan regelen we het.
+                        /* 7+ group booking form */
+                        <div className="space-y-4">
+                          <div className="rounded-xl border border-[#c9a227]/20 bg-[#c9a227]/5 p-3">
+                            <div className="text-sm text-[#c9a227] font-semibold">📞 Groepsreservering ({guestCount} personen)</div>
+                            <div className="text-[11px] text-white/50 mt-1">Je ontvangt een bevestiging zodra we je aanvraag hebben verwerkt.</div>
                           </div>
-                          <a
-                            href={`mailto:${groupEmail}?subject=Groepsreservering (7+)%20-%20${encodeURIComponent(event.title)}`}
-                            className="inline-flex items-center gap-2 rounded-xl border border-[#c9a227]/35 bg-[#c9a227]/10 px-4 py-3 text-sm font-bold text-[#c9a227] hover:bg-[#c9a227]/15 transition"
+
+                          <div className="space-y-3">
+                            <div>
+                              <label className="text-xs font-medium text-white/60">Naam *</label>
+                              <input
+                                type="text"
+                                value={customerName}
+                                onChange={(e) => setCustomerName(e.target.value)}
+                                placeholder="Je naam"
+                                className="w-full mt-1 px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-white/35 focus:border-[#c9a227]/60 focus:ring-1 focus:ring-[#c9a227]/30 outline-none"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="text-xs font-medium text-white/60">E-mail *</label>
+                              <input
+                                type="email"
+                                value={customerEmail}
+                                onChange={(e) => setCustomerEmail(e.target.value)}
+                                placeholder="email@voorbeeld.nl"
+                                className="w-full mt-1 px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-white/35 focus:border-[#c9a227]/60 focus:ring-1 focus:ring-[#c9a227]/30 outline-none"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="text-xs font-medium text-white/60">Telefoon (voor contact)</label>
+                              <input
+                                type="tel"
+                                value={customerPhone}
+                                onChange={(e) => setCustomerPhone(e.target.value)}
+                                placeholder="06 12345678"
+                                className="w-full mt-1 px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-white/35 focus:border-[#c9a227]/60 focus:ring-1 focus:ring-[#c9a227]/30 outline-none"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="text-xs font-medium text-white/60">Opmerkingen (optioneel)</label>
+                              <textarea
+                                value={customerRemarks}
+                                onChange={(e) => setCustomerRemarks(e.target.value)}
+                                placeholder="Speciale wensen, allergieën, opstelling..."
+                                rows={2}
+                                className="w-full mt-1 px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-white/35 focus:border-[#c9a227]/60 focus:ring-1 focus:ring-[#c9a227]/30 outline-none resize-none"
+                              />
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={handleBook}
+                            disabled={isBooking || !canSubmit}
+                            className={[
+                              "w-full rounded-xl px-4 py-4 text-base font-bold transition flex items-center justify-center gap-2",
+                              "bg-gradient-to-r from-[#c9a227] to-[#8f6f17] text-[#0b0b0b]",
+                              "hover:from-[#d4af37] hover:to-[#a8831d]",
+                              (isBooking || !canSubmit) ? "opacity-60 cursor-not-allowed" : "",
+                            ].join(" ")}
                           >
-                            <Mail className="w-4 h-4" />
-                            Mail ons
-                          </a>
-                          <div className="text-xs text-white/45">{groupEmail}</div>
+                            {isBooking ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Bezig met aanvragen…
+                              </>
+                            ) : (
+                              <>
+                                Aanvraag versturen
+                                <ArrowRight className="w-4 h-4" />
+                              </>
+                            )}
+                          </button>
                         </div>
                       )}
                     </div>

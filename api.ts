@@ -15,7 +15,7 @@ export async function fetchWidgetData(restaurantId: string) {
 // Book a table
 export interface BookingRequest {
     slot_id: string;
-    table_type: '2' | '4' | '6';
+    table_type?: '2' | '4' | '6';  // Optional for 7+ groups
     guest_count: number;
     customer_name: string;      // Required - customer's name
     customer_email?: string;    // Optional - for booking confirmation email
@@ -32,7 +32,8 @@ export interface BookingResponse {
     zone_name: string;
     customer_name: string;
     guest_count: number;
-    table_type: string;
+    table_type: string | null;
+    is_large_group?: boolean;
     message: string;
 }
 

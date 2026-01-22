@@ -7,7 +7,7 @@ import pool from './db-postgres.js';
 import { loginHandler, authMiddleware } from './auth.js';
 import { loginRateLimiter, bookingRateLimiter, widgetRateLimiter, calendarRateLimiter, isRedisConnected } from './ratelimit.js';
 import { initSentry, sentryErrorHandler, captureException } from './sentry.js';
-import { sendBookingConfirmation } from './email.js';
+import { sendBookingConfirmation, sendLargeGroupNotification } from './email.js';
 
 dotenv.config();
 
@@ -198,6 +198,7 @@ setInterval(() => {
 
 // POST /api/book - Book a table (public, rate limited)
 // Uses atomic capacity update and DB-level idempotency
+// Supports both regular bookings (1-6) and large groups (7+)
 app.post('/api/book', bookingRateLimiter, async (req, res) => {
     const { slot_id, table_type, guest_count, customer_name, customer_email, customer_phone, remarks, idempotency_key, _hp_field } = req.body;
 
@@ -224,11 +225,25 @@ app.post('/api/book', bookingRateLimiter, async (req, res) => {
     if (!slot_id || typeof slot_id !== 'string' || slot_id.length > 64) {
         return res.status(422).json({ error: 'slot_id is required' });
     }
-    if (!['2', '4', '6'].includes(table_type)) {
-        return res.status(422).json({ error: 'table_type must be 2, 4, or 6' });
+
+    // Allow guest_count from 1-50 (increased for large groups)
+    if (!guest_count || typeof guest_count !== 'number' || guest_count < 1 || guest_count > 50) {
+        return res.status(422).json({ error: 'guest_count must be 1-50' });
     }
-    if (!guest_count || typeof guest_count !== 'number' || guest_count < 1 || guest_count > 20) {
-        return res.status(422).json({ error: 'guest_count must be 1-20' });
+
+    // Determine if this is a large group (7+)
+    const isLargeGroup = guest_count >= 7;
+
+    // For regular bookings (1-6), table_type is required
+    // For large groups (7+), table_type is optional (handled manually by restaurant)
+    let effectiveTableType = table_type;
+    if (!isLargeGroup) {
+        if (!['2', '4', '6'].includes(table_type)) {
+            return res.status(422).json({ error: 'table_type must be 2, 4, or 6' });
+        }
+    } else {
+        // Large groups: if no table_type provided, set to null (pending allocation)
+        effectiveTableType = table_type || null;
     }
 
     const idem = (idempotency_key || '').trim() || null;
@@ -253,7 +268,9 @@ app.post('/api/book', bookingRateLimiter, async (req, res) => {
         const slotQ = await client.query(
             `SELECT s.id, s.zone_id, s.start_datetime,
                     s.booked_count_2_tops, s.booked_count_4_tops, s.booked_count_6_tops,
+                    COALESCE(s.current_couverts, 0) as current_couverts,
                     z.capacity_2_tops, z.capacity_4_tops, z.capacity_6_tops,
+                    z.max_couverts,
                     e.restaurant_id, e.title as event_title, z.name as zone_name
              FROM slots s
              JOIN zones z ON z.id = s.zone_id
@@ -277,46 +294,61 @@ app.post('/api/book', bookingRateLimiter, async (req, res) => {
             return res.status(422).json({ error: 'cannot book a slot in the past' });
         }
 
-        // Determine column and capacity
-        const col =
-            table_type === '2' ? 'booked_count_2_tops' :
-                table_type === '4' ? 'booked_count_4_tops' :
-                    table_type === '6' ? 'booked_count_6_tops' : null;
-
-        const cap =
-            table_type === '2' ? slot.capacity_2_tops :
-                table_type === '4' ? slot.capacity_4_tops :
-                    table_type === '6' ? slot.capacity_6_tops : null;
-
-        if (!col || cap == null) {
+        // Check max_couverts limit if set
+        if (slot.max_couverts && (slot.current_couverts + guest_count > slot.max_couverts)) {
             await client.query('ROLLBACK');
-            return res.status(422).json({ error: 'invalid table_type' });
+            return res.status(409).json({ error: 'max_couverts exceeded for this slot' });
         }
 
-        // ATOMIC capacity update - only succeeds if capacity remains
-        const upd = await client.query(
-            `UPDATE slots SET ${col} = ${col} + 1 WHERE id = $1 AND ${col} < $2 RETURNING id`,
-            [slot_id, cap]
+        // For regular bookings: check and update table counters
+        if (!isLargeGroup && effectiveTableType) {
+            const col =
+                effectiveTableType === '2' ? 'booked_count_2_tops' :
+                    effectiveTableType === '4' ? 'booked_count_4_tops' :
+                        effectiveTableType === '6' ? 'booked_count_6_tops' : null;
+
+            const cap =
+                effectiveTableType === '2' ? slot.capacity_2_tops :
+                    effectiveTableType === '4' ? slot.capacity_4_tops :
+                        effectiveTableType === '6' ? slot.capacity_6_tops : null;
+
+            if (!col || cap == null) {
+                await client.query('ROLLBACK');
+                return res.status(422).json({ error: 'invalid table_type' });
+            }
+
+            // ATOMIC capacity update - only succeeds if capacity remains
+            const upd = await client.query(
+                `UPDATE slots SET ${col} = ${col} + 1 WHERE id = $1 AND ${col} < $2 RETURNING id`,
+                [slot_id, cap]
+            );
+
+            if (upd.rowCount === 0) {
+                await client.query('ROLLBACK');
+                return res.status(409).json({ error: 'capacity exceeded' });
+            }
+        }
+
+        // Update current_couverts counter
+        await client.query(
+            `UPDATE slots SET current_couverts = COALESCE(current_couverts, 0) + $1 WHERE id = $2`,
+            [guest_count, slot_id]
         );
-
-        if (upd.rowCount === 0) {
-            await client.query('ROLLBACK');
-            return res.status(409).json({ error: 'capacity exceeded' });
-        }
 
         // Generate booking ID
         const bookingId = crypto.randomUUID();
 
-        // Insert booking record (idempotency via unique index)
+        // Insert booking record with is_large_group flag
         let insertedBookingId;
         try {
             const inserted = await client.query(
                 `INSERT INTO bookings (id, restaurant_id, slot_id, table_type, guest_count,
-                                       customer_name, customer_email, customer_phone, remarks, idempotency_key)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                                       customer_name, customer_email, customer_phone, remarks, 
+                                       idempotency_key, is_large_group)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                  RETURNING id`,
-                [bookingId, slot.restaurant_id, slot_id, table_type, guest_count,
-                    name, email || null, phone || null, note || null, idem]
+                [bookingId, slot.restaurant_id, slot_id, effectiveTableType, guest_count,
+                    name, email || null, phone || null, note || null, idem, isLargeGroup]
             );
             insertedBookingId = inserted.rows[0].id;
         } catch (e) {
@@ -335,11 +367,10 @@ app.post('/api/book', bookingRateLimiter, async (req, res) => {
 
         await client.query('COMMIT');
 
-        console.log(`[${req.requestId}] Booking ${insertedBookingId} created for slot ${slot_id}`);
+        console.log(`[${req.requestId}] Booking ${insertedBookingId} created for slot ${slot_id} (large_group: ${isLargeGroup})`);
 
-        // Send emails async (never block response)
-        // P0-1 FIX: Always use Europe/Amsterdam timezone for email formatting
-        sendBookingConfirmation({
+        // Send appropriate email based on group size
+        const emailData = {
             customerName: name,
             customerEmail: email || null,
             customerPhone: phone || null,
@@ -348,11 +379,19 @@ app.post('/api/book', bookingRateLimiter, async (req, res) => {
             slotTime: slotTime.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam' }),
             slotDate: slotTime.toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/Amsterdam' }),
             guestCount: guest_count,
-            tableType: table_type,
+            tableType: effectiveTableType,
             zoneName: slot.zone_name || 'Main',
-        }).catch(err => console.error('Email sending failed:', err));
+        };
 
-        // Return full booking details for instant confirmation screen
+        if (isLargeGroup) {
+            // Large groups get "we will contact you" email
+            sendLargeGroupNotification(emailData).catch(err => console.error('Large group email failed:', err));
+        } else {
+            // Regular bookings get confirmation email
+            sendBookingConfirmation(emailData).catch(err => console.error('Email sending failed:', err));
+        }
+
+        // Return full booking details for confirmation screen
         return res.status(201).json({
             success: true,
             booking_id: insertedBookingId,
@@ -361,8 +400,9 @@ app.post('/api/book', bookingRateLimiter, async (req, res) => {
             zone_name: slot.zone_name || 'Main',
             customer_name: name,
             guest_count: guest_count,
-            table_type: table_type,
-            message: 'Reservering bevestigd'
+            table_type: effectiveTableType,
+            is_large_group: isLargeGroup,
+            message: isLargeGroup ? 'Aanvraag ontvangen - we nemen contact op' : 'Reservering bevestigd'
         });
     } catch (error) {
         await client.query('ROLLBACK');
@@ -503,9 +543,13 @@ app.get('/api/admin/events', async (req, res) => {
 app.get('/api/admin/data', async (req, res) => {
     const restaurantId = req.query.restaurantId || 'demo-restaurant';
     try {
-        // Get zones
+        // Get zones (including max_couverts for couvert limit)
         const zonesResult = await pool.query(
-            `SELECT id, name, capacity_2_tops as count2tops, capacity_4_tops as count4tops, capacity_6_tops as count6tops
+            `SELECT id, name, 
+                    capacity_2_tops as count2tops, 
+                    capacity_4_tops as count4tops, 
+                    capacity_6_tops as count6tops,
+                    max_couverts as "maxCouverts"
              FROM zones WHERE restaurant_id = $1`,
             [restaurantId]
         );
@@ -953,12 +997,16 @@ app.post('/api/admin/save', async (req, res) => {
 
         // Upsert zones
         for (const zone of zones || []) {
+            // Calculate max_couverts if not provided
+            const calculatedCouverts = (zone.count2tops || 0) * 2 + (zone.count4tops || 0) * 4 + (zone.count6tops || 0) * 6;
+            const maxCouverts = zone.maxCouverts ?? calculatedCouverts;
+
             await client.query(
-                `INSERT INTO zones (id, restaurant_id, name, capacity_2_tops, capacity_4_tops, capacity_6_tops)
-                 VALUES ($1, $2, $3, $4, $5, $6)
+                `INSERT INTO zones (id, restaurant_id, name, capacity_2_tops, capacity_4_tops, capacity_6_tops, max_couverts)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7)
                  ON CONFLICT (id) DO UPDATE SET
-                   name = $3, capacity_2_tops = $4, capacity_4_tops = $5, capacity_6_tops = $6`,
-                [zone.id, targetRestaurantId, zone.name, zone.count2tops || 0, zone.count4tops || 0, zone.count6tops || 0]
+                   name = $3, capacity_2_tops = $4, capacity_4_tops = $5, capacity_6_tops = $6, max_couverts = $7`,
+                [zone.id, targetRestaurantId, zone.name, zone.count2tops || 0, zone.count4tops || 0, zone.count6tops || 0, maxCouverts]
             );
         }
 

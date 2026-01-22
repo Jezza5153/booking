@@ -52,12 +52,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
 
   // --- Wijk Management ---
   const handleAddWijk = () => {
+    const defaultTables = { count2tops: 5, count4tops: 3, count6tops: 1 };
+    const calculatedCouverts = (defaultTables.count2tops * 2) + (defaultTables.count4tops * 4) + (defaultTables.count6tops * 6);
     const newWijk: Wijk = {
       id: `w-${Date.now()}`,
       name: 'New Zone',
-      count2tops: 5,
-      count4tops: 3,
-      count6tops: 1
+      ...defaultTables,
+      maxCouverts: calculatedCouverts
     };
     setWijken([...wijken, newWijk]);
   };
@@ -202,52 +203,77 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {wijken.map(wijk => (
-            <div key={wijk.id} className="flex flex-col gap-3 bg-gray-50 p-3 rounded-lg border border-gray-200">
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={wijk.name}
-                  onChange={(e) => handleUpdateWijk(wijk.id, 'name', e.target.value)}
-                  className="w-full text-sm font-bold bg-transparent border-none p-0 focus:ring-0 text-gray-800 placeholder-gray-400"
-                  placeholder="Zone Name"
-                />
-                <button onClick={() => handleDeleteWijk(wijk.id)} className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded">
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
+          {wijken.map(wijk => {
+            // Calculate total seats from tables
+            const calculatedSeats = (wijk.count2tops * 2) + (wijk.count4tops * 4) + (wijk.count6tops * 6);
+            return (
+              <div key={wijk.id} className="flex flex-col gap-3 bg-gray-50 p-3 rounded-lg border border-gray-200">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={wijk.name}
+                    onChange={(e) => handleUpdateWijk(wijk.id, 'name', e.target.value)}
+                    className="w-full text-sm font-bold bg-transparent border-none p-0 focus:ring-0 text-gray-800 placeholder-gray-400"
+                    placeholder="Zone Name"
+                  />
+                  <button onClick={() => handleDeleteWijk(wijk.id)} className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
 
-              <div className="grid grid-cols-3 gap-2">
-                <div className="bg-white p-2 rounded border border-gray-100 text-center">
-                  <div className="text-[10px] text-gray-400 font-medium uppercase mb-1">2-Top</div>
-                  <input
-                    type="number"
-                    value={wijk.count2tops}
-                    onChange={(e) => handleUpdateWijk(wijk.id, 'count2tops', parseInt(e.target.value) || 0)}
-                    className="w-full text-center font-bold text-gray-700 bg-transparent border-none p-0 focus:ring-0"
-                  />
+                {/* Max Couverts Input */}
+                <div className="bg-amber-50 p-2 rounded border border-amber-100">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <div className="text-[10px] text-amber-600 font-medium uppercase">Max Couverts</div>
+                      <div className="text-[9px] text-amber-500">Limiet per slot</div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min={1}
+                        max={200}
+                        value={wijk.maxCouverts ?? calculatedSeats}
+                        onChange={(e) => handleUpdateWijk(wijk.id, 'maxCouverts', parseInt(e.target.value) || calculatedSeats)}
+                        className="w-16 text-center font-bold text-amber-700 bg-white border border-amber-200 rounded px-2 py-1 text-sm"
+                      />
+                      <span className="text-[9px] text-amber-500">/{calculatedSeats}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="bg-white p-2 rounded border border-gray-100 text-center">
-                  <div className="text-[10px] text-gray-400 font-medium uppercase mb-1">4-Top</div>
-                  <input
-                    type="number"
-                    value={wijk.count4tops}
-                    onChange={(e) => handleUpdateWijk(wijk.id, 'count4tops', parseInt(e.target.value) || 0)}
-                    className="w-full text-center font-bold text-gray-700 bg-transparent border-none p-0 focus:ring-0"
-                  />
-                </div>
-                <div className="bg-white p-2 rounded border border-gray-100 text-center">
-                  <div className="text-[10px] text-gray-400 font-medium uppercase mb-1">6-Top</div>
-                  <input
-                    type="number"
-                    value={wijk.count6tops}
-                    onChange={(e) => handleUpdateWijk(wijk.id, 'count6tops', parseInt(e.target.value) || 0)}
-                    className="w-full text-center font-bold text-gray-700 bg-transparent border-none p-0 focus:ring-0"
-                  />
+
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="bg-white p-2 rounded border border-gray-100 text-center">
+                    <div className="text-[10px] text-gray-400 font-medium uppercase mb-1">2-Top</div>
+                    <input
+                      type="number"
+                      value={wijk.count2tops}
+                      onChange={(e) => handleUpdateWijk(wijk.id, 'count2tops', parseInt(e.target.value) || 0)}
+                      className="w-full text-center font-bold text-gray-700 bg-transparent border-none p-0 focus:ring-0"
+                    />
+                  </div>
+                  <div className="bg-white p-2 rounded border border-gray-100 text-center">
+                    <div className="text-[10px] text-gray-400 font-medium uppercase mb-1">4-Top</div>
+                    <input
+                      type="number"
+                      value={wijk.count4tops}
+                      onChange={(e) => handleUpdateWijk(wijk.id, 'count4tops', parseInt(e.target.value) || 0)}
+                      className="w-full text-center font-bold text-gray-700 bg-transparent border-none p-0 focus:ring-0"
+                    />
+                  </div>
+                  <div className="bg-white p-2 rounded border border-gray-100 text-center">
+                    <div className="text-[10px] text-gray-400 font-medium uppercase mb-1">6-Top</div>
+                    <input
+                      type="number"
+                      value={wijk.count6tops}
+                      onChange={(e) => handleUpdateWijk(wijk.id, 'count6tops', parseInt(e.target.value) || 0)}
+                      className="w-full text-center font-bold text-gray-700 bg-transparent border-none p-0 focus:ring-0"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
 
