@@ -289,31 +289,67 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
         }
     }
 
-    // Auto-allocate table for party size
-    const findBestTable = (guestCount: number): Table | null => {
-        // Sort by seats ascending
+    // Smart table allocation for any party size
+    // Returns single table or array of tables to combine
+    const findBestTables = (guestCount: number, forTime?: string): { tables: Table[]; totalSeats: number } | null => {
+        const checkTime = forTime || (() => {
+            const now = new Date()
+            return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
+        })()
+
+        // Get all available tables at this time
         const availableTables = tables
-            .filter(t => {
-                // Check if table is free now
-                const now = new Date()
-                const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
-                return isSlotAvailable(t, currentTime) && t.seats >= guestCount
-            })
+            .filter(t => isSlotAvailable(t, checkTime) && (t.can_combine !== false))
             .sort((a, b) => a.seats - b.seats)
 
-        return availableTables[0] || null
+        if (availableTables.length === 0) return null
+
+        // Strategy 1: Single table (if one fits)
+        const singleTable = availableTables.find(t => t.seats >= guestCount)
+        if (singleTable) {
+            return { tables: [singleTable], totalSeats: singleTable.seats }
+        }
+
+        // Strategy 2: Combine tables (for parties > largest single table)
+        // Try to find the smallest combination that fits
+        const totalSeatsNeeded = guestCount
+
+        // Simple greedy: start with largest tables
+        const sortedDesc = [...availableTables].sort((a, b) => b.seats - a.seats)
+        let selectedTables: Table[] = []
+        let currentSeats = 0
+
+        for (const table of sortedDesc) {
+            if (currentSeats >= totalSeatsNeeded) break
+            selectedTables.push(table)
+            currentSeats += table.seats
+        }
+
+        if (currentSeats >= totalSeatsNeeded) {
+            return { tables: selectedTables, totalSeats: currentSeats }
+        }
+
+        // Not enough capacity
+        return null
     }
 
-    // Submit walk-in
+    // Simplified single table finder (for backwards compatibility)
+    const findBestTable = (guestCount: number): Table | null => {
+        const result = findBestTables(guestCount)
+        return result?.tables[0] || null
+    }
+
+    // Submit walk-in with multi-table support
     const submitWalkin = async () => {
         if (!walkinForm.customer_name || walkinForm.guest_count < 1) return
 
-        const table = walkinForm.table_id
-            ? tables.find(t => t.id === walkinForm.table_id)
-            : findBestTable(walkinForm.guest_count)
+        // Use smart allocation for multi-table
+        const allocation = walkinForm.table_id
+            ? { tables: [tables.find(t => t.id === walkinForm.table_id)!], totalSeats: 0 }
+            : findBestTables(walkinForm.guest_count)
 
-        if (!table) {
-            alert('Geen beschikbare tafel voor dit aantal gasten')
+        if (!allocation || allocation.tables.length === 0) {
+            alert('Geen beschikbare tafels voor dit aantal gasten')
             return
         }
 
@@ -324,6 +360,10 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
             const endMins = now.getHours() * 60 + now.getMinutes() + 90
             const endTime = `${Math.floor(endMins / 60).toString().padStart(2, '0')}:${(endMins % 60).toString().padStart(2, '0')}`
 
+            // Book all tables in the allocation
+            const tableIds = allocation.tables.map(t => t.id)
+            const primaryTable = allocation.tables[0]
+
             const res = await fetch(`${API_BASE_URL}/api/restaurant/book`, {
                 method: 'POST',
                 headers: {
@@ -332,14 +372,16 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                 },
                 body: JSON.stringify({
                     restaurantId,
-                    tableId: table.id,
+                    tableId: primaryTable.id,
+                    tableIds, // All tables for this booking
                     date,
                     startTime,
                     endTime,
                     guestCount: walkinForm.guest_count,
                     customerName: walkinForm.customer_name,
                     status: 'arrived',
-                    isWalkin: true
+                    isWalkin: true,
+                    tablesLinked: tableIds.length > 1 ? tableIds : undefined
                 })
             })
 

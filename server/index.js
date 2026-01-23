@@ -1585,16 +1585,22 @@ app.get('/api/restaurant/:id/openings', async (req, res) => {
     }
 });
 
-// POST /api/restaurant/book - Enhanced to support walk-ins and status
+// POST /api/restaurant/book - Enhanced with multi-table support
 app.post('/api/restaurant/book', async (req, res) => {
     const {
-        restaurantId, tableId, date, startTime, endTime,
+        restaurantId, tableId, tableIds, date, startTime, endTime,
         guestCount, customerName, customerEmail, customerPhone,
-        remarks, status, isWalkin
+        remarks, status, isWalkin, tablesLinked
     } = req.body;
 
-    if (!restaurantId || !tableId || !date || !startTime || !guestCount || !customerName) {
+    if (!restaurantId || !date || !startTime || !guestCount || !customerName) {
         return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Use tableIds if provided, otherwise fall back to single tableId
+    const allTableIds = tableIds?.length > 0 ? tableIds : [tableId];
+    if (!allTableIds[0]) {
+        return res.status(400).json({ error: 'Table ID required' });
     }
 
     const client = await pool.connect();
@@ -1632,15 +1638,25 @@ app.post('/api/restaurant/book', async (req, res) => {
             }
         }
 
-        await client.query(
-            `INSERT INTO restaurant_bookings 
-             (id, restaurant_id, table_id, booking_date, start_time, end_time, guest_count, 
-              customer_name, customer_email, customer_phone, remarks, status, is_walkin, customer_id, arrived_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
-            [bookingId, restaurantId, tableId, date, startTime, finalEndTime, guestCount,
-                customerName, customerEmail || null, customerPhone || null, remarks || null,
-                bookingStatus, walkin, customerId, bookingStatus === 'arrived' ? new Date() : null]
-        );
+        // Create booking for each table (linked bookings for large parties)
+        const linkedTableIds = allTableIds.length > 1 ? allTableIds : null;
+
+        for (let i = 0; i < allTableIds.length; i++) {
+            const currentTableId = allTableIds[i];
+            const currentBookingId = i === 0 ? bookingId : crypto.randomUUID();
+
+            await client.query(
+                `INSERT INTO restaurant_bookings 
+                 (id, restaurant_id, table_id, booking_date, start_time, end_time, guest_count, 
+                  customer_name, customer_email, customer_phone, remarks, status, is_walkin, customer_id, arrived_at, tables_linked)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+                [currentBookingId, restaurantId, currentTableId, date, startTime, finalEndTime,
+                    i === 0 ? guestCount : 0, // Only primary booking has guest count
+                    customerName, customerEmail || null, customerPhone || null, remarks || null,
+                    bookingStatus, walkin, customerId, bookingStatus === 'arrived' ? new Date() : null,
+                    linkedTableIds]
+            );
+        }
 
         // Update customer visits if walk-in (already arrived)
         if (customerId && bookingStatus === 'arrived') {
@@ -1651,7 +1667,22 @@ app.post('/api/restaurant/book', async (req, res) => {
         }
 
         await client.query('COMMIT');
-        res.status(201).json({ success: true, booking_id: bookingId, date, startTime });
+
+        // Get table names for response
+        const tableNamesQ = await pool.query(
+            `SELECT name FROM restaurant_tables WHERE id = ANY($1)`,
+            [allTableIds]
+        );
+        const tableNames = tableNamesQ.rows.map(r => r.name).join(' + ');
+
+        res.status(201).json({
+            success: true,
+            booking_id: bookingId,
+            date,
+            startTime,
+            tables: tableNames,
+            tables_count: allTableIds.length
+        });
     } catch (error) {
         await client.query('ROLLBACK');
         console.error('Restaurant booking error:', error);
