@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react"
 import { Loader2, RefreshCcw, Calendar, ChevronRight } from "lucide-react"
 import { EventCard } from "./EventCard"
+import { RestaurantBooking } from "./RestaurantBooking"
 import { EventData, Wijk } from "../types"
 import { WIJKEN_DATA, EVENTS_DATA } from "../data"
 import { fetchWidgetData, RESTAURANT_ID } from "../api"
@@ -111,11 +112,14 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
             <ChevronRight className={`w-5 h-5 text-white/70 transition-transform ${showRestaurantBooking ? 'rotate-90' : ''}`} />
           </button>
 
-          {/* Restaurant booking form placeholder - TODO: implement full flow */}
+          {/* Restaurant booking flow */}
           {showRestaurantBooking && (
-            <div className="mt-3 p-4 rounded-xl border border-[#3D9970]/30 bg-[#3D9970]/10">
-              <div className="text-sm text-[#3D9970] font-medium">Restaurant reservering</div>
-              <div className="text-xs text-white/50 mt-1">Binnenkort beschikbaar - kies datum, tijd en personen</div>
+            <div className="mt-3">
+              <RestaurantBooking
+                restaurantId={restaurantId}
+                onClose={() => setShowRestaurantBooking(false)}
+                onComplete={handleBookingComplete}
+              />
             </div>
           )}
         </div>

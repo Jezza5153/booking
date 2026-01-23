@@ -1276,6 +1276,156 @@ function parseSlotDateTime(dateStr, timeStr) {
 }
 
 // ============================================
+// RESTAURANT BOOKING SYSTEM
+// ============================================
+
+// GET /api/restaurant/:restaurantId/tables - Get all tables
+app.get('/api/restaurant/:restaurantId/tables', async (req, res) => {
+    const { restaurantId } = req.params;
+    try {
+        const result = await pool.query(
+            `SELECT id, name, seats, zone FROM restaurant_tables 
+             WHERE restaurant_id = $1 AND is_active = true 
+             ORDER BY zone, name`,
+            [restaurantId]
+        );
+        res.json({ tables: result.rows });
+    } catch (error) {
+        console.error('Restaurant tables error:', error);
+        res.status(500).json({ error: 'Failed to fetch tables' });
+    }
+});
+
+// GET /api/restaurant/:restaurantId/availability - Get available time slots
+app.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
+    const { restaurantId } = req.params;
+    const { date, guests } = req.query;
+
+    if (!date) {
+        return res.status(400).json({ error: 'date is required (YYYY-MM-DD)' });
+    }
+
+    const guestCount = parseInt(guests) || 2;
+    const bookingDate = new Date(date);
+    const dayOfWeek = bookingDate.getDay();
+
+    try {
+        // Get opening hours
+        const openingResult = await pool.query(
+            `SELECT open_time, close_time, slot_duration_minutes, is_closed 
+             FROM restaurant_openings 
+             WHERE restaurant_id = $1 AND (day_of_week = $2 OR specific_date = $3)
+             ORDER BY specific_date DESC NULLS LAST LIMIT 1`,
+            [restaurantId, dayOfWeek, date]
+        );
+
+        if (openingResult.rowCount === 0 || openingResult.rows[0].is_closed) {
+            return res.json({ slots: [], message: 'Restaurant is closed' });
+        }
+
+        const { open_time, close_time, slot_duration_minutes } = openingResult.rows[0];
+        const slotDuration = slot_duration_minutes || 90;
+
+        // Get tables that fit party size
+        const tablesResult = await pool.query(
+            `SELECT id, name, seats, zone FROM restaurant_tables 
+             WHERE restaurant_id = $1 AND is_active = true AND seats >= $2
+             ORDER BY seats ASC`,
+            [restaurantId, guestCount]
+        );
+
+        // Get existing bookings
+        const bookingsResult = await pool.query(
+            `SELECT table_id, start_time, end_time FROM restaurant_bookings 
+             WHERE restaurant_id = $1 AND booking_date = $2 AND status != 'cancelled'`,
+            [restaurantId, date]
+        );
+
+        // Generate time slots
+        const slots = [];
+        const openMins = parseInt(open_time.split(':')[0]) * 60 + parseInt(open_time.split(':')[1]);
+        const closeMins = parseInt(close_time.split(':')[0]) * 60 + parseInt(close_time.split(':')[1]);
+
+        for (let m = openMins; m + slotDuration <= closeMins; m += 30) {
+            const slotTime = `${Math.floor(m / 60).toString().padStart(2, '0')}:${(m % 60).toString().padStart(2, '0')}`;
+            const endTime = `${Math.floor((m + slotDuration) / 60).toString().padStart(2, '0')}:${((m + slotDuration) % 60).toString().padStart(2, '0')}`;
+
+            const availTables = tablesResult.rows.filter(t =>
+                !bookingsResult.rows.some(b => b.table_id === t.id && b.start_time < endTime && b.end_time > slotTime)
+            );
+
+            if (availTables.length > 0) {
+                slots.push({ time: slotTime, end_time: endTime, available: availTables.length });
+            }
+        }
+
+        res.json({ date, guest_count: guestCount, slots });
+    } catch (error) {
+        console.error('Restaurant availability error:', error);
+        res.status(500).json({ error: 'Failed to check availability' });
+    }
+});
+
+// POST /api/restaurant/book - Book a table
+app.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
+    const { restaurant_id, date, time, guest_count, customer_name, customer_email, customer_phone, remarks } = req.body;
+
+    if (!restaurant_id || !date || !time || !guest_count || !customer_name) {
+        return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // Get slot duration
+        const dayOfWeek = new Date(date).getDay();
+        const openingQ = await client.query(
+            `SELECT slot_duration_minutes FROM restaurant_openings WHERE restaurant_id = $1 AND day_of_week = $2 LIMIT 1`,
+            [restaurant_id, dayOfWeek]
+        );
+        const duration = openingQ.rows[0]?.slot_duration_minutes || 90;
+        const startMins = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1]);
+        const endTime = `${Math.floor((startMins + duration) / 60).toString().padStart(2, '0')}:${((startMins + duration) % 60).toString().padStart(2, '0')}`;
+
+        // Find available table
+        const tableQ = await client.query(
+            `SELECT id, name FROM restaurant_tables rt
+             WHERE rt.restaurant_id = $1 AND rt.is_active = true AND rt.seats >= $2
+             AND NOT EXISTS (
+                 SELECT 1 FROM restaurant_bookings rb 
+                 WHERE rb.table_id = rt.id AND rb.booking_date = $3 AND rb.status != 'cancelled'
+                 AND rb.start_time < $5 AND rb.end_time > $4
+             ) ORDER BY rt.seats ASC LIMIT 1`,
+            [restaurant_id, guest_count, date, time, endTime]
+        );
+
+        if (tableQ.rowCount === 0) {
+            await client.query('ROLLBACK');
+            return res.status(409).json({ error: 'No tables available' });
+        }
+
+        const table = tableQ.rows[0];
+        const bookingId = crypto.randomUUID();
+
+        await client.query(
+            `INSERT INTO restaurant_bookings (id, restaurant_id, table_id, booking_date, start_time, end_time, guest_count, customer_name, customer_email, customer_phone, remarks)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+            [bookingId, restaurant_id, table.id, date, time, endTime, guest_count, customer_name, customer_email, customer_phone, remarks]
+        );
+
+        await client.query('COMMIT');
+        res.status(201).json({ success: true, booking_id: bookingId, table_name: table.name, date, time });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Restaurant booking error:', error);
+        res.status(500).json({ error: 'Booking failed' });
+    } finally {
+        client.release();
+    }
+});
+
+// ============================================
 // SENTRY ERROR HANDLER (before global handler)
 // ============================================
 sentryErrorHandler(app);
