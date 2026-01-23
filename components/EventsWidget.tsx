@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react"
-import { Loader2, RefreshCcw } from "lucide-react"
+import { Loader2, RefreshCcw, Calendar, ChevronRight } from "lucide-react"
 import { EventCard } from "./EventCard"
 import { EventData, Wijk } from "../types"
 import { WIJKEN_DATA, EVENTS_DATA } from "../data"
@@ -13,6 +13,10 @@ interface EventsWidgetProps {
   useApi?: boolean
   /** Optional: show/hide brand header */
   showHeader?: boolean
+  /** Restaurant name for header */
+  restaurantName?: string
+  /** Restaurant subtitle */
+  restaurantSubtitle?: string
 }
 
 export const EventsWidget: React.FC<EventsWidgetProps> = ({
@@ -21,11 +25,14 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
   restaurantId = RESTAURANT_ID,
   useApi = true,
   showHeader = true,
+  restaurantName = "De Tafelaar",
+  restaurantSubtitle = "Shared dining restaurant",
 }) => {
   const [apiEvents, setApiEvents] = useState<EventData[] | null>(null)
   const [apiWijken, setApiWijken] = useState<Wijk[] | null>(null)
   const [loading, setLoading] = useState<boolean>(useApi)
   const [error, setError] = useState<string | null>(null)
+  const [showRestaurantBooking, setShowRestaurantBooking] = useState(false)
 
   const fallbackEvents = propEvents ?? EVENTS_DATA
   const fallbackWijken = propWijken ?? WIJKEN_DATA
@@ -75,26 +82,53 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
 
   return (
     <div className="w-full h-full bg-[#0b0b0b] text-white font-sans">
-      <div className="mx-auto max-w-[620px] h-full flex flex-col">
+      <div className="mx-auto max-w-[380px] h-full flex flex-col">
+        {/* Fixed Restaurant Header */}
         {showHeader && (
-          <div className="sticky top-0 z-30 bg-[#0b0b0b]/92 backdrop-blur-md border-b border-white/10">
-            <div className="px-5 py-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#c9a227] to-[#8f6f17] shadow-sm flex items-center justify-center">
-                  <span className="text-[#0b0b0b] font-black text-sm tracking-wide">E</span>
-                </div>
-                <div className="leading-tight">
-                  <div className="text-[13px] font-semibold tracking-wide text-[#c9a227] uppercase">
-                    EVENTS Booking
-                  </div>
-                  <div className="text-[12px] text-white/60">
-                    Kies een event & tijdslot
-                  </div>
-                </div>
-              </div>
+          <div className="sticky top-0 z-30 bg-[#0b0b0b] border-b border-white/10">
+            <div className="px-4 py-3 text-center">
+              <h1 className="text-lg font-bold tracking-wide text-white">{restaurantName}</h1>
+              <p className="text-xs text-white/50 tracking-wide">{restaurantSubtitle}</p>
             </div>
           </div>
         )}
+
+        {/* Restaurant Reservation Button (Tapla-style green) */}
+        <div className="px-4 pt-4 pb-2">
+          <button
+            onClick={() => setShowRestaurantBooking(!showRestaurantBooking)}
+            className="w-full flex items-center justify-between gap-3 p-3 rounded-xl bg-[#3D9970] hover:bg-[#3D9970]/90 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                <Calendar className="w-4 h-4 text-white" />
+              </div>
+              <div className="text-left">
+                <div className="text-sm font-semibold text-white">Reserveren</div>
+                <div className="text-[11px] text-white/70">Tafel boeken à la carte</div>
+              </div>
+            </div>
+            <ChevronRight className={`w-5 h-5 text-white/70 transition-transform ${showRestaurantBooking ? 'rotate-90' : ''}`} />
+          </button>
+
+          {/* Restaurant booking form placeholder - TODO: implement full flow */}
+          {showRestaurantBooking && (
+            <div className="mt-3 p-4 rounded-xl border border-[#3D9970]/30 bg-[#3D9970]/10">
+              <div className="text-sm text-[#3D9970] font-medium">Restaurant reservering</div>
+              <div className="text-xs text-white/50 mt-1">Binnenkort beschikbaar - kies datum, tijd en personen</div>
+            </div>
+          )}
+        </div>
+
+        {/* Events Section Header */}
+        <div className="px-4 pt-4 pb-2">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-md bg-gradient-to-br from-[#c9a227] to-[#8f6f17] flex items-center justify-center">
+              <span className="text-[#0b0b0b] font-bold text-[10px]">E</span>
+            </div>
+            <span className="text-xs font-semibold tracking-wide text-[#c9a227] uppercase">Speciale Events</span>
+          </div>
+        </div>
 
         <div className="flex-1 overflow-y-auto no-scrollbar pb-10">
           {loading ? (

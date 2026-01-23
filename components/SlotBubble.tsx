@@ -39,8 +39,8 @@ export const SlotBubble: React.FC<SlotBubbleProps> = ({ slot, isSelected, onClic
       aria-label={`${displayDate} om ${time}${isNextAvailable ? ', aanbevolen' : ''}${isFull ? ', vol' : ''}`}
       className={[
         "relative group flex flex-col items-center justify-center",
-        "py-2.5 px-2 w-full min-h-[64px]",
-        "rounded-xl transition-all duration-200 ease-out",
+        "py-2 px-1.5 w-full min-h-[48px]",
+        "rounded-lg transition-all duration-200 ease-out",
         "border select-none",
         isFull
           ? "opacity-40 cursor-not-allowed bg-white/[0.02] border-white/10"

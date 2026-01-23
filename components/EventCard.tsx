@@ -177,32 +177,32 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
   const slotCount = event.slots.length
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.02]">
-      <div className="px-5 py-5">
-        <div className="flex items-start justify-between gap-3">
+    <div className="rounded-xl border border-white/10 bg-white/[0.02]">
+      <div className="px-4 py-3">
+        <div className="flex items-start justify-between gap-2">
           <div className="flex-1">
-            <h2 className="text-[18px] sm:text-[20px] font-bold tracking-tight text-[#c9a227]">
+            <h2 className="text-[15px] sm:text-[16px] font-bold tracking-tight text-[#c9a227]">
               {event.title}
             </h2>
             {event.description && (
-              <p className="text-[13px] text-white/60 mt-1 leading-snug">{event.description}</p>
+              <p className="text-[11px] text-white/60 mt-0.5 leading-snug">{event.description}</p>
             )}
             {event.price_per_person && (
-              <div className="text-[13px] text-white/75 mt-1.5 font-medium">
+              <div className="text-[11px] text-white/75 mt-1 font-medium">
                 €{event.price_per_person.toFixed(2).replace('.', ',')} <span className="text-white/50 font-normal">p.p.</span>
               </div>
             )}
           </div>
 
           {selectedSlot && (
-            <div className="text-[11px] sm:text-xs text-white/70 bg-black/40 border border-white/10 px-3 py-1.5 rounded-full shrink-0">
-              Gekozen: <span className="text-white/90 font-semibold">{selectedSlot.date} · {selectedSlot.time}</span>
+            <div className="text-[10px] text-white/70 bg-black/40 border border-white/10 px-2 py-1 rounded-full shrink-0">
+              {selectedSlot.date} · {selectedSlot.time}
             </div>
           )}
         </div>
 
         {/* Slots */}
-        <div className="mt-4">
+        <div className="mt-3">
           {slotCount <= 3 ? (
             <div className="flex flex-wrap gap-3 justify-center">
               {event.slots.map((slot) => {
