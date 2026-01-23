@@ -206,15 +206,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
   return (
     <div className="w-full max-w-5xl mx-auto p-6 space-y-8 pb-20">
 
-      {/* --- WIJK / ZONE CONFIGURATION --- */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+      {/* --- EVENT ZONES CONFIGURATION --- */}
+      <div className="bg-white rounded-xl border border-indigo-200 shadow-sm p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
               <MapPin className="w-5 h-5 text-indigo-600" />
-              Zone Configuration
+              🎪 Event Zones
             </h2>
-            <p className="text-xs text-gray-500 mt-1">Configure the amount of tables per zone.</p>
+            <p className="text-xs text-gray-500 mt-1">Configure zones and tables for events (special dinners, tastings, etc.)</p>
           </div>
           <button onClick={handleAddWijk} className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100 hover:bg-indigo-100 transition-colors">
             + Add Zone
@@ -225,8 +225,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
           {wijken.map(wijk => {
             // Calculate total seats from tables
             const calculatedSeats = (wijk.count2tops * 2) + (wijk.count4tops * 4) + (wijk.count6tops * 6);
+            const currentMaxCouverts = wijk.maxCouverts ?? calculatedSeats;
+            const hasMismatch = currentMaxCouverts !== calculatedSeats;
+
             return (
-              <div key={wijk.id} className="flex flex-col gap-3 bg-gray-50 p-3 rounded-lg border border-gray-200">
+              <div key={wijk.id} className={`flex flex-col gap-3 p-3 rounded-lg border-2 transition-colors ${hasMismatch ? 'bg-red-50 border-red-300' : 'bg-gray-50 border-gray-200'
+                }`}>
                 <div className="flex items-center gap-2">
                   <input
                     type="text"
@@ -241,24 +245,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
                 </div>
 
                 {/* Max Couverts Input */}
-                <div className="bg-amber-50 p-2 rounded border border-amber-100">
+                <div className={`p-2 rounded border ${hasMismatch ? 'bg-red-100 border-red-200' : 'bg-amber-50 border-amber-100'}`}>
                   <div className="flex items-center justify-between gap-2">
                     <div>
-                      <div className="text-[10px] text-amber-600 font-medium uppercase">Max Couverts</div>
-                      <div className="text-[9px] text-amber-500">Limiet per slot</div>
+                      <div className={`text-[10px] font-medium uppercase ${hasMismatch ? 'text-red-600' : 'text-amber-600'}`}>Max Couverts</div>
+                      <div className={`text-[9px] ${hasMismatch ? 'text-red-500' : 'text-amber-500'}`}>Limiet per slot</div>
                     </div>
                     <div className="flex items-center gap-1">
                       <input
                         type="number"
                         min={1}
                         max={200}
-                        value={wijk.maxCouverts ?? calculatedSeats}
+                        value={currentMaxCouverts}
                         onChange={(e) => handleUpdateWijk(wijk.id, 'maxCouverts', parseInt(e.target.value) || calculatedSeats)}
-                        className="w-16 text-center font-bold text-amber-700 bg-white border border-amber-200 rounded px-2 py-1 text-sm"
+                        className={`w-16 text-center font-bold bg-white rounded px-2 py-1 text-sm ${hasMismatch ? 'text-red-700 border-red-300 border-2' : 'text-amber-700 border-amber-200 border'
+                          }`}
                       />
-                      <span className="text-[9px] text-amber-500">/{calculatedSeats}</span>
+                      <span className={`text-[9px] ${hasMismatch ? 'text-red-500' : 'text-amber-500'}`}>/{calculatedSeats}</span>
                     </div>
                   </div>
+                  {hasMismatch && (
+                    <div className="mt-2 text-[10px] text-red-600 font-medium flex items-center gap-1">
+                      ⚠️ Tafels tellen op tot {calculatedSeats} stoelen, maar max is {currentMaxCouverts}. Weet je het zeker?
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-3 gap-2">
@@ -293,6 +303,41 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
               </div>
             )
           })}
+        </div>
+      </div>
+
+      {/* --- RESTAURANT TABLES CONFIGURATION --- */}
+      <div className="bg-white rounded-xl border border-emerald-200 shadow-sm p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-emerald-600" />
+              🍽️ Restaurant Tafels
+            </h2>
+            <p className="text-xs text-gray-500 mt-1">Dagelijkse tafelindeling voor reguliere reserveringen (niet-events)</p>
+          </div>
+          <a
+            href="?view=timeline"
+            onClick={(e) => { e.preventDefault(); window.location.search = ''; }}
+            className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-colors"
+          >
+            Beheer in Tafels tab →
+          </a>
+        </div>
+
+        <div className="bg-emerald-50 rounded-lg p-4 border border-emerald-100">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+              <span className="text-xl">📋</span>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-emerald-800">Tafelconfiguratie gescheiden van events</p>
+              <p className="text-xs text-emerald-600 mt-0.5">
+                Gebruik de "Tafels" tab voor dagelijkse reserveringen en het tijdlijn overzicht.
+                Events hierboven zijn voor speciale gelegenheden.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -333,220 +378,224 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
       </div>
 
       {/* --- EVENTS LIST --- */}
-      {events.map((event) => (
-        <div key={event.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
-          {/* Event Header */}
-          <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-            <div className="flex items-center gap-4 group">
-              <div className="p-2 bg-white rounded-md border border-gray-200 text-gray-400 cursor-move">
-                <GripVertical className="w-4 h-4" />
-              </div>
-              <div className="flex-1">
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Event Title</label>
-                <input
-                  type="text"
-                  value={event.title}
-                  onChange={(e) => handleEventTitleChange(event.id, e.target.value)}
-                  className="w-full text-lg font-bold text-gray-900 bg-transparent border-none focus:ring-0 p-0 placeholder-gray-400"
-                  placeholder="e.g. Taco Tuesday"
-                />
-              </div>
-              <button
-                onClick={() => setDeleteConfirm({ type: 'event', id: event.id })}
-                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                title="Delete Event"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Description and Price Row */}
-            <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Description (optional)</label>
-                <input
-                  type="text"
-                  value={event.description || ''}
-                  onChange={(e) => handleEventDescriptionChange(event.id, e.target.value)}
-                  className="w-full text-sm text-gray-700 bg-white border border-gray-200 rounded-lg px-3 py-2 placeholder-gray-400"
-                  placeholder="A short description shown to customers"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Price per person (€)</label>
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-500 font-medium">€</span>
+      {
+        events.map((event) => (
+          <div key={event.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
+            {/* Event Header */}
+            <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center gap-4 group">
+                <div className="p-2 bg-white rounded-md border border-gray-200 text-gray-400 cursor-move">
+                  <GripVertical className="w-4 h-4" />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Event Title</label>
                   <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={event.price_per_person || ''}
-                    onChange={(e) => handleEventPriceChange(event.id, e.target.value)}
-                    className="w-24 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg px-3 py-2 placeholder-gray-400"
-                    placeholder="0.00"
+                    type="text"
+                    value={event.title}
+                    onChange={(e) => handleEventTitleChange(event.id, e.target.value)}
+                    className="w-full text-lg font-bold text-gray-900 bg-transparent border-none focus:ring-0 p-0 placeholder-gray-400"
+                    placeholder="e.g. Taco Tuesday"
                   />
-                  <span className="text-xs text-gray-400">p.p.</span>
+                </div>
+                <button
+                  onClick={() => setDeleteConfirm({ type: 'event', id: event.id })}
+                  className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  title="Delete Event"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Description and Price Row */}
+              <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Description (optional)</label>
+                  <input
+                    type="text"
+                    value={event.description || ''}
+                    onChange={(e) => handleEventDescriptionChange(event.id, e.target.value)}
+                    className="w-full text-sm text-gray-700 bg-white border border-gray-200 rounded-lg px-3 py-2 placeholder-gray-400"
+                    placeholder="A short description shown to customers"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Price per person (€)</label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500 font-medium">€</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={event.price_per_person || ''}
+                      onChange={(e) => handleEventPriceChange(event.id, e.target.value)}
+                      className="w-24 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg px-3 py-2 placeholder-gray-400"
+                      placeholder="0.00"
+                    />
+                    <span className="text-xs text-gray-400">p.p.</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Slots Grid Editor */}
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-              {event.slots.map((slot) => {
-                const wijk = wijken.find(w => w.id === slot.wijkId);
-                const max2 = wijk?.count2tops || 0;
-                const max4 = wijk?.count4tops || 0;
-                const max6 = wijk?.count6tops || 0;
-                const isFull = (slot.booked2tops >= max2) && (slot.booked4tops >= max4) && (slot.booked6tops >= max6);
+            {/* Slots Grid Editor */}
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                {event.slots.map((slot) => {
+                  const wijk = wijken.find(w => w.id === slot.wijkId);
+                  const max2 = wijk?.count2tops || 0;
+                  const max4 = wijk?.count4tops || 0;
+                  const max6 = wijk?.count6tops || 0;
+                  const isFull = (slot.booked2tops >= max2) && (slot.booked4tops >= max4) && (slot.booked6tops >= max6);
 
-                return (
-                  <div
-                    key={slot.id}
-                    className={`relative p-3 rounded-lg border-2 transition-colors group/slot overflow-hidden
+                  return (
+                    <div
+                      key={slot.id}
+                      className={`relative p-3 rounded-lg border-2 transition-colors group/slot overflow-hidden
                     ${isFull ? 'border-red-100 bg-red-50/50' : slot.isNextAvailable ? 'border-amber-200 bg-amber-50' : 'border-gray-100 hover:border-gray-200'}
                     `}
-                  >
-                    {/* Delete Slot */}
-                    <button
-                      onClick={() => handleDeleteSlot(event.id, slot.id)}
-                      className="absolute -top-2 -left-2 p-1 bg-red-100 text-red-600 rounded-full opacity-0 group-hover/slot:opacity-100 transition-opacity scale-90 hover:scale-100 z-20 shadow-sm"
                     >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
+                      {/* Delete Slot */}
+                      <button
+                        onClick={() => handleDeleteSlot(event.id, slot.id)}
+                        className="absolute -top-2 -left-2 p-1 bg-red-100 text-red-600 rounded-full opacity-0 group-hover/slot:opacity-100 transition-opacity scale-90 hover:scale-100 z-20 shadow-sm"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
 
-                    {/* Star Toggle */}
-                    <button
-                      onClick={() => toggleNextAvailable(event.id, slot.id)}
-                      className={`absolute -top-2 -right-2 p-1.5 rounded-full border shadow-sm transition-colors z-10 ${slot.isNextAvailable ? 'bg-amber-100 border-amber-200 text-amber-500' : 'bg-white border-gray-200 text-gray-300 hover:text-gray-400'}`}
-                      title="Toggle 'Next Available'"
-                    >
-                      <Star className="w-3.5 h-3.5 fill-current" />
-                    </button>
+                      {/* Star Toggle */}
+                      <button
+                        onClick={() => toggleNextAvailable(event.id, slot.id)}
+                        className={`absolute -top-2 -right-2 p-1.5 rounded-full border shadow-sm transition-colors z-10 ${slot.isNextAvailable ? 'bg-amber-100 border-amber-200 text-amber-500' : 'bg-white border-gray-200 text-gray-300 hover:text-gray-400'}`}
+                        title="Toggle 'Next Available'"
+                      >
+                        <Star className="w-3.5 h-3.5 fill-current" />
+                      </button>
 
-                    <div className="space-y-3 pt-1">
-                      {/* Date & Time & Zone */}
-                      <div className="flex gap-2">
-                        {/* Native Date Input (visible, works on Safari) */}
-                        {/* P0-4 FIX: Controlled input shows existing date */}
-                        <input
-                          type="date"
-                          value={slot.date?.match(/^\d{4}-\d{2}-\d{2}/) ? slot.date.slice(0, 10) : ''}
-                          onChange={(e) => handleDateSelect(event.id, slot.id, e.target.value)}
-                          className="w-28 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded px-2 py-1.5 cursor-pointer hover:border-indigo-300"
-                        />
-                        {/* Time Dropdown */}
-                        <select
-                          value={slot.time}
-                          onChange={(e) => handleSlotChange(event.id, slot.id, 'time', e.target.value)}
-                          className="w-20 text-sm font-bold text-gray-900 bg-white border border-gray-200 rounded px-1.5 py-1 text-center cursor-pointer"
-                        >
-                          {Array.from({ length: 48 }, (_, i) => {
-                            const hours = Math.floor(i / 4) + 12; // Start at 12:00
-                            const minutes = (i % 4) * 15;
-                            const time = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-                            return <option key={time} value={time}>{time}</option>;
-                          })}
-                        </select>
-                        {/* Zone Dropdown */}
-                        <select
-                          value={slot.wijkId || ''}
-                          onChange={(e) => handleSlotChange(event.id, slot.id, 'wijkId', e.target.value)}
-                          className="flex-1 min-w-0 max-w-[120px] text-xs bg-white border border-gray-200 rounded px-1.5 py-1 text-gray-600 truncate"
-                        >
-                          {wijken.map(w => (
-                            <option key={w.id} value={w.id}>{w.name}</option>
-                          ))}
-                        </select>
+                      <div className="space-y-3 pt-1">
+                        {/* Date & Time & Zone */}
+                        <div className="flex gap-2">
+                          {/* Native Date Input (visible, works on Safari) */}
+                          {/* P0-4 FIX: Controlled input shows existing date */}
+                          <input
+                            type="date"
+                            value={slot.date?.match(/^\d{4}-\d{2}-\d{2}/) ? slot.date.slice(0, 10) : ''}
+                            onChange={(e) => handleDateSelect(event.id, slot.id, e.target.value)}
+                            className="w-28 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded px-2 py-1.5 cursor-pointer hover:border-indigo-300"
+                          />
+                          {/* Time Dropdown */}
+                          <select
+                            value={slot.time}
+                            onChange={(e) => handleSlotChange(event.id, slot.id, 'time', e.target.value)}
+                            className="w-20 text-sm font-bold text-gray-900 bg-white border border-gray-200 rounded px-1.5 py-1 text-center cursor-pointer"
+                          >
+                            {Array.from({ length: 48 }, (_, i) => {
+                              const hours = Math.floor(i / 4) + 12; // Start at 12:00
+                              const minutes = (i % 4) * 15;
+                              const time = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+                              return <option key={time} value={time}>{time}</option>;
+                            })}
+                          </select>
+                          {/* Zone Dropdown */}
+                          <select
+                            value={slot.wijkId || ''}
+                            onChange={(e) => handleSlotChange(event.id, slot.id, 'wijkId', e.target.value)}
+                            className="flex-1 min-w-0 max-w-[120px] text-xs bg-white border border-gray-200 rounded px-1.5 py-1 text-gray-600 truncate"
+                          >
+                            {wijken.map(w => (
+                              <option key={w.id} value={w.id}>{w.name}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Inventory Grid */}
+                        <div className="bg-white rounded border border-gray-200 p-2">
+                          <div className="flex items-center justify-between text-[10px] text-gray-400 uppercase font-medium mb-1.5">
+                            <span>Table Type</span>
+                            <span>Booked / Total</span>
+                          </div>
+
+                          {/* 2 Tops */}
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs text-gray-600 font-medium w-12">2-Tops</span>
+                            <div className="flex items-center gap-1">
+                              <button onClick={() => adjustBookedTable(event.id, slot.id, '2', -1)} className="p-0.5 hover:bg-gray-100 rounded text-gray-400"><MinusCircle className="w-3 h-3" /></button>
+                              <span className={`text-xs font-mono w-8 text-center ${slot.booked2tops >= max2 ? 'text-red-600 font-bold' : ''}`}>{slot.booked2tops}/{max2}</span>
+                              <button onClick={() => adjustBookedTable(event.id, slot.id, '2', 1)} className="p-0.5 hover:bg-gray-100 rounded text-gray-400"><PlusCircle className="w-3 h-3" /></button>
+                            </div>
+                          </div>
+
+                          {/* 4 Tops */}
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs text-gray-600 font-medium w-12">4-Tops</span>
+                            <div className="flex items-center gap-1">
+                              <button onClick={() => adjustBookedTable(event.id, slot.id, '4', -1)} className="p-0.5 hover:bg-gray-100 rounded text-gray-400"><MinusCircle className="w-3 h-3" /></button>
+                              <span className={`text-xs font-mono w-8 text-center ${slot.booked4tops >= max4 ? 'text-red-600 font-bold' : ''}`}>{slot.booked4tops}/{max4}</span>
+                              <button onClick={() => adjustBookedTable(event.id, slot.id, '4', 1)} className="p-0.5 hover:bg-gray-100 rounded text-gray-400"><PlusCircle className="w-3 h-3" /></button>
+                            </div>
+                          </div>
+
+                          {/* 6 Tops */}
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-gray-600 font-medium w-12">6-Tops</span>
+                            <div className="flex items-center gap-1">
+                              <button onClick={() => adjustBookedTable(event.id, slot.id, '6', -1)} className="p-0.5 hover:bg-gray-100 rounded text-gray-400"><MinusCircle className="w-3 h-3" /></button>
+                              <span className={`text-xs font-mono w-8 text-center ${slot.booked6tops >= max6 ? 'text-red-600 font-bold' : ''}`}>{slot.booked6tops}/{max6}</span>
+                              <button onClick={() => adjustBookedTable(event.id, slot.id, '6', 1)} className="p-0.5 hover:bg-gray-100 rounded text-gray-400"><PlusCircle className="w-3 h-3" /></button>
+                            </div>
+                          </div>
+
+                        </div>
+
                       </div>
-
-                      {/* Inventory Grid */}
-                      <div className="bg-white rounded border border-gray-200 p-2">
-                        <div className="flex items-center justify-between text-[10px] text-gray-400 uppercase font-medium mb-1.5">
-                          <span>Table Type</span>
-                          <span>Booked / Total</span>
-                        </div>
-
-                        {/* 2 Tops */}
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs text-gray-600 font-medium w-12">2-Tops</span>
-                          <div className="flex items-center gap-1">
-                            <button onClick={() => adjustBookedTable(event.id, slot.id, '2', -1)} className="p-0.5 hover:bg-gray-100 rounded text-gray-400"><MinusCircle className="w-3 h-3" /></button>
-                            <span className={`text-xs font-mono w-8 text-center ${slot.booked2tops >= max2 ? 'text-red-600 font-bold' : ''}`}>{slot.booked2tops}/{max2}</span>
-                            <button onClick={() => adjustBookedTable(event.id, slot.id, '2', 1)} className="p-0.5 hover:bg-gray-100 rounded text-gray-400"><PlusCircle className="w-3 h-3" /></button>
-                          </div>
-                        </div>
-
-                        {/* 4 Tops */}
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs text-gray-600 font-medium w-12">4-Tops</span>
-                          <div className="flex items-center gap-1">
-                            <button onClick={() => adjustBookedTable(event.id, slot.id, '4', -1)} className="p-0.5 hover:bg-gray-100 rounded text-gray-400"><MinusCircle className="w-3 h-3" /></button>
-                            <span className={`text-xs font-mono w-8 text-center ${slot.booked4tops >= max4 ? 'text-red-600 font-bold' : ''}`}>{slot.booked4tops}/{max4}</span>
-                            <button onClick={() => adjustBookedTable(event.id, slot.id, '4', 1)} className="p-0.5 hover:bg-gray-100 rounded text-gray-400"><PlusCircle className="w-3 h-3" /></button>
-                          </div>
-                        </div>
-
-                        {/* 6 Tops */}
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-gray-600 font-medium w-12">6-Tops</span>
-                          <div className="flex items-center gap-1">
-                            <button onClick={() => adjustBookedTable(event.id, slot.id, '6', -1)} className="p-0.5 hover:bg-gray-100 rounded text-gray-400"><MinusCircle className="w-3 h-3" /></button>
-                            <span className={`text-xs font-mono w-8 text-center ${slot.booked6tops >= max6 ? 'text-red-600 font-bold' : ''}`}>{slot.booked6tops}/{max6}</span>
-                            <button onClick={() => adjustBookedTable(event.id, slot.id, '6', 1)} className="p-0.5 hover:bg-gray-100 rounded text-gray-400"><PlusCircle className="w-3 h-3" /></button>
-                          </div>
-                        </div>
-
-                      </div>
-
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
 
-              {/* Add Slot Button */}
-              <button
-                onClick={() => handleAddSlot(event.id)}
-                className="flex flex-col items-center justify-center gap-2 p-3 rounded-lg border-2 border-dashed border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-colors text-gray-400 hover:text-indigo-600 h-full min-h-[160px]"
-              >
-                <Plus className="w-6 h-6" />
-                <span className="text-xs font-semibold">Add Slot</span>
-              </button>
+                {/* Add Slot Button */}
+                <button
+                  onClick={() => handleAddSlot(event.id)}
+                  className="flex flex-col items-center justify-center gap-2 p-3 rounded-lg border-2 border-dashed border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-colors text-gray-400 hover:text-indigo-600 h-full min-h-[160px]"
+                >
+                  <Plus className="w-6 h-6" />
+                  <span className="text-xs font-semibold">Add Slot</span>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        ))
+      }
 
       {/* Delete Confirmation Modal */}
-      {deleteConfirm.type && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-sm mx-4 shadow-xl">
-            <h3 className="text-lg font-bold text-gray-900 mb-2">
-              {deleteConfirm.type === 'zone' ? 'Delete Zone?' : 'Delete Event?'}
-            </h3>
-            <p className="text-sm text-gray-600 mb-6">
-              {deleteConfirm.type === 'zone'
-                ? 'Events using this zone may lose capacity settings. This action cannot be undone.'
-                : 'This will permanently delete the event and all its slots. This action cannot be undone.'}
-            </p>
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={cancelDelete}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDelete}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
-              >
-                Delete
-              </button>
+      {
+        deleteConfirm.type && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 max-w-sm mx-4 shadow-xl">
+              <h3 className="text-lg font-bold text-gray-900 mb-2">
+                {deleteConfirm.type === 'zone' ? 'Delete Zone?' : 'Delete Event?'}
+              </h3>
+              <p className="text-sm text-gray-600 mb-6">
+                {deleteConfirm.type === 'zone'
+                  ? 'Events using this zone may lose capacity settings. This action cannot be undone.'
+                  : 'This will permanently delete the event and all its slots. This action cannot be undone.'}
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={cancelDelete}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 };
