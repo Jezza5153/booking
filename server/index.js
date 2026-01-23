@@ -1425,6 +1425,29 @@ app.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
     }
 });
 
+// GET /api/admin/restaurant-bookings - Get bookings for timeline grid
+app.get('/api/admin/restaurant-bookings', authMiddleware, async (req, res) => {
+    const { restaurantId, date } = req.query;
+    const targetRestaurantId = restaurantId || 'demo-restaurant';
+    const targetDate = date || new Date().toISOString().split('T')[0];
+
+    try {
+        const result = await pool.query(
+            `SELECT rb.id, rb.table_id, rb.start_time::text, rb.end_time::text, 
+                    rb.guest_count, rb.customer_name, rb.status, rt.name as table_name
+             FROM restaurant_bookings rb
+             JOIN restaurant_tables rt ON rt.id = rb.table_id
+             WHERE rb.restaurant_id = $1 AND rb.booking_date = $2 AND rb.status != 'cancelled'
+             ORDER BY rb.start_time ASC`,
+            [targetRestaurantId, targetDate]
+        );
+        res.json({ bookings: result.rows, date: targetDate });
+    } catch (error) {
+        console.error('Admin restaurant bookings error:', error);
+        res.status(500).json({ error: 'Failed to fetch bookings' });
+    }
+});
+
 // ============================================
 // SENTRY ERROR HANDLER (before global handler)
 // ============================================
