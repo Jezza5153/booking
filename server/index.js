@@ -1448,6 +1448,88 @@ app.get('/api/admin/restaurant-bookings', authMiddleware, async (req, res) => {
     }
 });
 
+// POST /api/admin/restaurant-settings - Save restaurant tables & settings
+app.post('/api/admin/restaurant-settings', authMiddleware, async (req, res) => {
+    const { restaurantId, tables, openingHours, settings } = req.body;
+
+    if (!restaurantId) {
+        return res.status(400).json({ error: 'restaurantId required' });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // Upsert tables
+        if (tables && Array.isArray(tables)) {
+            // Get existing table IDs
+            const existing = await client.query(
+                'SELECT id FROM restaurant_tables WHERE restaurant_id = $1',
+                [restaurantId]
+            );
+            const existingIds = existing.rows.map(r => r.id);
+            const newIds = tables.map(t => t.id);
+
+            // Delete removed tables
+            const toDelete = existingIds.filter(id => !newIds.includes(id));
+            if (toDelete.length > 0) {
+                await client.query(
+                    'DELETE FROM restaurant_tables WHERE id = ANY($1)',
+                    [toDelete]
+                );
+            }
+
+            // Upsert tables
+            for (const table of tables) {
+                await client.query(`
+                    INSERT INTO restaurant_tables (id, restaurant_id, name, seats, zone)
+                    VALUES ($1, $2, $3, $4, $5)
+                    ON CONFLICT (id) DO UPDATE SET
+                        name = EXCLUDED.name,
+                        seats = EXCLUDED.seats,
+                        zone = EXCLUDED.zone
+                `, [table.id, restaurantId, table.name, table.seats, table.zone || 'Binnen']);
+            }
+        }
+
+        // Upsert opening hours
+        if (openingHours && Array.isArray(openingHours)) {
+            // Delete existing and re-insert
+            await client.query(
+                'DELETE FROM restaurant_openings WHERE restaurant_id = $1',
+                [restaurantId]
+            );
+
+            for (const hour of openingHours) {
+                if (hour.isOpen) {
+                    await client.query(`
+                        INSERT INTO restaurant_openings 
+                        (restaurant_id, day_of_week, open_time, close_time, is_closed)
+                        VALUES ($1, $2, $3, $4, false)
+                    `, [restaurantId, hour.dayOfWeek, hour.open, hour.close]);
+                } else {
+                    await client.query(`
+                        INSERT INTO restaurant_openings 
+                        (restaurant_id, day_of_week, open_time, close_time, is_closed)
+                        VALUES ($1, $2, '00:00', '00:00', true)
+                    `, [restaurantId, hour.dayOfWeek]);
+                }
+            }
+        }
+
+        // TODO: Save settings (slotDuration, maxPartySize, bufferTime) to a restaurant_settings table
+
+        await client.query('COMMIT');
+        res.json({ success: true, message: 'Restaurant settings saved' });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Save restaurant settings error:', error);
+        res.status(500).json({ error: 'Failed to save restaurant settings' });
+    } finally {
+        client.release();
+    }
+});
+
 // ============================================
 // SENTRY ERROR HANDLER (before global handler)
 // ============================================
