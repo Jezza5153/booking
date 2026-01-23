@@ -1448,6 +1448,219 @@ app.get('/api/admin/restaurant-bookings', authMiddleware, async (req, res) => {
     }
 });
 
+// PATCH /api/admin/restaurant-bookings/:id/status - Update booking status
+app.patch('/api/admin/restaurant-bookings/:id/status', authMiddleware, async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const validStatuses = ['confirmed', 'arrived', 'no_show', 'cancelled', 'walkin'];
+    if (!validStatuses.includes(status)) {
+        return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    try {
+        const arrivedAt = status === 'arrived' ? 'NOW()' : 'NULL';
+        const result = await pool.query(
+            `UPDATE restaurant_bookings 
+             SET status = $1, arrived_at = ${status === 'arrived' ? 'NOW()' : 'NULL'}, updated_at = NOW()
+             WHERE id = $2
+             RETURNING *`,
+            [status, id]
+        );
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'Booking not found' });
+        }
+
+        // Update customer visit count if arrived
+        if (status === 'arrived' && result.rows[0].customer_id) {
+            await pool.query(
+                `UPDATE customers SET total_visits = total_visits + 1, last_visit = CURRENT_DATE WHERE id = $1`,
+                [result.rows[0].customer_id]
+            );
+        }
+
+        res.json({ success: true, booking: result.rows[0] });
+    } catch (error) {
+        console.error('Update booking status error:', error);
+        res.status(500).json({ error: 'Failed to update status' });
+    }
+});
+
+// GET /api/admin/day-notes - Get day notes
+app.get('/api/admin/day-notes', authMiddleware, async (req, res) => {
+    const { restaurantId, date } = req.query;
+    const targetDate = date || new Date().toISOString().split('T')[0];
+
+    try {
+        const result = await pool.query(
+            `SELECT id, note, created_at FROM day_notes 
+             WHERE restaurant_id = $1 AND date = $2 ORDER BY created_at DESC`,
+            [restaurantId || 'demo-restaurant', targetDate]
+        );
+        res.json({ notes: result.rows, date: targetDate });
+    } catch (error) {
+        // Table might not exist yet
+        console.error('Get day notes error:', error);
+        res.json({ notes: [], date: targetDate });
+    }
+});
+
+// POST /api/admin/day-notes - Add day note
+app.post('/api/admin/day-notes', authMiddleware, async (req, res) => {
+    const { restaurantId, date, note } = req.body;
+
+    if (!note || !note.trim()) {
+        return res.status(400).json({ error: 'Note text required' });
+    }
+
+    try {
+        const id = crypto.randomUUID();
+        await pool.query(
+            `INSERT INTO day_notes (id, restaurant_id, date, note, created_by) VALUES ($1, $2, $3, $4, $5)`,
+            [id, restaurantId || 'demo-restaurant', date || new Date().toISOString().split('T')[0], note.trim(), req.user?.username || 'admin']
+        );
+        res.status(201).json({ success: true, id });
+    } catch (error) {
+        console.error('Add day note error:', error);
+        res.status(500).json({ error: 'Failed to add note' });
+    }
+});
+
+// DELETE /api/admin/day-notes/:id - Delete day note
+app.delete('/api/admin/day-notes/:id', authMiddleware, async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        await pool.query('DELETE FROM day_notes WHERE id = $1', [id]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Delete day note error:', error);
+        res.status(500).json({ error: 'Failed to delete note' });
+    }
+});
+
+// GET /api/admin/customers/search - Search customers
+app.get('/api/admin/customers/search', authMiddleware, async (req, res) => {
+    const { restaurantId, q } = req.query;
+
+    if (!q || q.length < 2) {
+        return res.json({ customers: [] });
+    }
+
+    try {
+        const result = await pool.query(
+            `SELECT id, name, email, phone, total_visits, tags, dietary_notes 
+             FROM customers 
+             WHERE restaurant_id = $1 AND (
+                 name ILIKE $2 OR phone ILIKE $2 OR email ILIKE $2
+             ) ORDER BY total_visits DESC LIMIT 10`,
+            [restaurantId || 'demo-restaurant', `%${q}%`]
+        );
+        res.json({ customers: result.rows });
+    } catch (error) {
+        // Table might not exist yet
+        console.error('Customer search error:', error);
+        res.json({ customers: [] });
+    }
+});
+
+// GET /api/restaurant/:id/openings - Get opening hours for a restaurant
+app.get('/api/restaurant/:id/openings', async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const result = await pool.query(
+            `SELECT day_of_week as day, NOT is_closed as is_open, 
+                    open_time::text as open_time, close_time::text as close_time
+             FROM restaurant_openings 
+             WHERE restaurant_id = $1 
+             ORDER BY day_of_week`,
+            [id]
+        );
+        res.json({ openings: result.rows });
+    } catch (error) {
+        console.error('Get openings error:', error);
+        res.json({ openings: [] });
+    }
+});
+
+// POST /api/restaurant/book - Enhanced to support walk-ins and status
+app.post('/api/restaurant/book', async (req, res) => {
+    const {
+        restaurantId, tableId, date, startTime, endTime,
+        guestCount, customerName, customerEmail, customerPhone,
+        remarks, status, isWalkin
+    } = req.body;
+
+    if (!restaurantId || !tableId || !date || !startTime || !guestCount || !customerName) {
+        return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        const bookingId = crypto.randomUUID();
+        const bookingStatus = status || 'confirmed';
+        const walkin = isWalkin || false;
+
+        // Calculate end time if not provided
+        let finalEndTime = endTime;
+        if (!finalEndTime) {
+            const startMins = parseInt(startTime.split(':')[0]) * 60 + parseInt(startTime.split(':')[1]);
+            const endMins = startMins + 90;
+            finalEndTime = `${Math.floor(endMins / 60).toString().padStart(2, '0')}:${(endMins % 60).toString().padStart(2, '0')}`;
+        }
+
+        // Check for customer or create new one
+        let customerId = null;
+        if (customerPhone || customerEmail) {
+            const existingCustomer = await client.query(
+                `SELECT id FROM customers WHERE restaurant_id = $1 AND (phone = $2 OR email = $3) LIMIT 1`,
+                [restaurantId, customerPhone || '', customerEmail || '']
+            );
+
+            if (existingCustomer.rowCount > 0) {
+                customerId = existingCustomer.rows[0].id;
+            } else if (customerPhone || customerEmail) {
+                customerId = crypto.randomUUID();
+                await client.query(
+                    `INSERT INTO customers (id, restaurant_id, name, email, phone) VALUES ($1, $2, $3, $4, $5)`,
+                    [customerId, restaurantId, customerName, customerEmail || null, customerPhone || null]
+                );
+            }
+        }
+
+        await client.query(
+            `INSERT INTO restaurant_bookings 
+             (id, restaurant_id, table_id, booking_date, start_time, end_time, guest_count, 
+              customer_name, customer_email, customer_phone, remarks, status, is_walkin, customer_id, arrived_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+            [bookingId, restaurantId, tableId, date, startTime, finalEndTime, guestCount,
+                customerName, customerEmail || null, customerPhone || null, remarks || null,
+                bookingStatus, walkin, customerId, bookingStatus === 'arrived' ? new Date() : null]
+        );
+
+        // Update customer visits if walk-in (already arrived)
+        if (customerId && bookingStatus === 'arrived') {
+            await client.query(
+                `UPDATE customers SET total_visits = total_visits + 1, last_visit = CURRENT_DATE WHERE id = $1`,
+                [customerId]
+            );
+        }
+
+        await client.query('COMMIT');
+        res.status(201).json({ success: true, booking_id: bookingId, date, startTime });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Restaurant booking error:', error);
+        res.status(500).json({ error: 'Booking failed' });
+    } finally {
+        client.release();
+    }
+});
+
 // POST /api/admin/restaurant-settings - Save restaurant tables & settings
 app.post('/api/admin/restaurant-settings', authMiddleware, async (req, res) => {
     const { restaurantId, tables, openingHours, settings } = req.body;
