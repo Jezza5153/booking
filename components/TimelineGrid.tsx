@@ -868,7 +868,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
             {/* Walk-in Modal */}
             {showWalkinModal && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-xl max-w-sm w-full p-4 shadow-xl">
+                    <div className="bg-white rounded-xl max-w-md w-full p-4 shadow-xl">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="font-semibold text-gray-900 flex items-center gap-2">
                                 <Users className="w-5 h-5 text-blue-500" />
@@ -882,12 +882,12 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                         <div className="space-y-3">
                             <div>
                                 <label className="text-xs text-gray-500">Aantal gasten</label>
-                                <div className="flex gap-2 mt-1">
-                                    {[1, 2, 3, 4, 5, 6].map(n => (
+                                <div className="grid grid-cols-6 gap-2 mt-1">
+                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => (
                                         <button
                                             key={n}
                                             onClick={() => setWalkinForm(f => ({ ...f, guest_count: n, table_id: '' }))}
-                                            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${walkinForm.guest_count === n
+                                            className={`py-2 rounded-lg text-sm font-medium transition-colors ${walkinForm.guest_count === n
                                                 ? 'bg-blue-500 text-white'
                                                 : 'bg-gray-100 hover:bg-gray-200'
                                                 }`}
@@ -897,6 +897,28 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                     ))}
                                 </div>
                             </div>
+
+                            {/* Smart allocation preview */}
+                            {(() => {
+                                const allocation = findBestTables(walkinForm.guest_count)
+                                if (allocation && allocation.tables.length > 0) {
+                                    return (
+                                        <div className={`p-2 rounded-lg text-sm ${allocation.tables.length > 1 ? 'bg-purple-50 border border-purple-200' : 'bg-emerald-50 border border-emerald-200'}`}>
+                                            <div className="font-medium text-gray-700">
+                                                {allocation.tables.length > 1 ? '🔗 Gekoppelde tafels:' : '✅ Beschikbaar:'}
+                                            </div>
+                                            <div className="text-gray-600">
+                                                {allocation.tables.map(t => t.name).join(' + ')} ({allocation.totalSeats} stoelen)
+                                            </div>
+                                        </div>
+                                    )
+                                }
+                                return (
+                                    <div className="p-2 rounded-lg text-sm bg-red-50 border border-red-200 text-red-700">
+                                        ❌ Geen beschikbare tafels voor {walkinForm.guest_count} gasten
+                                    </div>
+                                )
+                            })()}
 
                             <div>
                                 <label className="text-xs text-gray-500">Naam (optioneel)</label>
