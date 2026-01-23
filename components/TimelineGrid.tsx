@@ -109,30 +109,39 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
     const [customerSearchQuery, setCustomerSearchQuery] = useState('')
     const [customerSearchResults, setCustomerSearchResults] = useState<Customer[]>([])
 
-    // Generate time slots based on opening hours
+    const [slotDuration, setSlotDuration] = useState<15 | 30 | 60>(30) // minutes per slot
+
+    // Generate time slots based on opening hours and slot duration
     const timeSlots = useMemo(() => {
         const today = new Date(date)
         const dayOfWeek = today.getDay()
         const todayHours = openingHours.find(h => h.day === dayOfWeek)
 
-        let startHour = 14
+        // Default hours if not loaded yet
+        let startHour = 12
         let endHour = 23
 
         if (todayHours?.is_open) {
-            startHour = parseInt(todayHours.open_time?.split(':')[0] || '14')
+            startHour = parseInt(todayHours.open_time?.split(':')[0] || '12')
             endHour = parseInt(todayHours.close_time?.split(':')[0] || '23')
+        } else if (openingHours.length === 0) {
+            // Fallback when opening hours haven't loaded yet
+            startHour = 12
+            endHour = 23
         }
 
         const slots: string[] = []
         for (let h = startHour; h <= endHour; h++) {
-            slots.push(`${h.toString().padStart(2, '0')}:00`)
-            if (h < endHour) slots.push(`${h.toString().padStart(2, '0')}:30`)
+            for (let m = 0; m < 60; m += slotDuration) {
+                if (h === endHour && m > 0) break // Don't go past closing
+                slots.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`)
+            }
         }
         return slots
-    }, [date, openingHours])
+    }, [date, openingHours, slotDuration])
 
     const gridStartHour = useMemo(() => {
-        if (timeSlots.length === 0) return 14
+        if (timeSlots.length === 0) return 12
         return parseInt(timeSlots[0].split(':')[0])
     }, [timeSlots])
 
@@ -141,7 +150,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
         const today = new Date(date)
         const dayOfWeek = today.getDay()
         const todayHours = openingHours.find(h => h.day === dayOfWeek)
-        return todayHours?.is_open ?? true
+        return todayHours?.is_open ?? true // Default to open if no data
     }, [date, openingHours])
 
     // Fetch all data
@@ -207,17 +216,18 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
         return d.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })
     }
 
-    // Calculate booking position on grid
+    // Calculate booking position on grid (adapts to slot duration)
     const getBookingStyle = (booking: Booking) => {
         const startMins = parseInt(booking.start_time.split(':')[0]) * 60 + parseInt(booking.start_time.split(':')[1])
         const endMins = parseInt(booking.end_time.split(':')[0]) * 60 + parseInt(booking.end_time.split(':')[1])
         const gridStartMins = gridStartHour * 60
-        const slotWidth = 60
+        const slotWidthPx = 60 // pixel width per slot
 
-        const left = ((startMins - gridStartMins) / 30) * slotWidth
-        const width = ((endMins - startMins) / 30) * slotWidth
+        // Calculate based on current slot duration
+        const left = ((startMins - gridStartMins) / slotDuration) * slotWidthPx
+        const width = ((endMins - startMins) / slotDuration) * slotWidthPx
 
-        return { left: `${left}px`, width: `${Math.max(width, 60)}px` }
+        return { left: `${left}px`, width: `${Math.max(width, slotWidthPx)}px` }
     }
 
     // Check if a slot is available for a table
@@ -534,6 +544,30 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                             >
                                 <RefreshCw className="w-4 h-4 text-gray-600" />
                             </button>
+                            {/* Slot duration selector */}
+                            <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+                                <button
+                                    onClick={() => setSlotDuration(60)}
+                                    className={`px-2 py-1 text-xs font-medium transition-colors ${slotDuration === 60 ? 'bg-gray-800 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                                    title="1 uur blokken"
+                                >
+                                    1u
+                                </button>
+                                <button
+                                    onClick={() => setSlotDuration(30)}
+                                    className={`px-2 py-1 text-xs font-medium transition-colors ${slotDuration === 30 ? 'bg-gray-800 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                                    title="30 minuten blokken"
+                                >
+                                    30m
+                                </button>
+                                <button
+                                    onClick={() => setSlotDuration(15)}
+                                    className={`px-2 py-1 text-xs font-medium transition-colors ${slotDuration === 15 ? 'bg-gray-800 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                                    title="15 minuten blokken"
+                                >
+                                    15m
+                                </button>
+                            </div>
                             <button
                                 onClick={() => setShowDayNotes(!showDayNotes)}
                                 className={`p-1.5 rounded-lg transition-colors ${dayNotes.length > 0 ? 'bg-amber-100 text-amber-700' : 'hover:bg-gray-100 text-gray-600'}`}
