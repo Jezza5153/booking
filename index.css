@@ -1,0 +1,64 @@
+/* EVENTS Booking Widget Styles */
+
+/* Custom styles for the booking widget */
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f3f4f6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Timeline grid */
+.timeline-cell:hover {
+    background-color: rgba(16, 185, 129, 0.1);
+}
+
+.timeline-booking {
+    transition: all 0.2s ease;
+}
+
+.timeline-booking:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Linked table indicator */
+.linked-booking {
+    border: 2px dashed rgba(168, 85, 247, 0.5);
+}
+
+/* Week view styles */
+.week-view-cell {
+    min-height: 60px;
+    position: relative;
+}
+
+.week-view-cell:hover {
+    background-color: rgba(59, 130, 246, 0.05);
+}
+
+/* Custom scrollbar */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Print styles */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+
+    body {
+        background: white;
+    }
+
+    .timeline-booking {
+        box-shadow: none;
+        border: 1px solid #ccc;
+    }
+}
