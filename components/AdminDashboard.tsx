@@ -1,8 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { EventData, Slot, Wijk } from '../types';
 import { Save, Star, Calendar, Trash2, Plus, GripVertical, MapPin, Users, MinusCircle, PlusCircle, Armchair, Loader2, CheckCircle, XCircle } from 'lucide-react';
 // formatDateToDutch no longer needed - sending ISO dates directly to backend
-import { saveAdminData, RESTAURANT_ID } from '../api';
+import { saveAdminData, RESTAURANT_ID, API_BASE_URL } from '../api';
+
+// Dutch day names
+const DAYS_NL = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag'];
+
+// Types for restaurant settings
+type RestaurantTable = {
+  id: string;
+  name: string;
+  seats: number;
+  zone: string;
+};
+
+type OpeningHour = {
+  dayOfWeek: number;
+  open: string;
+  close: string;
+  isOpen: boolean;
+};
 
 interface AdminDashboardProps {
   events: EventData[];
@@ -21,6 +39,67 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
 
   // Delete confirmation modal state
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'zone' | 'event' | null; id: string | null }>({ type: null, id: null });
+
+  // Restaurant settings state
+  const [restaurantTables, setRestaurantTables] = useState<RestaurantTable[]>([]);
+  const [openingHours, setOpeningHours] = useState<OpeningHour[]>([
+    { dayOfWeek: 0, open: '17:00', close: '23:00', isOpen: true },
+    { dayOfWeek: 1, open: '17:00', close: '23:00', isOpen: true },
+    { dayOfWeek: 2, open: '17:00', close: '23:00', isOpen: true },
+    { dayOfWeek: 3, open: '17:00', close: '23:00', isOpen: true },
+    { dayOfWeek: 4, open: '17:00', close: '23:00', isOpen: true },
+    { dayOfWeek: 5, open: '17:00', close: '23:00', isOpen: true },
+    { dayOfWeek: 6, open: '17:00', close: '23:00', isOpen: true },
+  ]);
+  const [slotDuration, setSlotDuration] = useState(90);
+  const [maxPartySize, setMaxPartySize] = useState(10);
+  const [bufferTime, setBufferTime] = useState(0);
+  const [savingRestaurant, setSavingRestaurant] = useState(false);
+
+  // Load restaurant settings on mount
+  useEffect(() => {
+    const loadRestaurantSettings = async () => {
+      try {
+        const tablesRes = await fetch(`${API_BASE_URL}/api/restaurant/${RESTAURANT_ID}/tables`);
+        if (tablesRes.ok) {
+          const data = await tablesRes.json();
+          if (data.tables && data.tables.length > 0) {
+            setRestaurantTables(data.tables);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load restaurant settings:', e);
+      }
+    };
+    loadRestaurantSettings();
+  }, []);
+
+  // Save restaurant settings
+  const handleSaveRestaurantSettings = async () => {
+    setSavingRestaurant(true);
+    try {
+      const token = localStorage.getItem('events_token');
+      await fetch(`${API_BASE_URL}/api/admin/restaurant-settings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          restaurantId: RESTAURANT_ID,
+          tables: restaurantTables,
+          openingHours: openingHours,
+          settings: { slotDuration, maxPartySize, bufferTime }
+        })
+      });
+      alert('Restaurant instellingen opgeslagen!');
+    } catch (e) {
+      console.error('Failed to save restaurant settings:', e);
+      alert('Opslaan mislukt');
+    } finally {
+      setSavingRestaurant(false);
+    }
+  };
 
   // Save changes to API
   const handleSaveChanges = async () => {
@@ -312,32 +391,231 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
           <div>
             <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
               <MapPin className="w-5 h-5 text-emerald-600" />
-              🍽️ Restaurant Tafels
+              🍽️ Restaurant Instellingen
             </h2>
-            <p className="text-xs text-gray-500 mt-1">Dagelijkse tafelindeling voor reguliere reserveringen (niet-events)</p>
+            <p className="text-xs text-gray-500 mt-1">Configureer tafels, openingstijden en reserveringsregels</p>
           </div>
-          <a
-            href="?view=timeline"
-            onClick={(e) => { e.preventDefault(); window.location.search = ''; }}
-            className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-colors"
-          >
-            Beheer in Tafels tab →
-          </a>
         </div>
 
-        <div className="bg-emerald-50 rounded-lg p-4 border border-emerald-100">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
-              <span className="text-xl">📋</span>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-emerald-800">Tafelconfiguratie gescheiden van events</p>
-              <p className="text-xs text-emerald-600 mt-0.5">
-                Gebruik de "Tafels" tab voor dagelijkse reserveringen en het tijdlijn overzicht.
-                Events hierboven zijn voor speciale gelegenheden.
-              </p>
-            </div>
+        {/* Tables Configuration */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-bold text-gray-700 uppercase">Tafels</h3>
+            <button
+              onClick={() => {
+                const newTable = {
+                  id: `t-${Date.now()}`,
+                  name: `Tafel ${restaurantTables.length + 1}`,
+                  seats: 2,
+                  zone: 'Binnen'
+                };
+                setRestaurantTables([...restaurantTables, newTable]);
+              }}
+              className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-colors"
+            >
+              + Tafel toevoegen
+            </button>
           </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {restaurantTables.map((table, idx) => (
+              <div key={table.id} className="bg-emerald-50 p-3 rounded-lg border border-emerald-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={table.name}
+                    onChange={(e) => {
+                      const updated = [...restaurantTables];
+                      updated[idx] = { ...table, name: e.target.value };
+                      setRestaurantTables(updated);
+                    }}
+                    className="flex-1 text-sm font-medium bg-white border border-emerald-200 rounded px-2 py-1"
+                    placeholder="Tafel naam"
+                  />
+                  <button
+                    onClick={() => setRestaurantTables(restaurantTables.filter(t => t.id !== table.id))}
+                    className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] text-emerald-600 font-medium uppercase">Stoelen</label>
+                    <select
+                      value={table.seats}
+                      onChange={(e) => {
+                        const updated = [...restaurantTables];
+                        updated[idx] = { ...table, seats: parseInt(e.target.value) };
+                        setRestaurantTables(updated);
+                      }}
+                      className="w-full text-sm bg-white border border-emerald-200 rounded px-2 py-1"
+                    >
+                      <option value={2}>2</option>
+                      <option value={4}>4</option>
+                      <option value={6}>6</option>
+                      <option value={8}>8</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-emerald-600 font-medium uppercase">Zone</label>
+                    <select
+                      value={table.zone}
+                      onChange={(e) => {
+                        const updated = [...restaurantTables];
+                        updated[idx] = { ...table, zone: e.target.value };
+                        setRestaurantTables(updated);
+                      }}
+                      className="w-full text-sm bg-white border border-emerald-200 rounded px-2 py-1"
+                    >
+                      <option value="Binnen">Binnen</option>
+                      <option value="Terras">Terras</option>
+                      <option value="Bar">Bar</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {restaurantTables.length === 0 && (
+              <div className="col-span-full text-center py-6 text-gray-400 text-sm">
+                Nog geen tafels geconfigureerd. Klik op "+ Tafel toevoegen" om te beginnen.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Opening Hours */}
+        <div className="mb-6">
+          <h3 className="text-sm font-bold text-gray-700 uppercase mb-3">Openingstijden</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            {DAYS_NL.map((dayName, dayIndex) => {
+              const hours = openingHours.find(h => h.dayOfWeek === dayIndex) || { open: '17:00', close: '23:00', isOpen: true };
+              return (
+                <div
+                  key={dayIndex}
+                  className={`p-3 rounded-lg border transition-colors ${hours.isOpen
+                    ? 'bg-emerald-50 border-emerald-200'
+                    : 'bg-gray-100 border-gray-200 opacity-60'
+                    }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-bold text-gray-700">{dayName}</span>
+                    <button
+                      onClick={() => {
+                        const updated = [...openingHours];
+                        const existingIdx = updated.findIndex(h => h.dayOfWeek === dayIndex);
+                        if (existingIdx >= 0) {
+                          updated[existingIdx] = { ...updated[existingIdx], isOpen: !updated[existingIdx].isOpen };
+                        } else {
+                          updated.push({ dayOfWeek: dayIndex, open: '17:00', close: '23:00', isOpen: true });
+                        }
+                        setOpeningHours(updated);
+                      }}
+                      className={`text-[10px] font-medium px-2 py-0.5 rounded ${hours.isOpen
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-gray-300 text-gray-600'
+                        }`}
+                    >
+                      {hours.isOpen ? 'OPEN' : 'DICHT'}
+                    </button>
+                  </div>
+                  {hours.isOpen && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] text-gray-500 font-medium">VAN</label>
+                        <input
+                          type="time"
+                          value={hours.open}
+                          onChange={(e) => {
+                            const updated = [...openingHours];
+                            const existingIdx = updated.findIndex(h => h.dayOfWeek === dayIndex);
+                            if (existingIdx >= 0) {
+                              updated[existingIdx] = { ...updated[existingIdx], open: e.target.value };
+                            } else {
+                              updated.push({ dayOfWeek: dayIndex, open: e.target.value, close: '23:00', isOpen: true });
+                            }
+                            setOpeningHours(updated);
+                          }}
+                          className="w-full text-sm bg-white border border-emerald-200 rounded px-2 py-1"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-gray-500 font-medium">TOT</label>
+                        <input
+                          type="time"
+                          value={hours.close}
+                          onChange={(e) => {
+                            const updated = [...openingHours];
+                            const existingIdx = updated.findIndex(h => h.dayOfWeek === dayIndex);
+                            if (existingIdx >= 0) {
+                              updated[existingIdx] = { ...updated[existingIdx], close: e.target.value };
+                            } else {
+                              updated.push({ dayOfWeek: dayIndex, open: '17:00', close: e.target.value, isOpen: true });
+                            }
+                            setOpeningHours(updated);
+                          }}
+                          className="w-full text-sm bg-white border border-emerald-200 rounded px-2 py-1"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Reservation Settings */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+            <label className="text-[10px] text-gray-500 font-medium uppercase">Slot duur (minuten)</label>
+            <select
+              value={slotDuration}
+              onChange={(e) => setSlotDuration(parseInt(e.target.value))}
+              className="w-full mt-1 text-sm bg-white border border-gray-200 rounded px-2 py-1.5 font-medium"
+            >
+              <option value={60}>60 min</option>
+              <option value={90}>90 min</option>
+              <option value={120}>120 min</option>
+            </select>
+          </div>
+          <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+            <label className="text-[10px] text-gray-500 font-medium uppercase">Max groepsgrootte</label>
+            <select
+              value={maxPartySize}
+              onChange={(e) => setMaxPartySize(parseInt(e.target.value))}
+              className="w-full mt-1 text-sm bg-white border border-gray-200 rounded px-2 py-1.5 font-medium"
+            >
+              <option value={6}>6 personen</option>
+              <option value={8}>8 personen</option>
+              <option value={10}>10 personen</option>
+              <option value={12}>12 personen</option>
+              <option value={20}>20 personen</option>
+            </select>
+          </div>
+          <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+            <label className="text-[10px] text-gray-500 font-medium uppercase">Tijd tussen reserveringen</label>
+            <select
+              value={bufferTime}
+              onChange={(e) => setBufferTime(parseInt(e.target.value))}
+              className="w-full mt-1 text-sm bg-white border border-gray-200 rounded px-2 py-1.5 font-medium"
+            >
+              <option value={0}>Geen</option>
+              <option value={15}>15 min</option>
+              <option value={30}>30 min</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Save Button */}
+        <div className="mt-4 flex justify-end">
+          <button
+            onClick={handleSaveRestaurantSettings}
+            disabled={savingRestaurant}
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg flex items-center gap-2 disabled:opacity-60"
+          >
+            {savingRestaurant ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {savingRestaurant ? 'Opslaan...' : 'Restaurant opslaan'}
+          </button>
         </div>
       </div>
 
