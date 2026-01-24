@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { EventData, Slot, Wijk } from '../types';
-import { Save, Star, Calendar, Trash2, Plus, GripVertical, MapPin, Users, MinusCircle, PlusCircle, Armchair, Loader2, CheckCircle, XCircle } from 'lucide-react';
+import { Save, Star, Calendar, Trash2, Plus, GripVertical, MapPin, Users, MinusCircle, PlusCircle, Armchair, Loader2, CheckCircle, XCircle, Clock } from 'lucide-react';
 // formatDateToDutch no longer needed - sending ISO dates directly to backend
 import { saveAdminData, RESTAURANT_ID, API_BASE_URL } from '../api';
 
@@ -520,22 +520,33 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
           </div>
         </div>
 
-        {/* Opening Hours */}
-        <div className="mb-6">
-          <h3 className="text-sm font-bold text-gray-700 uppercase mb-3">Openingstijden</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* Opening Hours - Premium Design */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                <Clock className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Openingstijden</h3>
+                <p className="text-xs text-gray-500">Configureer wanneer gasten kunnen reserveren</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
             {DAYS_NL.map((dayName, dayIndex) => {
               const hours = openingHours.find(h => h.dayOfWeek === dayIndex) || { open: '17:00', close: '23:00', isOpen: true };
               return (
                 <div
                   key={dayIndex}
-                  className={`p-3 rounded-lg border transition-colors ${hours.isOpen
-                    ? 'bg-emerald-50 border-emerald-200'
-                    : 'bg-gray-100 border-gray-200 opacity-60'
+                  className={`relative p-4 rounded-2xl border-2 transition-all duration-200 ${hours.isOpen
+                    ? 'bg-gradient-to-br from-emerald-50 to-white border-emerald-200 shadow-sm hover:shadow-md hover:border-emerald-300'
+                    : 'bg-gray-50 border-gray-200 opacity-75'
                     }`}
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-bold text-gray-700">{dayName}</span>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-bold text-gray-800">{dayName}</span>
                     <button
                       onClick={() => {
                         const updated = [...openingHours];
@@ -547,8 +558,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
                         }
                         setOpeningHours(updated);
                       }}
-                      className={`text-[10px] font-medium px-2 py-0.5 rounded ${hours.isOpen
-                        ? 'bg-emerald-600 text-white'
+                      className={`text-[10px] font-bold px-2.5 py-1 rounded-full transition-all ${hours.isOpen
+                        ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/30'
                         : 'bg-gray-300 text-gray-600'
                         }`}
                     >
@@ -556,9 +567,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
                     </button>
                   </div>
                   {hours.isOpen && (
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="text-[10px] text-gray-500 font-medium">VAN</label>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-gray-400 font-medium w-8">VAN</span>
                         <input
                           type="time"
                           value={hours.open}
@@ -572,11 +583,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
                             }
                             setOpeningHours(updated);
                           }}
-                          className="w-full text-sm bg-white border border-emerald-200 rounded px-2 py-1"
+                          className="flex-1 text-sm bg-white border border-emerald-200 rounded-lg px-2.5 py-1.5 font-medium focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all"
                         />
                       </div>
-                      <div>
-                        <label className="text-[10px] text-gray-500 font-medium">TOT</label>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-gray-400 font-medium w-8">TOT</span>
                         <input
                           type="time"
                           value={hours.close}
@@ -590,9 +601,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
                             }
                             setOpeningHours(updated);
                           }}
-                          className="w-full text-sm bg-white border border-emerald-200 rounded px-2 py-1"
+                          className="flex-1 text-sm bg-white border border-emerald-200 rounded-lg px-2.5 py-1.5 font-medium focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all"
                         />
                       </div>
+                    </div>
+                  )}
+                  {!hours.isOpen && (
+                    <div className="text-center py-3 text-sm text-gray-400 font-medium">
+                      Gesloten
                     </div>
                   )}
                 </div>
