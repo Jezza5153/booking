@@ -213,7 +213,7 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                                 <p className="text-xs text-indigo-600 mt-1">Gegroepeerd per event</p>
                             </div>
                             <button
-                                onClick={() => window.location.hash = '#/tafels'}
+                                onClick={() => window.location.hash = '#/tafels?newBooking=true'}
                                 className="flex items-center gap-1.5 bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
                             >
                                 <Plus className="w-4 h-4" />
@@ -294,7 +294,7 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                                 <p className="text-xs text-emerald-600 mt-1">Dagelijks overzicht</p>
                             </div>
                             <button
-                                onClick={() => window.location.hash = '#/tafels'}
+                                onClick={() => window.location.hash = '#/tafels?newBooking=true'}
                                 className="flex items-center gap-1.5 bg-emerald-600 text-white px-3 py-1.5 rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium"
                             >
                                 <Plus className="w-4 h-4" />

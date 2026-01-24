@@ -244,6 +244,16 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
         fetchData()
     }, [fetchData])
 
+    // Check for newBooking query param to auto-open modal
+    useEffect(() => {
+        const hash = window.location.hash
+        if (hash.includes('newBooking=true')) {
+            setShowNewBookingModal(true)
+            // Clean up the URL
+            window.location.hash = '#/tafels'
+        }
+    }, [])
+
     // Navigate date
     const navigateDate = (delta: number) => {
         const d = new Date(date)
