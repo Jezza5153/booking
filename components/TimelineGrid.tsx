@@ -842,23 +842,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                     )
                 }
 
-                {/* Capacity bar */}
-                <div className="flex items-center gap-1 mt-2 overflow-x-auto">
-                    {timeSlots.filter((_, i) => i % 2 === 0).map(slot => {
-                        const capacity = getSlotCapacity(slot)
-                        return (
-                            <div key={slot} className="flex flex-col items-center min-w-[60px]">
-                                <div
-                                    className={`h-2 w-full rounded-full ${capacity >= 80 ? 'bg-red-400' :
-                                        capacity >= 50 ? 'bg-amber-400' : 'bg-emerald-400'
-                                        }`}
-                                    style={{ opacity: 0.3 + (capacity / 100) * 0.7 }}
-                                />
-                                <span className="text-[10px] text-gray-400">{slot}</span>
-                            </div>
-                        )
-                    })}
-                </div>
+
 
 
                 {/* Closed indicator */}
