@@ -460,6 +460,10 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
 
     // Update booking status
     const updateBookingStatus = async (bookingId: string, status: string) => {
+        // Optimistic update - update local state immediately
+        setBookings(prev => prev.map(b =>
+            b.id === bookingId ? { ...b, status } : b
+        ))
         try {
             const token = localStorage.getItem('events_token')
             await fetch(`${API_BASE_URL}/api/admin/restaurant-bookings/${bookingId}/status`, {
@@ -470,12 +474,15 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                 },
                 body: JSON.stringify({ status })
             })
-            fetchData()
             setShowBookingDetail(null)
         } catch (e) {
             console.error('Failed to update status:', e)
+            fetchData() // Revert on error
         }
     }
+
+    // Quick mark as arrived helper
+    const markAsArrived = (bookingId: string) => updateBookingStatus(bookingId, 'arrived')
 
     // Add day note
     const addDayNote = async () => {
@@ -716,6 +723,34 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                     </div>
                 </div>
 
+
+                {/* Service Stats Bar - Quick Couverts Overview */}
+                <div className="grid grid-cols-4 gap-3 mb-4">
+                    <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200 p-3 text-center">
+                        <div className="text-2xl font-black text-amber-900">
+                            {bookings.filter(b => b.status !== 'arrived' && b.status !== 'cancelled' && b.status !== 'walkin').reduce((sum, b) => sum + (b.guest_count || 0), 0)}
+                        </div>
+                        <div className="text-[10px] font-bold text-amber-600 uppercase">Verwacht</div>
+                    </div>
+                    <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl border border-emerald-200 p-3 text-center">
+                        <div className="text-2xl font-black text-emerald-900">
+                            {bookings.filter(b => b.status === 'arrived').reduce((sum, b) => sum + (b.guest_count || 0), 0)}
+                        </div>
+                        <div className="text-[10px] font-bold text-emerald-600 uppercase">Binnen</div>
+                    </div>
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-3 text-center">
+                        <div className="text-2xl font-black text-blue-900">
+                            {bookings.filter(b => b.status === 'walkin' || (b as any).is_walkin).reduce((sum, b) => sum + (b.guest_count || 0), 0)}
+                        </div>
+                        <div className="text-[10px] font-bold text-blue-600 uppercase">Walk-in</div>
+                    </div>
+                    <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl border border-purple-200 p-3 text-center">
+                        <div className="text-2xl font-black text-purple-900">
+                            {bookings.filter(b => b.status === 'arrived' || b.status === 'walkin' || (b as any).is_walkin).reduce((sum, b) => sum + (b.guest_count || 0), 0)}
+                        </div>
+                        <div className="text-[10px] font-bold text-purple-600 uppercase">Totaal</div>
+                    </div>
+                </div>
 
                 {/* Day notes display */}
                 {
