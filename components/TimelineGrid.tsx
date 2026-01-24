@@ -87,6 +87,16 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
     const [showBookingDetail, setShowBookingDetail] = useState<Booking | null>(null)
     const [showCustomerSearch, setShowCustomerSearch] = useState(false)
 
+    // Toast notification
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+
+    // Confirmation dialog
+    const [confirmDialog, setConfirmDialog] = useState<{
+        message: string
+        action: () => void
+        type: 'danger' | 'warning'
+    } | null>(null)
+
     // Quick book state (when clicking a cell)
     const [quickBookData, setQuickBookData] = useState<{ table: Table; time: string } | null>(null)
     const [quickBookForm, setQuickBookForm] = useState({
@@ -246,6 +256,12 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
     useEffect(() => {
         fetchData()
     }, [fetchData])
+
+    // Toast helper
+    const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+        setToast({ message, type })
+        setTimeout(() => setToast(null), 3000)
+    }
 
     // Check for newBooking query param to auto-open modal
     useEffect(() => {
@@ -419,7 +435,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
             : findBestTables(walkinForm.guest_count)
 
         if (!allocation || allocation.tables.length === 0) {
-            alert('Geen beschikbare tafels voor dit aantal gasten')
+            showToast('Geen beschikbare tafels voor dit aantal gasten', 'error')
             setIsSubmitting(false)
             return
         }
@@ -1414,7 +1430,14 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                             Gearriveerd
                                         </button>
                                         <button
-                                            onClick={() => updateBookingStatus(showBookingDetail.id, 'no_show')}
+                                            onClick={() => setConfirmDialog({
+                                                message: 'Weet je zeker dat je deze boeking als No-show wilt markeren?',
+                                                action: () => {
+                                                    updateBookingStatus(showBookingDetail.id, 'no_show')
+                                                    setConfirmDialog(null)
+                                                },
+                                                type: 'warning'
+                                            })}
                                             className="flex items-center justify-center gap-2 px-3 py-2 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600"
                                         >
                                             <UserX className="w-4 h-4" />
@@ -1428,7 +1451,14 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                             Bevestigd
                                         </button>
                                         <button
-                                            onClick={() => updateBookingStatus(showBookingDetail.id, 'cancelled')}
+                                            onClick={() => setConfirmDialog({
+                                                message: 'Weet je zeker dat je deze boeking wilt annuleren?',
+                                                action: () => {
+                                                    updateBookingStatus(showBookingDetail.id, 'cancelled')
+                                                    setConfirmDialog(null)
+                                                },
+                                                type: 'danger'
+                                            })}
                                             className="flex items-center justify-center gap-2 px-3 py-2 bg-gray-500 text-white rounded-lg text-sm hover:bg-gray-600"
                                         >
                                             <X className="w-4 h-4" />
@@ -1465,6 +1495,40 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                     </div>
                 )
             }
+
+            {/* Toast Notification */}
+            {toast && (
+                <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-in slide-in-from-bottom-4 ${toast.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
+                    }`}>
+                    {toast.type === 'success' ? <Check className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                    {toast.message}
+                </div>
+            )}
+
+            {/* Confirmation Dialog */}
+            {confirmDialog && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl max-w-sm w-full p-5 shadow-xl">
+                        <h3 className="font-semibold text-gray-900 mb-3">Bevestigen</h3>
+                        <p className="text-gray-600 mb-5">{confirmDialog.message}</p>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setConfirmDialog(null)}
+                                className="flex-1 px-4 py-2 border rounded-lg text-sm hover:bg-gray-50"
+                            >
+                                Annuleren
+                            </button>
+                            <button
+                                onClick={confirmDialog.action}
+                                className={`flex-1 px-4 py-2 text-white rounded-lg text-sm ${confirmDialog.type === 'danger' ? 'bg-red-500 hover:bg-red-600' : 'bg-amber-500 hover:bg-amber-600'
+                                    }`}
+                            >
+                                Bevestigen
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     )
 }
