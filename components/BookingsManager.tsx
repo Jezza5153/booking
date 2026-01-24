@@ -138,7 +138,7 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
 
     const eventTitles = useMemo(() => {
         // Combine all events from allEvents with those that have bookings
-        const titlesFromAllEvents = allEvents.map(e => e.title)
+        const titlesFromAllEvents = (allEvents || []).map(e => e.title)
         const titlesFromBookings = Object.keys(groupedByEvent)
         const uniqueTitles = Array.from(new Set([...titlesFromAllEvents, ...titlesFromBookings]))
         return uniqueTitles.sort()
