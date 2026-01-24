@@ -1893,19 +1893,19 @@ app.get('/api/restaurant/:id/openings', async (req, res) => {
 });
 
 // POST /api/restaurant/book - Enhanced with multi-table support
-app.post('/api/restaurant/book', async (req, res) => {
+app.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
     const {
-        restaurantId, tableId, tableIds, date, startTime, endTime,
-        guestCount, customerName, customerEmail, customerPhone,
-        remarks, status, isWalkin, tablesLinked
+        restaurant_id, table_id, table_ids, date, time, end_time,
+        guest_count, customer_name, customer_email, customer_phone,
+        remarks, status, is_walkin, tables_linked
     } = req.body;
 
-    if (!restaurantId || !date || !startTime || !guestCount || !customerName) {
+    if (!restaurant_id || !date || !time || !guest_count || !customer_name) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Use tableIds if provided, otherwise fall back to single tableId
-    const allTableIds = tableIds?.length > 0 ? tableIds : [tableId];
+    // Use table_ids if provided, otherwise fall back to single table_id
+    const allTableIds = table_ids?.length > 0 ? table_ids : [table_id];
     if (!allTableIds[0]) {
         return res.status(400).json({ error: 'Table ID required' });
     }
@@ -1916,31 +1916,31 @@ app.post('/api/restaurant/book', async (req, res) => {
 
         const bookingId = crypto.randomUUID();
         const bookingStatus = status || 'confirmed';
-        const walkin = isWalkin || false;
+        const walkin = is_walkin || false;
 
         // Calculate end time if not provided
-        let finalEndTime = endTime;
+        let finalEndTime = end_time;
         if (!finalEndTime) {
-            const startMins = parseInt(startTime.split(':')[0]) * 60 + parseInt(startTime.split(':')[1]);
+            const startMins = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1]);
             const endMins = startMins + 90;
             finalEndTime = `${Math.floor(endMins / 60).toString().padStart(2, '0')}:${(endMins % 60).toString().padStart(2, '0')}`;
         }
 
         // Check for customer or create new one
         let customerId = null;
-        if (customerPhone || customerEmail) {
+        if (customer_phone || customer_email) {
             const existingCustomer = await client.query(
                 `SELECT id FROM customers WHERE restaurant_id = $1 AND (phone = $2 OR email = $3) LIMIT 1`,
-                [restaurantId, customerPhone || '', customerEmail || '']
+                [restaurant_id, customer_phone || '', customer_email || '']
             );
 
             if (existingCustomer.rowCount > 0) {
                 customerId = existingCustomer.rows[0].id;
-            } else if (customerPhone || customerEmail) {
+            } else if (customer_phone || customer_email) {
                 customerId = crypto.randomUUID();
                 await client.query(
                     `INSERT INTO customers (id, restaurant_id, name, email, phone) VALUES ($1, $2, $3, $4, $5)`,
-                    [customerId, restaurantId, customerName, customerEmail || null, customerPhone || null]
+                    [customerId, restaurant_id, customer_name, customer_email || null, customer_phone || null]
                 );
             }
         }
@@ -1957,9 +1957,9 @@ app.post('/api/restaurant/book', async (req, res) => {
                  (id, restaurant_id, table_id, booking_date, start_time, end_time, guest_count, 
                   customer_name, customer_email, customer_phone, remarks, status, is_walkin, customer_id, arrived_at, tables_linked)
                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
-                [currentBookingId, restaurantId, currentTableId, date, startTime, finalEndTime,
-                    i === 0 ? guestCount : 0, // Only primary booking has guest count
-                    customerName, customerEmail || null, customerPhone || null, remarks || null,
+                [currentBookingId, restaurant_id, currentTableId, date, time, finalEndTime,
+                    i === 0 ? guest_count : 0, // Only primary booking has guest count
+                    customer_name, customer_email || null, customer_phone || null, remarks || null,
                     bookingStatus, walkin, customerId, bookingStatus === 'arrived' ? new Date() : null,
                     linkedTableIds]
             );
