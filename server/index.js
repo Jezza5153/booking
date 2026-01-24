@@ -1769,6 +1769,7 @@ app.post('/api/restaurant/book', async (req, res) => {
 // POST /api/admin/restaurant-settings - Save restaurant tables & settings
 app.post('/api/admin/restaurant-settings', authMiddleware, async (req, res) => {
     const { restaurantId, tables, openingHours, settings } = req.body;
+    console.log('DEBUG: /api/admin/restaurant-settings called with:', JSON.stringify(req.body, null, 2));
 
     if (!restaurantId) {
         return res.status(400).json({ error: 'restaurantId required' });

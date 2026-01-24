@@ -79,19 +79,31 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
     setSavingRestaurant(true);
     try {
       const token = localStorage.getItem('events_token');
-      await fetch(`${API_BASE_URL}/api/admin/restaurant-settings`, {
+      const payload = {
+        restaurantId: RESTAURANT_ID,
+        tables: restaurantTables,
+        openingHours: openingHours,
+        settings: { slotDuration, maxPartySize, bufferTime }
+      };
+      console.log('DEBUG: Saving restaurant settings. Payload:', payload);
+
+      const response = await fetch(`${API_BASE_URL}/api/admin/restaurant-settings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          restaurantId: RESTAURANT_ID,
-          tables: restaurantTables,
-          openingHours: openingHours,
-          settings: { slotDuration, maxPartySize, bufferTime }
-        })
+        body: JSON.stringify(payload)
       });
+
+      console.log('DEBUG: Save response status:', response.status);
+      const data = await response.json();
+      console.log('DEBUG: Save response data:', data);
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Unknown error');
+      }
+
       alert('Restaurant instellingen opgeslagen!');
     } catch (e) {
       console.error('Failed to save restaurant settings:', e);

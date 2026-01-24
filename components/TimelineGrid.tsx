@@ -544,153 +544,155 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
     return (
         <>
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                {/* Header */}
-                <div className="px-4 py-3 border-b border-gray-200">
-                    <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
-                        {/* Left: Navigation & Controls */}
-                        <div className="flex items-center gap-3 overflow-x-auto pb-1 xl:pb-0 hide-scrollbar">
-                            <div className="flex items-center rounded-lg bg-gray-50 border border-gray-200 p-1 shrink-0">
+                {/* Header - Modern Premium Design */}
+                <div className="px-6 py-4 border-b border-gray-100 bg-white/80 backdrop-blur-sm sticky top-0 z-20">
+                    <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
+                        {/* Left: Date Navigation & View Mode */}
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center bg-gray-50 rounded-lg p-1 border border-gray-100 shadow-sm">
                                 <button
                                     onClick={() => navigateDate(-1)}
-                                    className="p-1.5 hover:bg-white hover:shadow-sm rounded-md transition-all text-gray-600"
+                                    className="p-1.5 hover:bg-white hover:shadow-sm rounded-md transition-all text-gray-500 hover:text-gray-900"
                                 >
-                                    <ChevronLeft className="w-4 h-4" />
+                                    <ChevronLeft className="w-5 h-5" />
                                 </button>
                                 <button
                                     onClick={goToToday}
-                                    className="px-3 py-1 text-xs font-semibold text-gray-700 hover:bg-white hover:shadow-sm rounded-md transition-all mx-1"
+                                    className="px-3 py-1 text-sm font-semibold text-gray-700 hover:text-gray-900 transition-colors"
                                 >
                                     Vandaag
                                 </button>
                                 <button
                                     onClick={() => navigateDate(1)}
-                                    className="p-1.5 hover:bg-white hover:shadow-sm rounded-md transition-all text-gray-600"
+                                    className="p-1.5 hover:bg-white hover:shadow-sm rounded-md transition-all text-gray-500 hover:text-gray-900"
                                 >
-                                    <ChevronRight className="w-4 h-4" />
+                                    <ChevronRight className="w-5 h-5" />
                                 </button>
                             </div>
 
-                            <h2 className="text-lg font-bold text-gray-900 min-w-[140px] whitespace-nowrap">
-                                {formatDate(date)}
-                            </h2>
+                            <div className="flex flex-col">
+                                <h2 className="text-xl font-bold text-gray-900 leading-none">
+                                    {new Date(date).toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })}
+                                </h2>
+                                <span className="text-xs text-gray-400 font-medium uppercase tracking-wider mt-0.5">
+                                    {viewMode === 'day' ? 'Dagoverzicht' : 'Weekoverzicht'}
+                                </span>
+                            </div>
+                        </div>
 
-                            <div className="h-6 w-px bg-gray-200 mx-1 shrink-0"></div>
+                        {/* Center: Live Stats Pill */}
+                        <div className="hidden 2xl:flex items-center gap-6 px-6 py-2.5 bg-gray-900 text-white rounded-full shadow-lg shadow-gray-200 transform hover:scale-105 transition-transform duration-200 cursor-default">
+                            <div className="flex items-center gap-3">
+                                <div className="flex -space-x-2">
+                                    {[...Array(3)].map((_, i) => (
+                                        <div key={i} className={`w-2 h-2 rounded-full border border-gray-900 ${i === 0 ? 'bg-emerald-400' : 'bg-gray-600'}`} />
+                                    ))}
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-lg font-bold leading-none">
+                                        {bookings.filter(b => b.status !== 'cancelled').length}
+                                    </span>
+                                    <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Boekingen</span>
+                                </div>
+                            </div>
+                            <div className="w-px h-8 bg-gray-700"></div>
+                            <div className="flex items-center gap-3">
+                                <Users className="w-4 h-4 text-blue-400" />
+                                <div className="flex flex-col">
+                                    <span className="text-lg font-bold leading-none">
+                                        {bookings.filter(b => b.status !== 'cancelled').reduce((sum, b) => sum + b.guest_count, 0)}
+                                    </span>
+                                    <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Gasten</span>
+                                </div>
+                            </div>
+                        </div>
 
-                            {/* View Toggle */}
-                            <div className="flex rounded-lg border border-gray-200 overflow-hidden bg-white shrink-0">
+                        {/* Right: Actions Toolbar */}
+                        <div className="flex items-center gap-3">
+                            {/* View Controls Group */}
+                            <div className="hidden md:flex items-center bg-gray-50 rounded-lg p-1 border border-gray-100 mr-2">
                                 <button
                                     onClick={() => setViewMode('day')}
-                                    className={`px-3 py-1.5 text-xs font-medium transition-colors ${viewMode === 'day' ? 'bg-gray-800 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+                                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${viewMode === 'day' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                                 >
                                     Dag
                                 </button>
                                 <button
                                     onClick={() => setViewMode('week')}
-                                    className={`px-3 py-1.5 text-xs font-medium transition-colors ${viewMode === 'week' ? 'bg-gray-800 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+                                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${viewMode === 'week' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                                 >
                                     Week
                                 </button>
-                            </div>
-
-                            {/* Slot Duration (Compact) */}
-                            <div className="flex rounded-lg border border-gray-200 overflow-hidden bg-white shrink-0 ml-1">
+                                <div className="w-px h-4 bg-gray-200 mx-1"></div>
                                 <select
                                     value={slotDuration}
                                     onChange={(e) => setSlotDuration(parseInt(e.target.value))}
-                                    className="text-xs font-medium text-gray-600 bg-transparent border-none py-1.5 pl-2 pr-6 focus:ring-0 cursor-pointer hover:bg-gray-50 bg-[center_right_0.2rem]"
+                                    className="bg-transparent text-xs font-medium text-gray-600 border-none focus:ring-0 py-0 pl-2 pr-6 cursor-pointer"
                                 >
                                     <option value={60}>1u</option>
                                     <option value={30}>30m</option>
                                     <option value={15}>15m</option>
                                 </select>
                             </div>
-                        </div>
 
-                        {/* Center: Stats (Hidden on mobile) */}
-                        <div className="hidden lg:flex items-center gap-4 px-4 py-2 bg-gray-50/80 rounded-full border border-gray-100 mx-auto">
-                            <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                                <span className="text-sm font-bold text-gray-700">
-                                    {bookings.filter(b => b.status !== 'cancelled').length}
-                                </span>
-                                <span className="text-xs text-gray-500 uppercase font-medium">boekingen</span>
+                            {/* Secondary Actions */}
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={fetchData}
+                                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-full transition-colors"
+                                    title="Vernieuwen"
+                                >
+                                    <RefreshCw className="w-5 h-5" />
+                                </button>
+                                <button
+                                    onClick={() => window.print()}
+                                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-full transition-colors"
+                                    title="Printen"
+                                >
+                                    <Printer className="w-5 h-5" />
+                                </button>
+                                <button
+                                    onClick={() => setShowDayNotes(!showDayNotes)}
+                                    className={`p-2 rounded-full transition-colors ${dayNotes.length > 0 ? 'text-amber-500 bg-amber-50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
+                                    title="Notities"
+                                >
+                                    <StickyNote className="w-5 h-5" />
+                                    {dayNotes.length > 0 && <span className="absolute top-0 right-0 w-2 h-2 bg-amber-500 rounded-full"></span>}
+                                </button>
+                                <button
+                                    onClick={() => setShowWaitlistPanel(!showWaitlistPanel)}
+                                    className={`p-2 rounded-full transition-colors relative ${waitlist.length > 0 ? 'text-purple-500 bg-purple-50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
+                                    title="Wachtlijst"
+                                >
+                                    <Clock className="w-5 h-5" />
+                                    {waitlist.length > 0 && (
+                                        <span className="absolute -top-1 -right-1 w-4 h-4 bg-purple-500 text-white text-[10px] flex items-center justify-center rounded-full ring-2 ring-white">
+                                            {waitlist.length}
+                                        </span>
+                                    )}
+                                </button>
                             </div>
-                            <div className="w-px h-4 bg-gray-300"></div>
+
+                            <div className="h-8 w-px bg-gray-200 mx-2"></div>
+
+                            {/* Primary Actions */}
                             <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                                <span className="text-sm font-bold text-gray-700">
-                                    {bookings.filter(b => b.status !== 'cancelled').reduce((sum, b) => sum + b.guest_count, 0)}
-                                </span>
-                                <span className="text-xs text-gray-500 uppercase font-medium">couverts</span>
+                                <button
+                                    onClick={() => setShowWalkinModal(true)}
+                                    className="hidden sm:flex items-center gap-2 text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 upgrade-btn px-4 py-2 rounded-xl transition-all font-medium text-sm shadow-sm"
+                                >
+                                    <Users className="w-4 h-4 text-gray-500" />
+                                    Walk-in
+                                </button>
+
+                                <button
+                                    onClick={() => setShowNewBookingModal(true)}
+                                    className="flex items-center gap-2 bg-[#0F172A] text-white px-5 py-2.5 rounded-xl hover:bg-black transition-all font-medium text-sm shadow-lg shadow-gray-200 active:transform active:scale-95"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    <span>Nieuwe boeking</span>
+                                </button>
                             </div>
-                        </div>
-
-                        {/* Right: Actions */}
-                        <div className="flex items-center gap-2 justify-end">
-                            <button
-                                onClick={fetchData}
-                                className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors border border-transparent hover:border-gray-200"
-                                title="Vernieuwen"
-                            >
-                                <RefreshCw className="w-4 h-4" />
-                            </button>
-
-                            <button
-                                onClick={() => window.print()}
-                                className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors border border-transparent hover:border-gray-200"
-                                title="Print dag overzicht"
-                            >
-                                <Printer className="w-4 h-4" />
-                            </button>
-
-                            <button
-                                onClick={() => setShowWaitlistPanel(!showWaitlistPanel)}
-                                className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${showWaitlistPanel
-                                    ? 'bg-purple-50 border-purple-200 text-purple-700'
-                                    : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
-                                    }`}
-                            >
-                                <Clock className="w-4 h-4" />
-                                {waitlist.length > 0 && (
-                                    <span className="bg-purple-600 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-bold">
-                                        {waitlist.length}
-                                    </span>
-                                )}
-                            </button>
-
-                            <button
-                                onClick={() => setShowDayNotes(!showDayNotes)}
-                                className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${dayNotes.length > 0
-                                    ? 'bg-amber-50 border-amber-200 text-amber-700'
-                                    : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
-                                    }`}
-                                title="Dagnotities"
-                            >
-                                <StickyNote className="w-4 h-4" />
-                                {dayNotes.length > 0 && (
-                                    <span className="bg-amber-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-bold">
-                                        {dayNotes.length}
-                                    </span>
-                                )}
-                            </button>
-
-                            <div className="h-8 w-px bg-gray-200 mx-1 hidden sm:block"></div>
-
-                            <button
-                                onClick={() => setShowWalkinModal(true)}
-                                className="hidden sm:flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors font-medium text-sm border border-blue-100"
-                            >
-                                <Users className="w-4 h-4" />
-                                Walk-in
-                            </button>
-
-                            <button
-                                onClick={() => setShowNewBookingModal(true)}
-                                className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors font-medium text-sm shadow-sm"
-                            >
-                                <Plus className="w-4 h-4" />
-                                <span className="hidden sm:inline">Nieuwe boeking</span>
-                            </button>
                         </div>
                     </div>
                 </div>
