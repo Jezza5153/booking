@@ -1691,6 +1691,109 @@ app.patch('/api/admin/restaurant-bookings/:id/status', authMiddleware, async (re
     }
 });
 
+// POST /api/admin/bookings - Create event booking from admin panel
+app.post('/api/admin/bookings', authMiddleware, async (req, res) => {
+    try {
+        const { restaurantId, eventId, customer_name, customer_email, customer_phone, guest_count, remarks } = req.body;
+
+        if (!restaurantId || !eventId || !customer_name || !guest_count) {
+            return res.status(400).json({ error: 'Missing required fields' });
+        }
+
+        // Get or create customer
+        let customerId = null;
+        if (customer_email || customer_phone) {
+            const existingCustomer = await pool.query(
+                `SELECT id FROM customers WHERE restaurant_id = $1 AND (email = $2 OR phone = $3) LIMIT 1`,
+                [restaurantId, customer_email || '', customer_phone || '']
+            );
+            if (existingCustomer.rows.length > 0) {
+                customerId = existingCustomer.rows[0].id;
+            } else {
+                const newCustomer = await pool.query(
+                    `INSERT INTO customers (id, restaurant_id, name, email, phone) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+                    [crypto.randomUUID(), restaurantId, customer_name, customer_email || null, customer_phone || null]
+                );
+                customerId = newCustomer.rows[0].id;
+            }
+        }
+
+        // Get event start datetime
+        const eventResult = await pool.query(
+            `SELECT start_datetime FROM slots WHERE event_id = $1 ORDER BY start_datetime LIMIT 1`,
+            [eventId]
+        );
+        const startDatetime = eventResult.rows[0]?.start_datetime || new Date();
+
+        // Create booking
+        const bookingId = crypto.randomUUID();
+        await pool.query(
+            `INSERT INTO bookings (id, restaurant_id, slot_id, customer_id, customer_name, customer_email, customer_phone, guest_count, status, confirmation_token, remarks, created_at)
+             VALUES ($1, $2, (SELECT id FROM slots WHERE event_id = $3 LIMIT 1), $4, $5, $6, $7, $8, 'confirmed', $9, $10, NOW())`,
+            [bookingId, restaurantId, eventId, customerId, customer_name, customer_email || null, customer_phone || null, guest_count, crypto.randomUUID(), remarks || null]
+        );
+
+        res.json({ success: true, booking_id: bookingId });
+    } catch (error) {
+        console.error('Admin event booking error:', error);
+        res.status(500).json({ error: 'Failed to create booking' });
+    }
+});
+
+// POST /api/admin/restaurant-bookings - Create restaurant booking from admin panel
+app.post('/api/admin/restaurant-bookings', authMiddleware, async (req, res) => {
+    try {
+        const { restaurantId, date, time, customer_name, customer_email, customer_phone, guest_count, remarks } = req.body;
+
+        if (!restaurantId || !date || !time || !customer_name || !guest_count) {
+            return res.status(400).json({ error: 'Missing required fields' });
+        }
+
+        // Get or create customer
+        let customerId = null;
+        if (customer_email || customer_phone) {
+            const existingCustomer = await pool.query(
+                `SELECT id FROM customers WHERE restaurant_id = $1 AND (email = $2 OR phone = $3) LIMIT 1`,
+                [restaurantId, customer_email || '', customer_phone || '']
+            );
+            if (existingCustomer.rows.length > 0) {
+                customerId = existingCustomer.rows[0].id;
+            } else {
+                const newCustomer = await pool.query(
+                    `INSERT INTO customers (id, restaurant_id, name, email, phone) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+                    [crypto.randomUUID(), restaurantId, customer_name, customer_email || null, customer_phone || null]
+                );
+                customerId = newCustomer.rows[0].id;
+            }
+        }
+
+        // Find best available table
+        const tablesResult = await pool.query(
+            `SELECT id, seats FROM tables WHERE restaurant_id = $1 AND seats >= $2 ORDER BY seats ASC LIMIT 1`,
+            [restaurantId, guest_count]
+        );
+        const tableId = tablesResult.rows[0]?.id || null;
+
+        // Calculate end time (default 90 min)
+        const startDatetime = new Date(`${date}T${time}`);
+        const endDatetime = new Date(startDatetime.getTime() + 90 * 60 * 1000);
+        const endTime = endDatetime.toTimeString().slice(0, 5);
+
+        // Create booking
+        const bookingId = crypto.randomUUID();
+        await pool.query(
+            `INSERT INTO restaurant_bookings (id, restaurant_id, table_id, customer_id, customer_name, customer_email, customer_phone, guest_count, date, start_time, end_time, status, remarks, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'confirmed', $12, NOW())`,
+            [bookingId, restaurantId, tableId, customerId, customer_name, customer_email || null, customer_phone || null, guest_count, date, time, endTime, remarks || null]
+        );
+
+        res.json({ success: true, booking_id: bookingId });
+    } catch (error) {
+        console.error('Admin restaurant booking error:', error);
+        res.status(500).json({ error: 'Failed to create booking' });
+    }
+});
+
 // GET /api/admin/day-notes - Get day notes
 app.get('/api/admin/day-notes', authMiddleware, async (req, res) => {
     const { restaurantId, date } = req.query;
