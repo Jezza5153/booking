@@ -1,16 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { EventsWidget } from './components/EventsWidget';
-import { AdminDashboard } from './components/AdminDashboard';
-import { IntegrationGuide } from './components/IntegrationGuide';
-import { CalendarManager } from './components/CalendarManager';
-import { BookingsManager } from './components/BookingsManager';
-import { TimelineGrid } from './components/TimelineGrid';
-import { BookingStats } from './components/BookingStats';
 import { LoginPage } from './components/LoginPage';
 import { EVENTS_DATA, WIJKEN_DATA } from './data';
 import { EventData, Wijk } from './types';
 import { API_BASE_URL, fetchWidgetData, fetchAdminData, RESTAURANT_ID } from './api';
-import { Smartphone, Settings, BookOpen, Calendar as CalendarIcon, LogOut, Users, LayoutGrid, BarChart3 } from 'lucide-react';
+import { Smartphone, Settings, BookOpen, Calendar as CalendarIcon, LogOut, Users, LayoutGrid, BarChart3, Loader2 } from 'lucide-react';
+
+// Lazy load heavy components for faster initial load
+const AdminDashboard = lazy(() => import('./components/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
+const IntegrationGuide = lazy(() => import('./components/IntegrationGuide').then(m => ({ default: m.IntegrationGuide })));
+const CalendarManager = lazy(() => import('./components/CalendarManager').then(m => ({ default: m.CalendarManager })));
+const BookingsManager = lazy(() => import('./components/BookingsManager').then(m => ({ default: m.BookingsManager })));
+const TimelineGrid = lazy(() => import('./components/TimelineGrid').then(m => ({ default: m.TimelineGrid })));
+const BookingStats = lazy(() => import('./components/BookingStats').then(m => ({ default: m.BookingStats })));
 
 type ViewMode = 'widget' | 'admin' | 'guide' | 'calendar' | 'bookings' | 'timeline' | 'stats';
 
@@ -271,52 +273,64 @@ const App: React.FC = () => {
 
         {/* VIEW: CALENDAR APP */}
         {view === 'calendar' && (
-          <div className="animate-in slide-in-from-bottom-4 duration-300">
-            <CalendarManager events={events} wijken={wijken} />
-          </div>
+          <Suspense fallback={<div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-gray-400" /></div>}>
+            <div className="animate-in slide-in-from-bottom-4 duration-300">
+              <CalendarManager events={events} wijken={wijken} />
+            </div>
+          </Suspense>
         )}
 
         {/* VIEW: ADMIN DASHBOARD */}
         {view === 'admin' && (
-          <div className="animate-in slide-in-from-bottom-4 duration-300">
-            <AdminDashboard
-              events={events}
-              setEvents={setEvents}
-              onAddEvent={handleAddEvent}
-              onDeleteEvent={handleDeleteEvent}
-              wijken={wijken}
-              setWijken={setWijken}
-              onRefresh={loadDataFromAPI}
-            />
-          </div>
+          <Suspense fallback={<div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-gray-400" /></div>}>
+            <div className="animate-in slide-in-from-bottom-4 duration-300">
+              <AdminDashboard
+                events={events}
+                setEvents={setEvents}
+                onAddEvent={handleAddEvent}
+                onDeleteEvent={handleDeleteEvent}
+                wijken={wijken}
+                setWijken={setWijken}
+                onRefresh={loadDataFromAPI}
+              />
+            </div>
+          </Suspense>
         )}
 
         {/* VIEW: BOOKINGS MANAGER */}
         {view === 'bookings' && (
-          <div className="animate-in slide-in-from-bottom-4 duration-300">
-            <BookingsManager restaurantId={getRestaurantId()} />
-          </div>
+          <Suspense fallback={<div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-gray-400" /></div>}>
+            <div className="animate-in slide-in-from-bottom-4 duration-300">
+              <BookingsManager restaurantId={getRestaurantId()} />
+            </div>
+          </Suspense>
         )}
 
         {/* VIEW: INTEGRATION GUIDE */}
         {view === 'guide' && (
-          <div className="animate-in slide-in-from-right-4 duration-300">
-            <IntegrationGuide />
-          </div>
+          <Suspense fallback={<div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-gray-400" /></div>}>
+            <div className="animate-in slide-in-from-right-4 duration-300">
+              <IntegrationGuide />
+            </div>
+          </Suspense>
         )}
 
         {/* VIEW: TIMELINE GRID (Restaurant Tables) */}
         {view === 'timeline' && (
-          <div className="animate-in slide-in-from-bottom-4 duration-300 max-w-6xl mx-auto px-4">
-            <TimelineGrid restaurantId={getRestaurantId()} />
-          </div>
+          <Suspense fallback={<div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-gray-400" /></div>}>
+            <div className="animate-in slide-in-from-bottom-4 duration-300 max-w-6xl mx-auto px-4">
+              <TimelineGrid restaurantId={getRestaurantId()} />
+            </div>
+          </Suspense>
         )}
 
         {/* VIEW: STATISTICS */}
         {view === 'stats' && (
-          <div className="animate-in slide-in-from-bottom-4 duration-300 max-w-6xl mx-auto px-4">
-            <BookingStats restaurantId={getRestaurantId()} onBack={() => setView('timeline')} />
-          </div>
+          <Suspense fallback={<div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-gray-400" /></div>}>
+            <div className="animate-in slide-in-from-bottom-4 duration-300 max-w-6xl mx-auto px-4">
+              <BookingStats restaurantId={getRestaurantId()} onBack={() => setView('timeline')} />
+            </div>
+          </Suspense>
         )}
 
       </main>
