@@ -1350,6 +1350,109 @@ app.get('/api/restaurant/:restaurantId/opening-hours', async (req, res) => {
     }
 });
 
+// ============================================
+// WAITLIST API ENDPOINTS
+// ============================================
+
+// GET /api/restaurant/:restaurantId/waitlist - Get waitlist entries
+app.get('/api/restaurant/:restaurantId/waitlist', async (req, res) => {
+    const { restaurantId } = req.params;
+    const { date } = req.query;
+
+    try {
+        let query = `SELECT * FROM waitlist WHERE restaurant_id = $1`;
+        const params = [restaurantId];
+
+        if (date) {
+            query += ` AND date = $2`;
+            params.push(date);
+        }
+
+        query += ` ORDER BY position ASC, created_at ASC`;
+
+        const result = await pool.query(query, params);
+        res.json({ waitlist: result.rows });
+    } catch (error) {
+        console.error('Error fetching waitlist:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// POST /api/restaurant/:restaurantId/waitlist - Add to waitlist
+app.post('/api/restaurant/:restaurantId/waitlist', async (req, res) => {
+    const { restaurantId } = req.params;
+    const { date, time_preference, guest_count, customer_name, phone, email, notes } = req.body;
+
+    if (!date || !guest_count || !customer_name) {
+        return res.status(400).json({ error: 'date, guest_count, and customer_name are required' });
+    }
+
+    try {
+        const posResult = await pool.query(
+            `SELECT COALESCE(MAX(position), 0) + 1 as next_pos FROM waitlist WHERE restaurant_id = $1 AND date = $2`,
+            [restaurantId, date]
+        );
+        const position = posResult.rows[0].next_pos;
+
+        const result = await pool.query(
+            `INSERT INTO waitlist (restaurant_id, date, time_preference, guest_count, customer_name, phone, email, notes, position)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+             RETURNING *`,
+            [restaurantId, date, time_preference, guest_count, customer_name, phone, email, notes, position]
+        );
+
+        res.status(201).json({ entry: result.rows[0] });
+    } catch (error) {
+        console.error('Error adding to waitlist:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// PUT /api/restaurant/:restaurantId/waitlist/:id - Update waitlist entry
+app.put('/api/restaurant/:restaurantId/waitlist/:id', authMiddleware, async (req, res) => {
+    const { restaurantId, id } = req.params;
+    const { status, notes } = req.body;
+
+    try {
+        const result = await pool.query(
+            `UPDATE waitlist SET status = COALESCE($1, status), notes = COALESCE($2, notes)
+             WHERE id = $3 AND restaurant_id = $4
+             RETURNING *`,
+            [status, notes, id, restaurantId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Waitlist entry not found' });
+        }
+
+        res.json({ entry: result.rows[0] });
+    } catch (error) {
+        console.error('Error updating waitlist:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// DELETE /api/restaurant/:restaurantId/waitlist/:id - Remove from waitlist
+app.delete('/api/restaurant/:restaurantId/waitlist/:id', authMiddleware, async (req, res) => {
+    const { restaurantId, id } = req.params;
+
+    try {
+        const result = await pool.query(
+            `DELETE FROM waitlist WHERE id = $1 AND restaurant_id = $2 RETURNING id`,
+            [id, restaurantId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Waitlist entry not found' });
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error deleting from waitlist:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // PUT /api/restaurant/:restaurantId/tables - Update tables (replace all)
 app.put('/api/restaurant/:restaurantId/tables', authMiddleware, async (req, res) => {
     const { restaurantId } = req.params;
