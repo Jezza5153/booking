@@ -328,15 +328,15 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                     'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({
-                    restaurantId,
-                    tableId: quickBookData.table.id,
+                    restaurant_id: restaurantId,
+                    table_id: quickBookData.table.id,
                     date,
-                    startTime,
-                    endTime,
-                    guestCount: quickBookForm.guest_count,
-                    customerName: quickBookForm.customer_name,
-                    customerPhone: quickBookForm.customer_phone,
-                    customerEmail: quickBookForm.customer_email,
+                    time: startTime,
+                    end_time: endTime,
+                    guest_count: quickBookForm.guest_count,
+                    customer_name: quickBookForm.customer_name,
+                    customer_phone: quickBookForm.customer_phone,
+                    customer_email: quickBookForm.customer_email,
                     remarks: quickBookForm.remarks,
                     status: 'confirmed'
                 })
@@ -434,17 +434,17 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                     'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({
-                    restaurantId,
-                    tableId: primaryTable.id,
-                    tableIds, // All tables for this booking
+                    restaurant_id: restaurantId,
+                    table_id: primaryTable.id,
+                    table_ids: tableIds, // All tables for this booking
                     date,
-                    startTime,
-                    endTime,
-                    guestCount: walkinForm.guest_count,
-                    customerName: walkinForm.customer_name,
+                    time: startTime,
+                    end_time: endTime,
+                    guest_count: walkinForm.guest_count,
+                    customer_name: walkinForm.customer_name,
                     status: 'arrived',
-                    isWalkin: true,
-                    tablesLinked: tableIds.length > 1 ? tableIds : undefined
+                    is_walkin: true,
+                    tables_linked: tableIds.length > 1 ? tableIds : undefined
                 })
             })
 
