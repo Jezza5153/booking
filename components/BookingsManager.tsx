@@ -265,6 +265,29 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
         }
     }
 
+    // Mark booking as arrived
+    const markAsArrived = async (bookingId: string) => {
+        try {
+            const token = localStorage.getItem('events_token')
+            const res = await fetch(`${API_BASE_URL}/api/admin/restaurant-bookings/${bookingId}/status`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ status: 'arrived' })
+            })
+            if (res.ok) {
+                // Update local state
+                setRestaurantBookings(prev => prev.map(b =>
+                    b.id === bookingId ? { ...b, status: 'arrived' } : b
+                ))
+            }
+        } catch (e) {
+            console.error('Failed to mark as arrived:', e)
+        }
+    }
+
     const navigateDate = (delta: number) => {
         const d = new Date(timelineDate)
         d.setDate(d.getDate() + delta)
@@ -569,7 +592,7 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                             </div>
                             <div className="divide-y divide-gray-100 max-h-64 overflow-y-auto">
                                 {restaurantBookings.map(booking => (
-                                    <div key={booking.id} className="px-4 py-3">
+                                    <div key={booking.id} className={`px-4 py-3 ${booking.status === 'arrived' ? 'bg-emerald-50/50' : ''}`}>
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="flex-1">
                                                 <div className="flex items-center gap-3">
@@ -578,6 +601,11 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                                                         <Users className="w-3.5 h-3.5" />
                                                         {booking.guest_count}
                                                     </span>
+                                                    {booking.status === 'arrived' && (
+                                                        <span className="text-xs bg-emerald-500 text-white px-2 py-0.5 rounded-full font-medium">
+                                                            ✓ Binnen
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 {booking.remarks && (
                                                     <div className="mt-1 text-sm text-amber-700 bg-amber-50 rounded px-2 py-1 flex items-start gap-1.5">
@@ -586,8 +614,18 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                                                     </div>
                                                 )}
                                             </div>
-                                            <div className="text-right text-sm font-mono text-gray-700">
-                                                {booking.start_time}
+                                            <div className="flex items-center gap-3">
+                                                <div className="text-right text-sm font-mono text-gray-700">
+                                                    {booking.start_time}
+                                                </div>
+                                                {booking.status !== 'arrived' && (
+                                                    <button
+                                                        onClick={() => markAsArrived(booking.id)}
+                                                        className="px-3 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 transition-colors"
+                                                    >
+                                                        Binnen
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
