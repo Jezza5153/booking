@@ -49,16 +49,57 @@ body {
 
 /* Print styles */
 @media print {
-    .no-print {
+
+    .no-print,
+    nav,
+    button:not(.print-keep) {
         display: none !important;
     }
 
     body {
         background: white;
+        font-size: 12px;
     }
 
     .timeline-booking {
         box-shadow: none;
         border: 1px solid #ccc;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+    }
+
+    /* Keep colors when printing */
+    .bg-emerald-500,
+    .bg-amber-500,
+    .bg-red-500,
+    .bg-blue-500,
+    .bg-gray-400 {
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+    }
+
+    /* Make timeline fit on page */
+    .overflow-x-auto {
+        overflow: visible !important;
+    }
+
+    /* Expand timeline to full width */
+    .min-w-\[1000px\] {
+        min-width: 100% !important;
+    }
+
+    /* Page setup */
+    @page {
+        size: landscape;
+        margin: 1cm;
+    }
+
+    /* Print header with date */
+    .print-header::before {
+        content: "Reserveringen - " attr(data-date);
+        display: block;
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 16px;
     }
 }

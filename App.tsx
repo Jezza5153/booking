@@ -5,13 +5,14 @@ import { IntegrationGuide } from './components/IntegrationGuide';
 import { CalendarManager } from './components/CalendarManager';
 import { BookingsManager } from './components/BookingsManager';
 import { TimelineGrid } from './components/TimelineGrid';
+import { BookingStats } from './components/BookingStats';
 import { LoginPage } from './components/LoginPage';
 import { EVENTS_DATA, WIJKEN_DATA } from './data';
 import { EventData, Wijk } from './types';
 import { API_BASE_URL, fetchWidgetData, fetchAdminData, RESTAURANT_ID } from './api';
-import { Smartphone, Settings, BookOpen, Calendar as CalendarIcon, LogOut, Users, LayoutGrid } from 'lucide-react';
+import { Smartphone, Settings, BookOpen, Calendar as CalendarIcon, LogOut, Users, LayoutGrid, BarChart3 } from 'lucide-react';
 
-type ViewMode = 'widget' | 'admin' | 'guide' | 'calendar' | 'bookings' | 'timeline';
+type ViewMode = 'widget' | 'admin' | 'guide' | 'calendar' | 'bookings' | 'timeline' | 'stats';
 
 // Check if we're in embed mode (public widget only, no login required)
 const isEmbedMode = () => {
@@ -212,6 +213,13 @@ const App: React.FC = () => {
                   Tafels
                 </button>
                 <button
+                  onClick={() => setView('stats')}
+                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-2 whitespace-nowrap ${view === 'stats' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                >
+                  <BarChart3 className="w-4 h-4" />
+                  Stats
+                </button>
+                <button
                   onClick={() => setView('guide')}
                   className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-2 whitespace-nowrap ${view === 'guide' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
                 >
@@ -301,6 +309,13 @@ const App: React.FC = () => {
         {view === 'timeline' && (
           <div className="animate-in slide-in-from-bottom-4 duration-300 max-w-6xl mx-auto px-4">
             <TimelineGrid restaurantId={getRestaurantId()} />
+          </div>
+        )}
+
+        {/* VIEW: STATISTICS */}
+        {view === 'stats' && (
+          <div className="animate-in slide-in-from-bottom-4 duration-300 max-w-6xl mx-auto px-4">
+            <BookingStats restaurantId={getRestaurantId()} onBack={() => setView('timeline')} />
           </div>
         )}
 
