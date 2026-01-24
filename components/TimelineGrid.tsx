@@ -365,10 +365,14 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
             if (res.ok) {
                 setShowQuickBookModal(false)
                 setQuickBookData(null)
+                showToast('Boeking succesvol aangemaakt', 'success')
                 fetchData()
+            } else {
+                showToast('Boeking mislukt', 'error')
             }
         } catch (e) {
             console.error('Failed to create booking:', e)
+            showToast('Boeking mislukt', 'error')
         } finally {
             setIsSubmitting(false)
         }
@@ -475,10 +479,14 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
             if (res.ok) {
                 setShowWalkinModal(false)
                 setWalkinForm({ guest_count: 2, customer_name: '', table_id: '' })
+                showToast('Walk-in succesvol geplaatst', 'success')
                 fetchData()
+            } else {
+                showToast('Walk-in mislukt', 'error')
             }
         } catch (e) {
             console.error('Failed to create walk-in:', e)
+            showToast('Walk-in mislukt', 'error')
         } finally {
             setIsSubmitting(false)
         }
@@ -501,8 +509,16 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                 body: JSON.stringify({ status })
             })
             setShowBookingDetail(null)
+            const statusLabels: Record<string, string> = {
+                'arrived': 'Gearriveerd',
+                'no_show': 'No-show',
+                'confirmed': 'Bevestigd',
+                'cancelled': 'Geannuleerd'
+            }
+            showToast(`Status gewijzigd naar ${statusLabels[status] || status}`, 'success')
         } catch (e) {
             console.error('Failed to update status:', e)
+            showToast('Status wijzigen mislukt', 'error')
             fetchData() // Revert on error
         }
     }
