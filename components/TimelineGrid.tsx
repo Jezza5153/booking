@@ -661,8 +661,8 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                             <button
                                 onClick={() => setShowDayNotes(!showDayNotes)}
                                 className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${dayNotes.length > 0
-                                        ? 'bg-amber-50 border-amber-200 text-amber-700'
-                                        : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                                    ? 'bg-amber-50 border-amber-200 text-amber-700'
+                                    : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
                                     }`}
                                 title="Dagnotities"
                             >
@@ -857,532 +857,532 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                         )
                     })}
                 </div>
-            </div >
 
-            {/* Closed indicator */}
-            {
-                !isOpenToday && (
-                    <div className="px-4 py-3 bg-gray-100 text-center text-gray-500 font-medium">
-                        🚫 Gesloten op deze dag
-                    </div>
-                )
-            }
 
-            {/* Timeline Grid */}
-            {
-                viewMode === 'week' ? (
-                    /* Week View */
-                    <div className="p-4">
-                        <div className="grid grid-cols-7 gap-2">
-                            {Array.from({ length: 7 }).map((_, i) => {
-                                const d = new Date(date)
-                                d.setDate(d.getDate() - d.getDay() + i + 1) // Start from Monday
-                                const dayStr = d.toISOString().split('T')[0]
-                                const isToday = dayStr === new Date().toISOString().split('T')[0]
-                                const isSelected = dayStr === date
-                                // Simulated count for demo - in production, fetch from API
-                                const dayBookings = bookings.filter(b =>
-                                    b.status !== 'cancelled' &&
-                                    new Date(b.start_time).toISOString().split('T')[0] === dayStr
-                                )
-                                const dayCouverts = dayBookings.reduce((s, b) => s + b.guest_count, 0)
-
-                                return (
-                                    <div
-                                        key={i}
-                                        onClick={() => {
-                                            setDate(dayStr)
-                                            setViewMode('day')
-                                        }}
-                                        className={`p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${isToday ? 'border-emerald-500 bg-emerald-50' :
-                                            isSelected ? 'border-blue-500 bg-blue-50' :
-                                                'border-gray-200 bg-white hover:border-gray-300'
-                                            }`}
-                                    >
-                                        <div className="text-xs font-medium text-gray-500 mb-1">
-                                            {['Zo', 'Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za'][(d.getDay())]}
-                                        </div>
-                                        <div className={`text-lg font-bold ${isToday ? 'text-emerald-700' : 'text-gray-900'}`}>
-                                            {d.getDate()}
-                                        </div>
-                                        <div className="mt-2 space-y-1">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-xs text-gray-500">Boekingen</span>
-                                                <span className="text-sm font-bold text-emerald-600">{dayBookings.length || '-'}</span>
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-xs text-gray-500">Couverts</span>
-                                                <span className="text-sm font-bold text-blue-600">{dayCouverts || '-'}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )
-                            })}
+                {/* Closed indicator */}
+                {
+                    !isOpenToday && (
+                        <div className="px-4 py-3 bg-gray-100 text-center text-gray-500 font-medium">
+                            🚫 Gesloten op deze dag
                         </div>
-                        <div className="mt-4 text-center text-sm text-gray-500">
-                            Klik op een dag om de details te bekijken
-                        </div>
-                    </div>
-                ) : (
-                    /* Day View */
-                    <div className="overflow-x-auto">
-                        <div className="min-w-[1000px]">
-                            {/* Time Header */}
-                            <div className="flex border-b border-gray-200">
-                                <div className="w-32 shrink-0 px-3 py-2 bg-gray-50 text-xs font-medium text-gray-500 uppercase">
-                                    Tafel
-                                </div>
-                                <div className="flex-1 flex">
-                                    {timeSlots.map((slot, i) => (
-                                        <div
-                                            key={slot}
-                                            className={`w-[60px] shrink-0 px-1 py-2 text-center text-xs font-medium ${i % 2 === 0 ? 'text-gray-700' : 'text-gray-400'
-                                                } border-l border-gray-100`}
-                                        >
-                                            {slot}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
+                    )
+                }
 
-                            {/* Table Rows */}
-                            {loading ? (
-                                <div className="px-4 py-8 text-center text-gray-400">Laden...</div>
-                            ) : tables.length === 0 ? (
-                                <div className="px-4 py-8 text-center text-gray-400">Geen tafels gevonden</div>
-                            ) : (
-                                tables.map((table, tableIndex) => {
-                                    const tableBookings = bookings.filter(b => b.table_id === table.id && b.status !== 'cancelled')
+                {/* Timeline Grid */}
+                {
+                    viewMode === 'week' ? (
+                        /* Week View */
+                        <div className="p-4">
+                            <div className="grid grid-cols-7 gap-2">
+                                {Array.from({ length: 7 }).map((_, i) => {
+                                    const d = new Date(date)
+                                    d.setDate(d.getDate() - d.getDay() + i + 1) // Start from Monday
+                                    const dayStr = d.toISOString().split('T')[0]
+                                    const isToday = dayStr === new Date().toISOString().split('T')[0]
+                                    const isSelected = dayStr === date
+                                    // Simulated count for demo - in production, fetch from API
+                                    const dayBookings = bookings.filter(b =>
+                                        b.status !== 'cancelled' &&
+                                        new Date(b.start_time).toISOString().split('T')[0] === dayStr
+                                    )
+                                    const dayCouverts = dayBookings.reduce((s, b) => s + b.guest_count, 0)
+
                                     return (
                                         <div
-                                            key={table.id}
-                                            className={`flex border-b border-gray-100 ${tableIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}
+                                            key={i}
+                                            onClick={() => {
+                                                setDate(dayStr)
+                                                setViewMode('day')
+                                            }}
+                                            className={`p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${isToday ? 'border-emerald-500 bg-emerald-50' :
+                                                isSelected ? 'border-blue-500 bg-blue-50' :
+                                                    'border-gray-200 bg-white hover:border-gray-300'
+                                                }`}
                                         >
-                                            {/* Table Info */}
-                                            <div className="w-32 shrink-0 px-3 py-2 flex items-center gap-2">
-                                                <span className="font-medium text-sm text-gray-900">{table.name}</span>
-                                                <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
-                                                    {table.seats}
-                                                </span>
+                                            <div className="text-xs font-medium text-gray-500 mb-1">
+                                                {['Zo', 'Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za'][(d.getDay())]}
                                             </div>
-
-                                            {/* Timeline */}
-                                            <div className="flex-1 relative h-14">
-                                                {/* Clickable grid cells */}
-                                                <div className="absolute inset-0 flex">
-                                                    {timeSlots.map((slot, i) => {
-                                                        const available = isSlotAvailable(table, slot)
-                                                        return (
-                                                            <div
-                                                                key={i}
-                                                                onClick={() => available && handleCellClick(table, slot)}
-                                                                className={`w-[60px] shrink-0 border-l border-gray-100 transition-colors ${available
-                                                                    ? 'hover:bg-emerald-50 cursor-pointer'
-                                                                    : 'cursor-not-allowed'
-                                                                    }`}
-                                                            />
-                                                        )
-                                                    })}
+                                            <div className={`text-lg font-bold ${isToday ? 'text-emerald-700' : 'text-gray-900'}`}>
+                                                {d.getDate()}
+                                            </div>
+                                            <div className="mt-2 space-y-1">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-xs text-gray-500">Boekingen</span>
+                                                    <span className="text-sm font-bold text-emerald-600">{dayBookings.length || '-'}</span>
                                                 </div>
-
-                                                {/* Bookings */}
-                                                {tableBookings.map(booking => {
-                                                    const statusConfig = STATUS_COLORS[booking.status as keyof typeof STATUS_COLORS] || STATUS_COLORS.confirmed
-                                                    return (
-                                                        <div
-                                                            key={booking.id}
-                                                            style={getBookingStyle(booking)}
-                                                            onClick={() => setShowBookingDetail(booking)}
-                                                            className={`absolute top-1 bottom-1 ${statusConfig.bg} ${statusConfig.hover} rounded-md px-2 py-1 cursor-pointer transition-all shadow-sm hover:shadow-md overflow-hidden z-10`}
-                                                            title={`${booking.customer_name} - ${booking.guest_count} pers.`}
-                                                        >
-                                                            <div className="flex items-center gap-1 text-white text-xs font-medium">
-                                                                <StatusIcon status={booking.status} />
-                                                                <span className="truncate">{booking.guest_count} {booking.customer_name}</span>
-                                                            </div>
-                                                            {booking.dietary_notes && (
-                                                                <div className="text-white/70 text-[10px] truncate">
-                                                                    ⚠️ {booking.dietary_notes}
-                                                                </div>
-                                                            )}
-                                                            {(booking.customer_visits && booking.customer_visits > 1) && (
-                                                                <Star className="absolute top-0.5 right-0.5 w-3 h-3 text-yellow-300" />
-                                                            )}
-                                                        </div>
-                                                    )
-                                                })}
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-xs text-gray-500">Couverts</span>
+                                                    <span className="text-sm font-bold text-blue-600">{dayCouverts || '-'}</span>
+                                                </div>
                                             </div>
                                         </div>
                                     )
-                                })
-                            )}
+                                })}
+                            </div>
+                            <div className="mt-4 text-center text-sm text-gray-500">
+                                Klik op een dag om de details te bekijken
+                            </div>
+                        </div>
+                    ) : (
+                        /* Day View */
+                        <div className="overflow-x-auto">
+                            <div className="min-w-[1000px]">
+                                {/* Time Header */}
+                                <div className="flex border-b border-gray-200">
+                                    <div className="w-32 shrink-0 px-3 py-2 bg-gray-50 text-xs font-medium text-gray-500 uppercase">
+                                        Tafel
+                                    </div>
+                                    <div className="flex-1 flex">
+                                        {timeSlots.map((slot, i) => (
+                                            <div
+                                                key={slot}
+                                                className={`w-[60px] shrink-0 px-1 py-2 text-center text-xs font-medium ${i % 2 === 0 ? 'text-gray-700' : 'text-gray-400'
+                                                    } border-l border-gray-100`}
+                                            >
+                                                {slot}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Table Rows */}
+                                {loading ? (
+                                    <div className="px-4 py-8 text-center text-gray-400">Laden...</div>
+                                ) : tables.length === 0 ? (
+                                    <div className="px-4 py-8 text-center text-gray-400">Geen tafels gevonden</div>
+                                ) : (
+                                    tables.map((table, tableIndex) => {
+                                        const tableBookings = bookings.filter(b => b.table_id === table.id && b.status !== 'cancelled')
+                                        return (
+                                            <div
+                                                key={table.id}
+                                                className={`flex border-b border-gray-100 ${tableIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}
+                                            >
+                                                {/* Table Info */}
+                                                <div className="w-32 shrink-0 px-3 py-2 flex items-center gap-2">
+                                                    <span className="font-medium text-sm text-gray-900">{table.name}</span>
+                                                    <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
+                                                        {table.seats}
+                                                    </span>
+                                                </div>
+
+                                                {/* Timeline */}
+                                                <div className="flex-1 relative h-14">
+                                                    {/* Clickable grid cells */}
+                                                    <div className="absolute inset-0 flex">
+                                                        {timeSlots.map((slot, i) => {
+                                                            const available = isSlotAvailable(table, slot)
+                                                            return (
+                                                                <div
+                                                                    key={i}
+                                                                    onClick={() => available && handleCellClick(table, slot)}
+                                                                    className={`w-[60px] shrink-0 border-l border-gray-100 transition-colors ${available
+                                                                        ? 'hover:bg-emerald-50 cursor-pointer'
+                                                                        : 'cursor-not-allowed'
+                                                                        }`}
+                                                                />
+                                                            )
+                                                        })}
+                                                    </div>
+
+                                                    {/* Bookings */}
+                                                    {tableBookings.map(booking => {
+                                                        const statusConfig = STATUS_COLORS[booking.status as keyof typeof STATUS_COLORS] || STATUS_COLORS.confirmed
+                                                        return (
+                                                            <div
+                                                                key={booking.id}
+                                                                style={getBookingStyle(booking)}
+                                                                onClick={() => setShowBookingDetail(booking)}
+                                                                className={`absolute top-1 bottom-1 ${statusConfig.bg} ${statusConfig.hover} rounded-md px-2 py-1 cursor-pointer transition-all shadow-sm hover:shadow-md overflow-hidden z-10`}
+                                                                title={`${booking.customer_name} - ${booking.guest_count} pers.`}
+                                                            >
+                                                                <div className="flex items-center gap-1 text-white text-xs font-medium">
+                                                                    <StatusIcon status={booking.status} />
+                                                                    <span className="truncate">{booking.guest_count} {booking.customer_name}</span>
+                                                                </div>
+                                                                {booking.dietary_notes && (
+                                                                    <div className="text-white/70 text-[10px] truncate">
+                                                                        ⚠️ {booking.dietary_notes}
+                                                                    </div>
+                                                                )}
+                                                                {(booking.customer_visits && booking.customer_visits > 1) && (
+                                                                    <Star className="absolute top-0.5 right-0.5 w-3 h-3 text-yellow-300" />
+                                                                )}
+                                                            </div>
+                                                        )
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )
+                                    })
+                                )}
+                            </div>
+                        </div>
+                    )
+                }
+
+                {/* Legend */}
+                <div className="px-4 py-2 border-t border-gray-200 flex items-center gap-4 text-xs text-gray-500">
+                    <span className="font-medium">Status:</span>
+                    {Object.entries(STATUS_COLORS).map(([key, val]) => (
+                        <div key={key} className="flex items-center gap-1">
+                            <div className={`w-3 h-3 rounded ${val.bg}`} />
+                            <span>{val.text}</span>
+                        </div>
+                    ))}
+                </div>
+            </div >
+
+            {/* Quick Book Modal */}
+            {
+                showQuickBookModal && quickBookData && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-xl max-w-sm w-full p-4 shadow-xl">
+                            <div className="flex items-center justify-between mb-4">
+                                <div>
+                                    <h3 className="font-semibold text-gray-900">Snelle boeking</h3>
+                                    <p className="text-sm text-gray-500">{quickBookData.table.name} om {quickBookData.time}</p>
+                                </div>
+                                <button onClick={() => setShowQuickBookModal(false)} className="p-1 hover:bg-gray-100 rounded">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            <div className="space-y-3">
+                                <div className="flex gap-2">
+                                    <div className="flex-1">
+                                        <label className="text-xs text-gray-500">Gasten</label>
+                                        <select
+                                            value={quickBookForm.guest_count}
+                                            onChange={e => setQuickBookForm(f => ({ ...f, guest_count: Number(e.target.value) }))}
+                                            className="w-full px-2 py-1.5 border rounded text-sm"
+                                        >
+                                            {[1, 2, 3, 4, 5, 6, 7, 8].map(n => (
+                                                <option key={n} value={n}>{n} pers.</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="flex-1">
+                                        <label className="text-xs text-gray-500">Duur</label>
+                                        <select
+                                            value={quickBookForm.duration}
+                                            onChange={e => setQuickBookForm(f => ({ ...f, duration: Number(e.target.value) }))}
+                                            className="w-full px-2 py-1.5 border rounded text-sm"
+                                        >
+                                            <option value={60}>1 uur</option>
+                                            <option value={90}>1.5 uur</option>
+                                            <option value={120}>2 uur</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-xs text-gray-500">Naam *</label>
+                                    <input
+                                        type="text"
+                                        value={quickBookForm.customer_name}
+                                        onChange={e => {
+                                            setQuickBookForm(f => ({ ...f, customer_name: e.target.value }))
+                                            searchCustomers(e.target.value)
+                                        }}
+                                        className="w-full px-2 py-1.5 border rounded text-sm"
+                                        placeholder="Naam gast"
+                                        autoFocus
+                                    />
+                                    {customerSearchResults.length > 0 && (
+                                        <div className="mt-1 bg-white border rounded shadow-lg max-h-32 overflow-y-auto">
+                                            {customerSearchResults.map(c => (
+                                                <button
+                                                    key={c.id}
+                                                    onClick={() => {
+                                                        setQuickBookForm(f => ({
+                                                            ...f,
+                                                            customer_name: c.name,
+                                                            customer_email: c.email || '',
+                                                            customer_phone: c.phone || ''
+                                                        }))
+                                                        setCustomerSearchResults([])
+                                                    }}
+                                                    className="w-full px-2 py-1.5 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+                                                >
+                                                    <span>{c.name}</span>
+                                                    {c.total_visits > 1 && (
+                                                        <span className="text-xs text-amber-600">🌟 {c.total_visits}x</span>
+                                                    )}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label className="text-xs text-gray-500">Telefoon</label>
+                                        <input
+                                            type="tel"
+                                            value={quickBookForm.customer_phone}
+                                            onChange={e => setQuickBookForm(f => ({ ...f, customer_phone: e.target.value }))}
+                                            className="w-full px-2 py-1.5 border rounded text-sm"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-gray-500">Email</label>
+                                        <input
+                                            type="email"
+                                            value={quickBookForm.customer_email}
+                                            onChange={e => setQuickBookForm(f => ({ ...f, customer_email: e.target.value }))}
+                                            className="w-full px-2 py-1.5 border rounded text-sm"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-xs text-gray-500">Opmerking</label>
+                                    <input
+                                        type="text"
+                                        value={quickBookForm.remarks}
+                                        onChange={e => setQuickBookForm(f => ({ ...f, remarks: e.target.value }))}
+                                        className="w-full px-2 py-1.5 border rounded text-sm"
+                                        placeholder="Allergie, verjaardag, etc."
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex gap-2 mt-4">
+                                <button
+                                    onClick={() => setShowQuickBookModal(false)}
+                                    className="flex-1 px-3 py-2 border rounded-lg text-sm hover:bg-gray-50"
+                                >
+                                    Annuleren
+                                </button>
+                                <button
+                                    onClick={submitQuickBook}
+                                    disabled={!quickBookForm.customer_name}
+                                    className="flex-1 px-3 py-2 bg-emerald-500 text-white rounded-lg text-sm hover:bg-emerald-600 disabled:opacity-50"
+                                >
+                                    Boeken
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )
             }
 
-            {/* Legend */}
-            <div className="px-4 py-2 border-t border-gray-200 flex items-center gap-4 text-xs text-gray-500">
-                <span className="font-medium">Status:</span>
-                {Object.entries(STATUS_COLORS).map(([key, val]) => (
-                    <div key={key} className="flex items-center gap-1">
-                        <div className={`w-3 h-3 rounded ${val.bg}`} />
-                        <span>{val.text}</span>
-                    </div>
-                ))}
-            </div>
-        </div >
-
-            {/* Quick Book Modal */ }
-    {
-        showQuickBookModal && quickBookData && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-xl max-w-sm w-full p-4 shadow-xl">
-                    <div className="flex items-center justify-between mb-4">
-                        <div>
-                            <h3 className="font-semibold text-gray-900">Snelle boeking</h3>
-                            <p className="text-sm text-gray-500">{quickBookData.table.name} om {quickBookData.time}</p>
-                        </div>
-                        <button onClick={() => setShowQuickBookModal(false)} className="p-1 hover:bg-gray-100 rounded">
-                            <X className="w-5 h-5" />
-                        </button>
-                    </div>
-
-                    <div className="space-y-3">
-                        <div className="flex gap-2">
-                            <div className="flex-1">
-                                <label className="text-xs text-gray-500">Gasten</label>
-                                <select
-                                    value={quickBookForm.guest_count}
-                                    onChange={e => setQuickBookForm(f => ({ ...f, guest_count: Number(e.target.value) }))}
-                                    className="w-full px-2 py-1.5 border rounded text-sm"
-                                >
-                                    {[1, 2, 3, 4, 5, 6, 7, 8].map(n => (
-                                        <option key={n} value={n}>{n} pers.</option>
-                                    ))}
-                                </select>
+            {/* Walk-in Modal */}
+            {
+                showWalkinModal && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-xl max-w-md w-full p-4 shadow-xl">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                                    <Users className="w-5 h-5 text-blue-500" />
+                                    Walk-in
+                                </h3>
+                                <button onClick={() => setShowWalkinModal(false)} className="p-1 hover:bg-gray-100 rounded">
+                                    <X className="w-5 h-5" />
+                                </button>
                             </div>
-                            <div className="flex-1">
-                                <label className="text-xs text-gray-500">Duur</label>
-                                <select
-                                    value={quickBookForm.duration}
-                                    onChange={e => setQuickBookForm(f => ({ ...f, duration: Number(e.target.value) }))}
-                                    className="w-full px-2 py-1.5 border rounded text-sm"
-                                >
-                                    <option value={60}>1 uur</option>
-                                    <option value={90}>1.5 uur</option>
-                                    <option value={120}>2 uur</option>
-                                </select>
-                            </div>
-                        </div>
 
-                        <div>
-                            <label className="text-xs text-gray-500">Naam *</label>
-                            <input
-                                type="text"
-                                value={quickBookForm.customer_name}
-                                onChange={e => {
-                                    setQuickBookForm(f => ({ ...f, customer_name: e.target.value }))
-                                    searchCustomers(e.target.value)
-                                }}
-                                className="w-full px-2 py-1.5 border rounded text-sm"
-                                placeholder="Naam gast"
-                                autoFocus
-                            />
-                            {customerSearchResults.length > 0 && (
-                                <div className="mt-1 bg-white border rounded shadow-lg max-h-32 overflow-y-auto">
-                                    {customerSearchResults.map(c => (
-                                        <button
-                                            key={c.id}
-                                            onClick={() => {
-                                                setQuickBookForm(f => ({
-                                                    ...f,
-                                                    customer_name: c.name,
-                                                    customer_email: c.email || '',
-                                                    customer_phone: c.phone || ''
-                                                }))
-                                                setCustomerSearchResults([])
-                                            }}
-                                            className="w-full px-2 py-1.5 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
-                                        >
-                                            <span>{c.name}</span>
-                                            {c.total_visits > 1 && (
-                                                <span className="text-xs text-amber-600">🌟 {c.total_visits}x</span>
-                                            )}
-                                        </button>
-                                    ))}
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="text-xs text-gray-500">Aantal gasten</label>
+                                    <div className="grid grid-cols-6 gap-2 mt-1">
+                                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => (
+                                            <button
+                                                key={n}
+                                                onClick={() => setWalkinForm(f => ({ ...f, guest_count: n, table_id: '' }))}
+                                                className={`py-2 rounded-lg text-sm font-medium transition-colors ${walkinForm.guest_count === n
+                                                    ? 'bg-blue-500 text-white'
+                                                    : 'bg-gray-100 hover:bg-gray-200'
+                                                    }`}
+                                            >
+                                                {n}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
-                            )}
-                        </div>
 
-                        <div className="grid grid-cols-2 gap-2">
-                            <div>
-                                <label className="text-xs text-gray-500">Telefoon</label>
-                                <input
-                                    type="tel"
-                                    value={quickBookForm.customer_phone}
-                                    onChange={e => setQuickBookForm(f => ({ ...f, customer_phone: e.target.value }))}
-                                    className="w-full px-2 py-1.5 border rounded text-sm"
-                                />
-                            </div>
-                            <div>
-                                <label className="text-xs text-gray-500">Email</label>
-                                <input
-                                    type="email"
-                                    value={quickBookForm.customer_email}
-                                    onChange={e => setQuickBookForm(f => ({ ...f, customer_email: e.target.value }))}
-                                    className="w-full px-2 py-1.5 border rounded text-sm"
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="text-xs text-gray-500">Opmerking</label>
-                            <input
-                                type="text"
-                                value={quickBookForm.remarks}
-                                onChange={e => setQuickBookForm(f => ({ ...f, remarks: e.target.value }))}
-                                className="w-full px-2 py-1.5 border rounded text-sm"
-                                placeholder="Allergie, verjaardag, etc."
-                            />
-                        </div>
-                    </div>
-
-                    <div className="flex gap-2 mt-4">
-                        <button
-                            onClick={() => setShowQuickBookModal(false)}
-                            className="flex-1 px-3 py-2 border rounded-lg text-sm hover:bg-gray-50"
-                        >
-                            Annuleren
-                        </button>
-                        <button
-                            onClick={submitQuickBook}
-                            disabled={!quickBookForm.customer_name}
-                            className="flex-1 px-3 py-2 bg-emerald-500 text-white rounded-lg text-sm hover:bg-emerald-600 disabled:opacity-50"
-                        >
-                            Boeken
-                        </button>
-                    </div>
-                </div>
-            </div>
-        )
-    }
-
-    {/* Walk-in Modal */ }
-    {
-        showWalkinModal && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-xl max-w-md w-full p-4 shadow-xl">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                            <Users className="w-5 h-5 text-blue-500" />
-                            Walk-in
-                        </h3>
-                        <button onClick={() => setShowWalkinModal(false)} className="p-1 hover:bg-gray-100 rounded">
-                            <X className="w-5 h-5" />
-                        </button>
-                    </div>
-
-                    <div className="space-y-3">
-                        <div>
-                            <label className="text-xs text-gray-500">Aantal gasten</label>
-                            <div className="grid grid-cols-6 gap-2 mt-1">
-                                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => (
-                                    <button
-                                        key={n}
-                                        onClick={() => setWalkinForm(f => ({ ...f, guest_count: n, table_id: '' }))}
-                                        className={`py-2 rounded-lg text-sm font-medium transition-colors ${walkinForm.guest_count === n
-                                            ? 'bg-blue-500 text-white'
-                                            : 'bg-gray-100 hover:bg-gray-200'
-                                            }`}
-                                    >
-                                        {n}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Smart allocation preview */}
-                        {(() => {
-                            const allocation = findBestTables(walkinForm.guest_count)
-                            if (allocation && allocation.tables.length > 0) {
-                                return (
-                                    <div className={`p-2 rounded-lg text-sm ${allocation.tables.length > 1 ? 'bg-purple-50 border border-purple-200' : 'bg-emerald-50 border border-emerald-200'}`}>
-                                        <div className="font-medium text-gray-700">
-                                            {allocation.tables.length > 1 ? '🔗 Gekoppelde tafels:' : '✅ Beschikbaar:'}
+                                {/* Smart allocation preview */}
+                                {(() => {
+                                    const allocation = findBestTables(walkinForm.guest_count)
+                                    if (allocation && allocation.tables.length > 0) {
+                                        return (
+                                            <div className={`p-2 rounded-lg text-sm ${allocation.tables.length > 1 ? 'bg-purple-50 border border-purple-200' : 'bg-emerald-50 border border-emerald-200'}`}>
+                                                <div className="font-medium text-gray-700">
+                                                    {allocation.tables.length > 1 ? '🔗 Gekoppelde tafels:' : '✅ Beschikbaar:'}
+                                                </div>
+                                                <div className="text-gray-600">
+                                                    {allocation.tables.map(t => t.name).join(' + ')} ({allocation.totalSeats} stoelen)
+                                                </div>
+                                            </div>
+                                        )
+                                    }
+                                    return (
+                                        <div className="p-2 rounded-lg text-sm bg-red-50 border border-red-200 text-red-700">
+                                            ❌ Geen beschikbare tafels voor {walkinForm.guest_count} gasten
                                         </div>
-                                        <div className="text-gray-600">
-                                            {allocation.tables.map(t => t.name).join(' + ')} ({allocation.totalSeats} stoelen)
+                                    )
+                                })()}
+
+                                <div>
+                                    <label className="text-xs text-gray-500">Naam (optioneel)</label>
+                                    <input
+                                        type="text"
+                                        value={walkinForm.customer_name}
+                                        onChange={e => setWalkinForm(f => ({ ...f, customer_name: e.target.value }))}
+                                        className="w-full px-2 py-1.5 border rounded text-sm"
+                                        placeholder="Walk-in gast"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="text-xs text-gray-500">Tafel (auto-select indien leeg)</label>
+                                    <select
+                                        value={walkinForm.table_id}
+                                        onChange={e => setWalkinForm(f => ({ ...f, table_id: e.target.value }))}
+                                        className="w-full px-2 py-1.5 border rounded text-sm"
+                                    >
+                                        <option value="">Automatisch kiezen</option>
+                                        {tables
+                                            .filter(t => t.seats >= walkinForm.guest_count)
+                                            .map(t => (
+                                                <option key={t.id} value={t.id}>{t.name} ({t.seats} pers.)</option>
+                                            ))
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={submitWalkin}
+                                className="w-full mt-4 px-3 py-2.5 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 flex items-center justify-center gap-2"
+                            >
+                                <UserCheck className="w-4 h-4" />
+                                Plaats direct
+                            </button>
+                        </div>
+                    </div>
+                )
+            }
+
+            {/* Booking Detail Modal */}
+            {
+                showBookingDetail && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-xl max-w-md w-full p-4 shadow-xl">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="font-semibold text-gray-900">Boeking details</h3>
+                                <button onClick={() => setShowBookingDetail(null)} className="p-1 hover:bg-gray-100 rounded">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-10 h-10 rounded-full ${STATUS_COLORS[showBookingDetail.status as keyof typeof STATUS_COLORS]?.bg || 'bg-gray-400'} flex items-center justify-center text-white font-bold`}>
+                                        {showBookingDetail.guest_count}
+                                    </div>
+                                    <div>
+                                        <div className="font-medium text-gray-900">{showBookingDetail.customer_name}</div>
+                                        <div className="text-sm text-gray-500">
+                                            {showBookingDetail.start_time} - {showBookingDetail.end_time}
                                         </div>
                                     </div>
-                                )
-                            }
-                            return (
-                                <div className="p-2 rounded-lg text-sm bg-red-50 border border-red-200 text-red-700">
-                                    ❌ Geen beschikbare tafels voor {walkinForm.guest_count} gasten
+                                    {showBookingDetail.customer_visits && showBookingDetail.customer_visits > 1 && (
+                                        <div className="ml-auto bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-xs font-medium">
+                                            🌟 {showBookingDetail.customer_visits}e bezoek
+                                        </div>
+                                    )}
                                 </div>
-                            )
-                        })()}
 
-                        <div>
-                            <label className="text-xs text-gray-500">Naam (optioneel)</label>
-                            <input
-                                type="text"
-                                value={walkinForm.customer_name}
-                                onChange={e => setWalkinForm(f => ({ ...f, customer_name: e.target.value }))}
-                                className="w-full px-2 py-1.5 border rounded text-sm"
-                                placeholder="Walk-in gast"
+                                {showBookingDetail.customer_phone && (
+                                    <a href={`tel:${showBookingDetail.customer_phone}`} className="flex items-center gap-2 text-sm text-blue-600 hover:underline">
+                                        <Phone className="w-4 h-4" />
+                                        {showBookingDetail.customer_phone}
+                                    </a>
+                                )}
+
+                                {showBookingDetail.customer_email && (
+                                    <a href={`mailto:${showBookingDetail.customer_email}`} className="flex items-center gap-2 text-sm text-blue-600 hover:underline">
+                                        <Mail className="w-4 h-4" />
+                                        {showBookingDetail.customer_email}
+                                    </a>
+                                )}
+
+                                {showBookingDetail.remarks && (
+                                    <div className="p-2 bg-amber-50 rounded-lg text-sm text-amber-800">
+                                        📝 {showBookingDetail.remarks}
+                                    </div>
+                                )}
+
+                                {showBookingDetail.dietary_notes && (
+                                    <div className="p-2 bg-red-50 rounded-lg text-sm text-red-800">
+                                        ⚠️ {showBookingDetail.dietary_notes}
+                                    </div>
+                                )}
+
+                                <div className="border-t pt-3">
+                                    <label className="text-xs text-gray-500 block mb-2">Status wijzigen</label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <button
+                                            onClick={() => updateBookingStatus(showBookingDetail.id, 'arrived')}
+                                            className="flex items-center justify-center gap-2 px-3 py-2 bg-amber-500 text-white rounded-lg text-sm hover:bg-amber-600"
+                                        >
+                                            <UserCheck className="w-4 h-4" />
+                                            Gearriveerd
+                                        </button>
+                                        <button
+                                            onClick={() => updateBookingStatus(showBookingDetail.id, 'no_show')}
+                                            className="flex items-center justify-center gap-2 px-3 py-2 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600"
+                                        >
+                                            <UserX className="w-4 h-4" />
+                                            No-show
+                                        </button>
+                                        <button
+                                            onClick={() => updateBookingStatus(showBookingDetail.id, 'confirmed')}
+                                            className="flex items-center justify-center gap-2 px-3 py-2 bg-emerald-500 text-white rounded-lg text-sm hover:bg-emerald-600"
+                                        >
+                                            <Check className="w-4 h-4" />
+                                            Bevestigd
+                                        </button>
+                                        <button
+                                            onClick={() => updateBookingStatus(showBookingDetail.id, 'cancelled')}
+                                            className="flex items-center justify-center gap-2 px-3 py-2 bg-gray-500 text-white rounded-lg text-sm hover:bg-gray-600"
+                                        >
+                                            <X className="w-4 h-4" />
+                                            Annuleren
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+
+            {/* New Booking Modal (Full Widget) */}
+            {
+                showNewBookingModal && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-[#0b0b0b] rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto relative">
+                            <button
+                                onClick={() => setShowNewBookingModal(false)}
+                                className="absolute top-3 right-3 p-1.5 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-colors z-10"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                            <RestaurantBooking
+                                restaurantId={restaurantId}
+                                onClose={() => setShowNewBookingModal(false)}
+                                onComplete={() => {
+                                    fetchData()
+                                    setShowNewBookingModal(false)
+                                }}
                             />
                         </div>
-
-                        <div>
-                            <label className="text-xs text-gray-500">Tafel (auto-select indien leeg)</label>
-                            <select
-                                value={walkinForm.table_id}
-                                onChange={e => setWalkinForm(f => ({ ...f, table_id: e.target.value }))}
-                                className="w-full px-2 py-1.5 border rounded text-sm"
-                            >
-                                <option value="">Automatisch kiezen</option>
-                                {tables
-                                    .filter(t => t.seats >= walkinForm.guest_count)
-                                    .map(t => (
-                                        <option key={t.id} value={t.id}>{t.name} ({t.seats} pers.)</option>
-                                    ))
-                                }
-                            </select>
-                        </div>
                     </div>
-
-                    <button
-                        onClick={submitWalkin}
-                        className="w-full mt-4 px-3 py-2.5 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 flex items-center justify-center gap-2"
-                    >
-                        <UserCheck className="w-4 h-4" />
-                        Plaats direct
-                    </button>
-                </div>
-            </div>
-        )
-    }
-
-    {/* Booking Detail Modal */ }
-    {
-        showBookingDetail && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-xl max-w-md w-full p-4 shadow-xl">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-semibold text-gray-900">Boeking details</h3>
-                        <button onClick={() => setShowBookingDetail(null)} className="p-1 hover:bg-gray-100 rounded">
-                            <X className="w-5 h-5" />
-                        </button>
-                    </div>
-
-                    <div className="space-y-3">
-                        <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 rounded-full ${STATUS_COLORS[showBookingDetail.status as keyof typeof STATUS_COLORS]?.bg || 'bg-gray-400'} flex items-center justify-center text-white font-bold`}>
-                                {showBookingDetail.guest_count}
-                            </div>
-                            <div>
-                                <div className="font-medium text-gray-900">{showBookingDetail.customer_name}</div>
-                                <div className="text-sm text-gray-500">
-                                    {showBookingDetail.start_time} - {showBookingDetail.end_time}
-                                </div>
-                            </div>
-                            {showBookingDetail.customer_visits && showBookingDetail.customer_visits > 1 && (
-                                <div className="ml-auto bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-xs font-medium">
-                                    🌟 {showBookingDetail.customer_visits}e bezoek
-                                </div>
-                            )}
-                        </div>
-
-                        {showBookingDetail.customer_phone && (
-                            <a href={`tel:${showBookingDetail.customer_phone}`} className="flex items-center gap-2 text-sm text-blue-600 hover:underline">
-                                <Phone className="w-4 h-4" />
-                                {showBookingDetail.customer_phone}
-                            </a>
-                        )}
-
-                        {showBookingDetail.customer_email && (
-                            <a href={`mailto:${showBookingDetail.customer_email}`} className="flex items-center gap-2 text-sm text-blue-600 hover:underline">
-                                <Mail className="w-4 h-4" />
-                                {showBookingDetail.customer_email}
-                            </a>
-                        )}
-
-                        {showBookingDetail.remarks && (
-                            <div className="p-2 bg-amber-50 rounded-lg text-sm text-amber-800">
-                                📝 {showBookingDetail.remarks}
-                            </div>
-                        )}
-
-                        {showBookingDetail.dietary_notes && (
-                            <div className="p-2 bg-red-50 rounded-lg text-sm text-red-800">
-                                ⚠️ {showBookingDetail.dietary_notes}
-                            </div>
-                        )}
-
-                        <div className="border-t pt-3">
-                            <label className="text-xs text-gray-500 block mb-2">Status wijzigen</label>
-                            <div className="grid grid-cols-2 gap-2">
-                                <button
-                                    onClick={() => updateBookingStatus(showBookingDetail.id, 'arrived')}
-                                    className="flex items-center justify-center gap-2 px-3 py-2 bg-amber-500 text-white rounded-lg text-sm hover:bg-amber-600"
-                                >
-                                    <UserCheck className="w-4 h-4" />
-                                    Gearriveerd
-                                </button>
-                                <button
-                                    onClick={() => updateBookingStatus(showBookingDetail.id, 'no_show')}
-                                    className="flex items-center justify-center gap-2 px-3 py-2 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600"
-                                >
-                                    <UserX className="w-4 h-4" />
-                                    No-show
-                                </button>
-                                <button
-                                    onClick={() => updateBookingStatus(showBookingDetail.id, 'confirmed')}
-                                    className="flex items-center justify-center gap-2 px-3 py-2 bg-emerald-500 text-white rounded-lg text-sm hover:bg-emerald-600"
-                                >
-                                    <Check className="w-4 h-4" />
-                                    Bevestigd
-                                </button>
-                                <button
-                                    onClick={() => updateBookingStatus(showBookingDetail.id, 'cancelled')}
-                                    className="flex items-center justify-center gap-2 px-3 py-2 bg-gray-500 text-white rounded-lg text-sm hover:bg-gray-600"
-                                >
-                                    <X className="w-4 h-4" />
-                                    Annuleren
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        )
-    }
-
-    {/* New Booking Modal (Full Widget) */ }
-    {
-        showNewBookingModal && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                <div className="bg-[#0b0b0b] rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto relative">
-                    <button
-                        onClick={() => setShowNewBookingModal(false)}
-                        className="absolute top-3 right-3 p-1.5 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-colors z-10"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
-                    <RestaurantBooking
-                        restaurantId={restaurantId}
-                        onClose={() => setShowNewBookingModal(false)}
-                        onComplete={() => {
-                            fetchData()
-                            setShowNewBookingModal(false)
-                        }}
-                    />
-                </div>
-            </div>
-        )
-    }
+                )
+            }
         </>
     )
 }
