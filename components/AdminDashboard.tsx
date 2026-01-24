@@ -396,6 +396,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
             <p className="text-xs text-gray-500 mt-1">Configureer tafels, openingstijden en reserveringsregels</p>
           </div>
         </div>
+        <div className="flex gap-2">
+          <button
+            onClick={handleSaveRestaurantSettings}
+            disabled={savingRestaurant}
+            className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50"
+          >
+            {savingRestaurant ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            Opslaan
+          </button>
+        </div>
 
         {/* Tables Configuration */}
         <div className="mb-6">

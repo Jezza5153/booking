@@ -1318,8 +1318,55 @@ app.get('/api/restaurant/:restaurantId/tables', async (req, res) => {
         );
         res.json({ tables: result.rows });
     } catch (error) {
-        console.error('Restaurant tables error:', error);
-        res.status(500).json({ error: 'Failed to fetch tables' });
+        console.error('Error fetching tables:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// PUT /api/restaurant/:restaurantId/tables - Update tables (replace all)
+app.put('/api/restaurant/:restaurantId/tables', authMiddleware, async (req, res) => {
+    const { restaurantId } = req.params;
+    const { tables } = req.body;
+
+    if (!Array.isArray(tables)) {
+        return res.status(400).json({ error: 'Tables must be an array' });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // Verify ownership (optional but recommended)
+        // const check = await client.query('SELECT 1 FROM users WHERE id = $1 AND restaurant_id = $2', [req.user.id, restaurantId]);
+
+        // Soft delete all existing tables for this restaurant
+        await client.query(
+            'UPDATE restaurant_tables SET is_active = false WHERE restaurant_id = $1',
+            [restaurantId]
+        );
+
+        // Upsert new tables
+        for (const table of tables) {
+            await client.query(
+                `INSERT INTO restaurant_tables (id, restaurant_id, name, seats, zone, is_active)
+                 VALUES ($1, $2, $3, $4, $5, true)
+                 ON CONFLICT (id) DO UPDATE SET
+                    name = EXCLUDED.name,
+                    seats = EXCLUDED.seats,
+                    zone = EXCLUDED.zone,
+                    is_active = true`,
+                [table.id, restaurantId, table.name, table.seats, table.zone || 'Main']
+            );
+        }
+
+        await client.query('COMMIT');
+        res.json({ success: true, count: tables.length });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Error updating tables:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    } finally {
+        client.release();
     }
 });
 
