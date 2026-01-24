@@ -60,11 +60,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
   useEffect(() => {
     const loadRestaurantSettings = async () => {
       try {
+        // Fetch tables
         const tablesRes = await fetch(`${API_BASE_URL}/api/restaurant/${RESTAURANT_ID}/tables`);
         if (tablesRes.ok) {
           const data = await tablesRes.json();
           if (data.tables && data.tables.length > 0) {
             setRestaurantTables(data.tables);
+          }
+        }
+
+        // Fetch opening hours
+        const hoursRes = await fetch(`${API_BASE_URL}/api/restaurant/${RESTAURANT_ID}/opening-hours`);
+        if (hoursRes.ok) {
+          const data = await hoursRes.json();
+          if (data.openingHours && data.openingHours.length > 0) {
+            // Merge with defaults to ensure all days are present
+            const merged = [0, 1, 2, 3, 4, 5, 6].map(day => {
+              const saved = data.openingHours.find((h: OpeningHour) => h.dayOfWeek === day);
+              return saved || { dayOfWeek: day, open: '17:00', close: '23:00', isOpen: true };
+            });
+            setOpeningHours(merged);
           }
         }
       } catch (e) {

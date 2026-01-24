@@ -1323,6 +1323,33 @@ app.get('/api/restaurant/:restaurantId/tables', async (req, res) => {
     }
 });
 
+// GET /api/restaurant/:restaurantId/opening-hours - Get opening hours
+app.get('/api/restaurant/:restaurantId/opening-hours', async (req, res) => {
+    const { restaurantId } = req.params;
+    try {
+        const result = await pool.query(
+            `SELECT day_of_week, open_time, close_time, is_closed 
+             FROM restaurant_openings 
+             WHERE restaurant_id = $1 AND specific_date IS NULL
+             ORDER BY day_of_week`,
+            [restaurantId]
+        );
+
+        // Map to frontend format
+        const openingHours = result.rows.map(row => ({
+            dayOfWeek: row.day_of_week,
+            open: row.open_time?.substring(0, 5) || '17:00',
+            close: row.close_time?.substring(0, 5) || '23:00',
+            isOpen: !row.is_closed
+        }));
+
+        res.json({ openingHours });
+    } catch (error) {
+        console.error('Error fetching opening hours:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // PUT /api/restaurant/:restaurantId/tables - Update tables (replace all)
 app.put('/api/restaurant/:restaurantId/tables', authMiddleware, async (req, res) => {
     const { restaurantId } = req.params;

@@ -25,29 +25,60 @@ export const BookingStats: React.FC<BookingStatsProps> = ({ restaurantId, onBack
     const [stats, setStats] = useState<DayStats[]>([])
     const [loading, setLoading] = useState(true)
 
-    // Generate mock data for now (in production, fetch from API)
+    // Fetch real stats from API
     useEffect(() => {
-        const generateStats = () => {
-            const days = period === 'week' ? 7 : 30
-            const data: DayStats[] = []
-            const start = new Date(startDate)
+        const fetchStats = async () => {
+            setLoading(true)
+            try {
+                const days = period === 'week' ? 7 : 30
+                const start = new Date(startDate)
+                const end = new Date(start)
+                end.setDate(end.getDate() + days)
 
-            for (let i = 0; i < days; i++) {
-                const d = new Date(start)
-                d.setDate(d.getDate() + i)
-                data.push({
-                    date: d.toISOString().split('T')[0],
-                    bookings: Math.floor(Math.random() * 20) + 5,
-                    couverts: Math.floor(Math.random() * 60) + 15,
-                    walkins: Math.floor(Math.random() * 8),
-                    noShows: Math.floor(Math.random() * 3)
+                const token = localStorage.getItem('events_token')
+                const params = new URLSearchParams({
+                    restaurantId,
+                    from: startDate,
+                    to: end.toISOString().split('T')[0]
                 })
+
+                const response = await fetch(`${API_BASE_URL}/api/admin/bookings?${params}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+
+                if (!response.ok) throw new Error('Failed to fetch stats')
+
+                const { bookings } = await response.json()
+
+                // Aggregate by day
+                const dayMap: Record<string, DayStats> = {}
+                for (let i = 0; i < days; i++) {
+                    const d = new Date(start)
+                    d.setDate(d.getDate() + i)
+                    const dateStr = d.toISOString().split('T')[0]
+                    dayMap[dateStr] = { date: dateStr, bookings: 0, couverts: 0, walkins: 0, noShows: 0 }
+                }
+
+                for (const b of bookings || []) {
+                    const dateStr = b.booking_date?.split('T')[0] || b.start_datetime?.split('T')[0]
+                    if (dateStr && dayMap[dateStr]) {
+                        dayMap[dateStr].bookings++
+                        dayMap[dateStr].couverts += b.guest_count || 0
+                        if (b.is_walkin) dayMap[dateStr].walkins++
+                        if (b.status === 'no_show') dayMap[dateStr].noShows++
+                    }
+                }
+
+                setStats(Object.values(dayMap).sort((a, b) => a.date.localeCompare(b.date)))
+            } catch (e) {
+                console.error('Failed to fetch stats:', e)
+                setStats([])
+            } finally {
+                setLoading(false)
             }
-            setStats(data)
-            setLoading(false)
         }
-        generateStats()
-    }, [startDate, period])
+        fetchStats()
+    }, [startDate, period, restaurantId])
 
     const summary = useMemo(() => {
         return {
