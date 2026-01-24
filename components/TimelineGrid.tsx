@@ -105,6 +105,9 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
         table_id: ''
     })
 
+    // Submitting state for double-click protection
+    const [isSubmitting, setIsSubmitting] = useState(false)
+
     // Customer search
     const [customerSearchQuery, setCustomerSearchQuery] = useState('')
     const [customerSearchResults, setCustomerSearchResults] = useState<Customer[]>([])
@@ -312,7 +315,8 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
 
     // Submit quick booking
     const submitQuickBook = async () => {
-        if (!quickBookData || !quickBookForm.customer_name) return
+        if (!quickBookData || !quickBookForm.customer_name || isSubmitting) return
+        setIsSubmitting(true)
 
         try {
             const token = localStorage.getItem('events_token')
@@ -349,6 +353,8 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
             }
         } catch (e) {
             console.error('Failed to create booking:', e)
+        } finally {
+            setIsSubmitting(false)
         }
     }
 
@@ -404,7 +410,8 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
 
     // Submit walk-in with multi-table support
     const submitWalkin = async () => {
-        if (!walkinForm.customer_name || walkinForm.guest_count < 1) return
+        if (!walkinForm.customer_name || walkinForm.guest_count < 1 || isSubmitting) return
+        setIsSubmitting(true)
 
         // Use smart allocation for multi-table
         const allocation = walkinForm.table_id
@@ -413,6 +420,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
 
         if (!allocation || allocation.tables.length === 0) {
             alert('Geen beschikbare tafels voor dit aantal gasten')
+            setIsSubmitting(false)
             return
         }
 
@@ -455,6 +463,8 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
             }
         } catch (e) {
             console.error('Failed to create walk-in:', e)
+        } finally {
+            setIsSubmitting(false)
         }
     }
 
@@ -1228,10 +1238,10 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                 </button>
                                 <button
                                     onClick={submitQuickBook}
-                                    disabled={!quickBookForm.customer_name}
-                                    className="flex-1 px-3 py-2 bg-emerald-500 text-white rounded-lg text-sm hover:bg-emerald-600 disabled:opacity-50"
+                                    disabled={!quickBookForm.customer_name || isSubmitting}
+                                    className="flex-1 px-3 py-2 bg-emerald-500 text-white rounded-lg text-sm hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    Boeken
+                                    {isSubmitting ? 'Bezig...' : 'Boeken'}
                                 </button>
                             </div>
                         </div>
@@ -1326,10 +1336,11 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
 
                             <button
                                 onClick={submitWalkin}
-                                className="w-full mt-4 px-3 py-2.5 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 flex items-center justify-center gap-2"
+                                disabled={isSubmitting || !walkinForm.customer_name}
+                                className="w-full mt-4 px-3 py-2.5 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
                                 <UserCheck className="w-4 h-4" />
-                                Plaats direct
+                                {isSubmitting ? 'Bezig...' : 'Plaats direct'}
                             </button>
                         </div>
                     </div>
