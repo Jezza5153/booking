@@ -224,6 +224,15 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                 const notesData = await notesRes.json()
                 setDayNotes(notesData.notes || [])
             }
+
+            // Fetch waitlist
+            const waitlistRes = await fetch(
+                `${API_BASE_URL}/api/restaurant/${restaurantId}/waitlist?date=${date}`
+            )
+            if (waitlistRes.ok) {
+                const waitlistData = await waitlistRes.json()
+                setWaitlist(waitlistData.waitlist || [])
+            }
         } catch (e) {
             console.error('Failed to load timeline data:', e)
         } finally {
@@ -778,7 +787,24 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                                     Boeken
                                                 </button>
                                                 <button
-                                                    onClick={() => setWaitlist(prev => prev.filter(w => w.id !== entry.id))}
+                                                    onClick={async () => {
+                                                        const token = localStorage.getItem('events_token')
+                                                        try {
+                                                            const res = await fetch(
+                                                                `${API_BASE_URL}/api/restaurant/${restaurantId}/waitlist/${entry.id}`,
+                                                                {
+                                                                    method: 'DELETE',
+                                                                    headers: { 'Authorization': `Bearer ${token}` }
+                                                                }
+                                                            )
+                                                            if (res.ok) {
+                                                                setWaitlist(prev => prev.filter(w => w.id !== entry.id))
+                                                            }
+                                                        } catch (e) {
+                                                            console.error('Failed to delete from waitlist:', e)
+                                                            setWaitlist(prev => prev.filter(w => w.id !== entry.id))
+                                                        }
+                                                    }}
                                                     className="p-1 text-purple-600 hover:text-red-600"
                                                 >
                                                     <X className="w-3 h-3" />
@@ -813,24 +839,38 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                     ))}
                                 </select>
                                 <button
-                                    onClick={() => {
+                                    onClick={async () => {
                                         if (waitlistForm.customer_name) {
-                                            setWaitlist(prev => [...prev, {
-                                                id: `wl-${Date.now()}`,
-                                                customer_name: waitlistForm.customer_name,
-                                                customer_phone: waitlistForm.customer_phone,
-                                                guest_count: waitlistForm.guest_count,
-                                                preferred_time: waitlistForm.preferred_time,
-                                                notes: waitlistForm.notes,
-                                                created_at: new Date().toISOString()
-                                            }])
-                                            setWaitlistForm({
-                                                customer_name: '',
-                                                customer_phone: '',
-                                                guest_count: 2,
-                                                preferred_time: '',
-                                                notes: ''
-                                            })
+                                            try {
+                                                const res = await fetch(
+                                                    `${API_BASE_URL}/api/restaurant/${restaurantId}/waitlist`,
+                                                    {
+                                                        method: 'POST',
+                                                        headers: { 'Content-Type': 'application/json' },
+                                                        body: JSON.stringify({
+                                                            date,
+                                                            customer_name: waitlistForm.customer_name,
+                                                            phone: waitlistForm.customer_phone,
+                                                            guest_count: waitlistForm.guest_count,
+                                                            time_preference: waitlistForm.preferred_time,
+                                                            notes: waitlistForm.notes
+                                                        })
+                                                    }
+                                                )
+                                                if (res.ok) {
+                                                    const data = await res.json()
+                                                    setWaitlist(prev => [...prev, data.entry])
+                                                    setWaitlistForm({
+                                                        customer_name: '',
+                                                        customer_phone: '',
+                                                        guest_count: 2,
+                                                        preferred_time: '',
+                                                        notes: ''
+                                                    })
+                                                }
+                                            } catch (e) {
+                                                console.error('Failed to add to waitlist:', e)
+                                            }
                                         }
                                     }}
                                     className="px-2 py-1 text-sm bg-purple-500 text-white rounded hover:bg-purple-600"
