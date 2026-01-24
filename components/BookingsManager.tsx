@@ -314,6 +314,50 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                 </div>
             </div>
 
+            {/* Couverts Stats Bar */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200 p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className="text-lg">📊</span>
+                        <span className="text-xs font-medium text-amber-700 uppercase">Verwacht</span>
+                    </div>
+                    <div className="text-2xl font-bold text-amber-900">
+                        {restaurantBookings.filter(b => b.status !== 'arrived' && b.status !== 'cancelled').reduce((sum, b) => sum + (b.guest_count || 0), 0)}
+                    </div>
+                    <div className="text-xs text-amber-600">couverts nog niet binnen</div>
+                </div>
+                <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl border border-emerald-200 p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className="text-lg">✅</span>
+                        <span className="text-xs font-medium text-emerald-700 uppercase">Binnen</span>
+                    </div>
+                    <div className="text-2xl font-bold text-emerald-900">
+                        {restaurantBookings.filter(b => b.status === 'arrived').reduce((sum, b) => sum + (b.guest_count || 0), 0)}
+                    </div>
+                    <div className="text-xs text-emerald-600">couverts gearriveerd</div>
+                </div>
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className="text-lg">🚶</span>
+                        <span className="text-xs font-medium text-blue-700 uppercase">Walk-in</span>
+                    </div>
+                    <div className="text-2xl font-bold text-blue-900">
+                        {restaurantBookings.filter(b => b.status === 'walkin' || (b as any).is_walkin).reduce((sum, b) => sum + (b.guest_count || 0), 0)}
+                    </div>
+                    <div className="text-xs text-blue-600">couverts ingelopen</div>
+                </div>
+                <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl border border-purple-200 p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className="text-lg">📈</span>
+                        <span className="text-xs font-medium text-purple-700 uppercase">Totaal Binnen</span>
+                    </div>
+                    <div className="text-2xl font-bold text-purple-900">
+                        {restaurantBookings.filter(b => b.status === 'arrived' || b.status === 'walkin' || (b as any).is_walkin).reduce((sum, b) => sum + (b.guest_count || 0), 0)}
+                    </div>
+                    <div className="text-xs text-purple-600">binnen + walk-in</div>
+                </div>
+            </div>
+
             {/* Two Column Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
