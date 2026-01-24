@@ -137,12 +137,9 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
     }, [rows])
 
     const eventTitles = useMemo(() => {
-        // Combine all events from allEvents with those that have bookings
-        const titlesFromAllEvents = (allEvents || []).map(e => e.title)
-        const titlesFromBookings = Object.keys(groupedByEvent)
-        const uniqueTitles = Array.from(new Set([...titlesFromAllEvents, ...titlesFromBookings]))
-        return uniqueTitles.sort()
-    }, [allEvents, groupedByEvent])
+        // Use only event titles from bookings to avoid undefined errors
+        return Object.keys(groupedByEvent).sort()
+    }, [groupedByEvent])
 
     const handleCancel = async (bookingId: string) => {
         setIsCancelling(true)
