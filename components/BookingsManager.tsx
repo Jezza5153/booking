@@ -55,6 +55,7 @@ function fmtTime(dIso: string) {
 export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restaurantId = RESTAURANT_ID }) => {
     const [loading, setLoading] = useState(true)
     const [rows, setRows] = useState<BookingRow[]>([])
+    const [allEvents, setAllEvents] = useState<{ id: string; title: string }[]>([])
     const [selected, setSelected] = useState<BookingRow | null>(null)
     const [isCancelling, setIsCancelling] = useState(false)
 
@@ -64,10 +65,11 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
     const [restaurantBookings, setRestaurantBookings] = useState<RestaurantBooking[]>([])
     const [loadingTimeline, setLoadingTimeline] = useState(true)
 
-    // Fetch event bookings
+    // Fetch event bookings and all events
     const fetchData = async () => {
         setLoading(true)
         try {
+            // Fetch bookings
             const res = await fetchBookings({
                 restaurantId,
                 status: "confirmed",
@@ -75,6 +77,12 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                 offset: 0,
             })
             setRows(res.bookings || [])
+
+            // Fetch all events (to show even without bookings)
+            const adminData = await fetchAdminData(restaurantId)
+            if (adminData?.events) {
+                setAllEvents(adminData.events.map((e: any) => ({ id: e.id, title: e.title })))
+            }
         } catch (e) {
             console.error('Failed to load bookings:', e)
         } finally {
@@ -128,7 +136,13 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
         return groups
     }, [rows])
 
-    const eventTitles = Object.keys(groupedByEvent).sort()
+    const eventTitles = useMemo(() => {
+        // Combine all events from allEvents with those that have bookings
+        const titlesFromAllEvents = allEvents.map(e => e.title)
+        const titlesFromBookings = Object.keys(groupedByEvent)
+        const uniqueTitles = Array.from(new Set([...titlesFromAllEvents, ...titlesFromBookings]))
+        return uniqueTitles.sort()
+    }, [allEvents, groupedByEvent])
 
     const handleCancel = async (bookingId: string) => {
         setIsCancelling(true)
@@ -190,11 +204,22 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                 {/* LEFT COLUMN: Event Bookings */}
                 <div className="space-y-4">
                     <div className="bg-indigo-50 rounded-xl border border-indigo-200 p-4">
-                        <h3 className="font-bold text-indigo-900 flex items-center gap-2">
-                            <Calendar className="w-5 h-5" />
-                            🎪 Event Boekingen
-                        </h3>
-                        <p className="text-xs text-indigo-600 mt-1">Gegroepeerd per event</p>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h3 className="font-bold text-indigo-900 flex items-center gap-2">
+                                    <Calendar className="w-5 h-5" />
+                                    🎪 Event Boekingen
+                                </h3>
+                                <p className="text-xs text-indigo-600 mt-1">Gegroepeerd per event</p>
+                            </div>
+                            <button
+                                onClick={() => window.location.hash = '#/schedule'}
+                                className="flex items-center gap-1.5 bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
+                            >
+                                <Plus className="w-4 h-4" />
+                                Boeking
+                            </button>
+                        </div>
                     </div>
 
                     {loading ? (
@@ -252,10 +277,21 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                 {/* RIGHT COLUMN: Restaurant Timeline */}
                 <div className="space-y-4">
                     <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-4">
-                        <h3 className="font-bold text-emerald-900 flex items-center gap-2">
-                            🍽️ Restaurant Tafels
-                        </h3>
-                        <p className="text-xs text-emerald-600 mt-1">Dagelijks overzicht</p>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h3 className="font-bold text-emerald-900 flex items-center gap-2">
+                                    🍽️ Restaurant Tafels
+                                </h3>
+                                <p className="text-xs text-emerald-600 mt-1">Dagelijks overzicht</p>
+                            </div>
+                            <button
+                                onClick={() => window.location.hash = '#/tafels'}
+                                className="flex items-center gap-1.5 bg-emerald-600 text-white px-3 py-1.5 rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium"
+                            >
+                                <Plus className="w-4 h-4" />
+                                Boeking
+                            </button>
+                        </div>
                     </div>
 
                     {/* Date Navigation */}
