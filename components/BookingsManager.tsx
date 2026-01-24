@@ -180,6 +180,91 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
         }
     }
 
+    // Submit event booking
+    const submitEventBooking = async () => {
+        if (!bookingForm.event_id || !bookingForm.customer_name) return
+        setIsSubmitting(true)
+        try {
+            const token = localStorage.getItem('events_token')
+            const res = await fetch(`${API_BASE_URL}/api/admin/bookings`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    restaurantId,
+                    eventId: bookingForm.event_id,
+                    customer_name: bookingForm.customer_name,
+                    customer_email: bookingForm.customer_email,
+                    customer_phone: bookingForm.customer_phone,
+                    guest_count: bookingForm.guest_count,
+                    remarks: bookingForm.remarks
+                })
+            })
+            if (res.ok) {
+                setShowEventBookingModal(false)
+                setBookingForm({
+                    customer_name: '', customer_email: '', customer_phone: '',
+                    guest_count: 2, date: new Date().toISOString().split('T')[0],
+                    time: '18:00', remarks: '', event_id: ''
+                })
+                await fetchData()
+            } else {
+                const err = await res.json()
+                alert(err.error || 'Boeking mislukt')
+            }
+        } catch (e) {
+            console.error('Event booking failed:', e)
+            alert('Boeking mislukt')
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
+    // Submit restaurant booking
+    const submitRestaurantBooking = async () => {
+        if (!bookingForm.customer_name) return
+        setIsSubmitting(true)
+        try {
+            const token = localStorage.getItem('events_token')
+            const res = await fetch(`${API_BASE_URL}/api/admin/restaurant-bookings`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    restaurantId,
+                    date: bookingForm.date,
+                    time: bookingForm.time,
+                    customer_name: bookingForm.customer_name,
+                    customer_email: bookingForm.customer_email,
+                    customer_phone: bookingForm.customer_phone,
+                    guest_count: bookingForm.guest_count,
+                    remarks: bookingForm.remarks
+                })
+            })
+            if (res.ok) {
+                setShowRestaurantBookingModal(false)
+                setBookingForm({
+                    customer_name: '', customer_email: '', customer_phone: '',
+                    guest_count: 2, date: new Date().toISOString().split('T')[0],
+                    time: '18:00', remarks: '', event_id: ''
+                })
+                await fetchTimelineData()
+            } else {
+                const err = await res.json()
+                alert(err.error || 'Boeking mislukt')
+            }
+        } catch (e) {
+            console.error('Restaurant booking failed:', e)
+            alert('Boeking mislukt')
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
     const navigateDate = (delta: number) => {
         const d = new Date(timelineDate)
         d.setDate(d.getDate() + delta)
@@ -637,6 +722,7 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                                     Annuleren
                                 </button>
                                 <button
+                                    onClick={submitEventBooking}
                                     disabled={!bookingForm.event_id || !bookingForm.customer_name || isSubmitting}
                                     className="flex-1 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-bold hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50"
                                 >
@@ -745,6 +831,7 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                                     Annuleren
                                 </button>
                                 <button
+                                    onClick={submitRestaurantBooking}
                                     disabled={!bookingForm.customer_name || isSubmitting}
                                     className="flex-1 px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg font-bold hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50"
                                 >
