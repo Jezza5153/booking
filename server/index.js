@@ -624,6 +624,33 @@ app.get('/api/health', async (req, res) => {
     }
 });
 
+// GET /api/events - Public events endpoint for widget
+app.get('/api/events', async (req, res) => {
+    const restaurantId = req.query.restaurantId || 'demo-restaurant';
+    try {
+        const eventsResult = await pool.query(
+            `SELECT * FROM events WHERE restaurant_id = $1 AND is_active = true ORDER BY title`,
+            [restaurantId]
+        );
+
+        // Get slots for each event
+        const eventsWithSlots = await Promise.all(
+            eventsResult.rows.map(async (event) => {
+                const slotsResult = await pool.query(
+                    `SELECT * FROM slots WHERE event_id = $1 ORDER BY start_datetime`,
+                    [event.id]
+                );
+                return { ...event, slots: slotsResult.rows };
+            })
+        );
+
+        res.json({ events: eventsWithSlots });
+    } catch (error) {
+        console.error('Failed to fetch events:', error);
+        res.status(500).json({ error: 'Failed to fetch events' });
+    }
+});
+
 // ============================================
 // PROTECTED ADMIN ROUTES (Auth required)
 // ============================================
