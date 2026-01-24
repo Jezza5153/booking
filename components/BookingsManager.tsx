@@ -64,6 +64,22 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
     const [tables, setTables] = useState<Table[]>([])
     const [restaurantBookings, setRestaurantBookings] = useState<RestaurantBooking[]>([])
     const [loadingTimeline, setLoadingTimeline] = useState(true)
+    const [openingHours, setOpeningHours] = useState<{ day: number; is_open: boolean }[]>([])
+
+    // Modal states
+    const [showEventBookingModal, setShowEventBookingModal] = useState(false)
+    const [showRestaurantBookingModal, setShowRestaurantBookingModal] = useState(false)
+    const [bookingForm, setBookingForm] = useState({
+        customer_name: '',
+        customer_email: '',
+        customer_phone: '',
+        guest_count: 2,
+        date: new Date().toISOString().split('T')[0],
+        time: '18:00',
+        remarks: '',
+        event_id: ''
+    })
+    const [isSubmitting, setIsSubmitting] = useState(false)
 
     // Fetch event bookings and all events
     const fetchData = async () => {
@@ -105,6 +121,13 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
             if (bookingsRes.ok) {
                 const bookingsData = await bookingsRes.json()
                 setRestaurantBookings(bookingsData.bookings || [])
+            }
+
+            // Fetch opening hours
+            const hoursRes = await fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/opening-hours`)
+            if (hoursRes.ok) {
+                const hoursData = await hoursRes.json()
+                setOpeningHours(hoursData.openingHours || [])
             }
         } catch (e) {
             console.error('Failed to load timeline:', e)
@@ -179,6 +202,14 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
         return slots
     }, [])
 
+    // Check if the timeline date is open
+    const isOpenToday = useMemo(() => {
+        const d = new Date(timelineDate)
+        const dayOfWeek = d.getDay() // 0=Sunday
+        const dayInfo = openingHours.find(h => h.day === dayOfWeek)
+        return dayInfo?.is_open !== false // Default to open if not found
+    }, [timelineDate, openingHours])
+
     return (
         <div className="w-full max-w-7xl mx-auto p-6">
             {/* Header */}
@@ -213,7 +244,7 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                                 <p className="text-xs text-indigo-600 mt-1">Gegroepeerd per event</p>
                             </div>
                             <button
-                                onClick={() => window.location.hash = '#/tafels?newBooking=true'}
+                                onClick={() => setShowEventBookingModal(true)}
                                 className="flex items-center gap-1.5 bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
                             >
                                 <Plus className="w-4 h-4" />
@@ -294,7 +325,7 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                                 <p className="text-xs text-emerald-600 mt-1">Dagelijks overzicht</p>
                             </div>
                             <button
-                                onClick={() => window.location.hash = '#/tafels?newBooking=true'}
+                                onClick={() => setShowRestaurantBookingModal(true)}
                                 className="flex items-center gap-1.5 bg-emerald-600 text-white px-3 py-1.5 rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium"
                             >
                                 <Plus className="w-4 h-4" />
@@ -323,9 +354,15 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                     </div>
 
                     {/* Timeline Grid */}
-                    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                    <div className="bg-gradient-to-br from-white to-emerald-50/30 rounded-xl border border-emerald-200/50 overflow-hidden shadow-lg">
                         {loadingTimeline ? (
                             <div className="text-center py-8 text-gray-500">Laden...</div>
+                        ) : !isOpenToday ? (
+                            <div className="text-center py-12 bg-gradient-to-br from-gray-100 to-gray-50">
+                                <div className="text-6xl mb-4">🚫</div>
+                                <h3 className="text-xl font-bold text-gray-700 mb-2">Gesloten</h3>
+                                <p className="text-gray-500">Het restaurant is op deze dag gesloten</p>
+                            </div>
                         ) : tables.length === 0 ? (
                             <div className="text-center py-8 text-gray-500">Geen tafels geconfigureerd</div>
                         ) : (
@@ -509,6 +546,215 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                     </div>
                 )
             }
+
+            {/* Event Booking Modal */}
+            {showEventBookingModal && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+                        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                    🎪 Nieuwe Event Boeking
+                                </h3>
+                                <button onClick={() => setShowEventBookingModal(false)} className="text-white/80 hover:text-white">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                        </div>
+                        <div className="p-4 space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Event</label>
+                                <select
+                                    value={bookingForm.event_id}
+                                    onChange={e => setBookingForm(f => ({ ...f, event_id: e.target.value }))}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                                >
+                                    <option value="">Selecteer event...</option>
+                                    {allEvents.map(ev => (
+                                        <option key={ev.id} value={ev.id}>{ev.title}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Naam</label>
+                                    <input
+                                        type="text"
+                                        value={bookingForm.customer_name}
+                                        onChange={e => setBookingForm(f => ({ ...f, customer_name: e.target.value }))}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                                        placeholder="Klantnaam"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Gasten</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        value={bookingForm.guest_count}
+                                        onChange={e => setBookingForm(f => ({ ...f, guest_count: parseInt(e.target.value) || 1 }))}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                                    />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                    <input
+                                        type="email"
+                                        value={bookingForm.customer_email}
+                                        onChange={e => setBookingForm(f => ({ ...f, customer_email: e.target.value }))}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                                        placeholder="email@voorbeeld.nl"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Telefoon</label>
+                                    <input
+                                        type="tel"
+                                        value={bookingForm.customer_phone}
+                                        onChange={e => setBookingForm(f => ({ ...f, customer_phone: e.target.value }))}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                                        placeholder="+31..."
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Opmerkingen</label>
+                                <textarea
+                                    value={bookingForm.remarks}
+                                    onChange={e => setBookingForm(f => ({ ...f, remarks: e.target.value }))}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                                    rows={2}
+                                    placeholder="Bijzonderheden..."
+                                />
+                            </div>
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    onClick={() => setShowEventBookingModal(false)}
+                                    className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium"
+                                >
+                                    Annuleren
+                                </button>
+                                <button
+                                    disabled={!bookingForm.event_id || !bookingForm.customer_name || isSubmitting}
+                                    className="flex-1 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-bold hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50"
+                                >
+                                    {isSubmitting ? 'Bezig...' : 'Boeken'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Restaurant Booking Modal */}
+            {showRestaurantBookingModal && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+                        <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-4">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                    🍽️ Nieuwe Tafel Boeking
+                                </h3>
+                                <button onClick={() => setShowRestaurantBookingModal(false)} className="text-white/80 hover:text-white">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                        </div>
+                        <div className="p-4 space-y-4">
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Datum</label>
+                                    <input
+                                        type="date"
+                                        value={bookingForm.date}
+                                        onChange={e => setBookingForm(f => ({ ...f, date: e.target.value }))}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Tijd</label>
+                                    <input
+                                        type="time"
+                                        value={bookingForm.time}
+                                        onChange={e => setBookingForm(f => ({ ...f, time: e.target.value }))}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                                    />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Naam</label>
+                                    <input
+                                        type="text"
+                                        value={bookingForm.customer_name}
+                                        onChange={e => setBookingForm(f => ({ ...f, customer_name: e.target.value }))}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                                        placeholder="Klantnaam"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Gasten</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        value={bookingForm.guest_count}
+                                        onChange={e => setBookingForm(f => ({ ...f, guest_count: parseInt(e.target.value) || 1 }))}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                                    />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                    <input
+                                        type="email"
+                                        value={bookingForm.customer_email}
+                                        onChange={e => setBookingForm(f => ({ ...f, customer_email: e.target.value }))}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                                        placeholder="email@voorbeeld.nl"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Telefoon</label>
+                                    <input
+                                        type="tel"
+                                        value={bookingForm.customer_phone}
+                                        onChange={e => setBookingForm(f => ({ ...f, customer_phone: e.target.value }))}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                                        placeholder="+31..."
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Opmerkingen</label>
+                                <textarea
+                                    value={bookingForm.remarks}
+                                    onChange={e => setBookingForm(f => ({ ...f, remarks: e.target.value }))}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                                    rows={2}
+                                    placeholder="Bijzonderheden..."
+                                />
+                            </div>
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    onClick={() => setShowRestaurantBookingModal(false)}
+                                    className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium"
+                                >
+                                    Annuleren
+                                </button>
+                                <button
+                                    disabled={!bookingForm.customer_name || isSubmitting}
+                                    className="flex-1 px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg font-bold hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50"
+                                >
+                                    {isSubmitting ? 'Bezig...' : 'Boeken'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div >
     )
 }
