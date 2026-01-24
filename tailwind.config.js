@@ -7,7 +7,14 @@ export default {
         "./src/**/*.{ts,tsx}",
     ],
     theme: {
-        extend: {},
+        extend: {
+            keyframes: {
+                shimmer: {
+                    '0%': { transform: 'translateX(-150%)' },
+                    '100%': { transform: 'translateX(150%)' },
+                }
+            }
+        },
     },
     plugins: [],
 }
