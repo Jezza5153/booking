@@ -1515,13 +1515,75 @@ app.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
 
     try {
         // Get opening hours
-        const openingResult = await pool.query(
+        let openingResult = await pool.query(
             `SELECT open_time, close_time, slot_duration_minutes, is_closed 
              FROM restaurant_openings 
              WHERE restaurant_id = $1 AND (day_of_week = $2 OR specific_date = $3)
              ORDER BY specific_date DESC NULLS LAST LIMIT 1`,
             [restaurantId, dayOfWeek, date]
         );
+
+        // AUTO-PROVISION: If no opening hours exist, create default hours for this restaurant
+        if (openingResult.rowCount === 0) {
+            console.log(`📋 Auto-provisioning opening hours for restaurant: ${restaurantId}`);
+
+            // Create default opening hours (Mon-Sun 17:00-22:00)
+            const defaultOpenings = [
+                { day: 0, open: '17:00', close: '22:00' }, // Sunday
+                { day: 1, open: '17:00', close: '22:00' }, // Monday
+                { day: 2, open: '17:00', close: '22:00' }, // Tuesday
+                { day: 3, open: '17:00', close: '22:00' }, // Wednesday
+                { day: 4, open: '17:00', close: '23:00' }, // Thursday
+                { day: 5, open: '17:00', close: '23:00' }, // Friday
+                { day: 6, open: '17:00', close: '23:00' }, // Saturday
+            ];
+
+            for (const o of defaultOpenings) {
+                await pool.query(
+                    `INSERT INTO restaurant_openings (restaurant_id, day_of_week, open_time, close_time, slot_duration_minutes)
+                     VALUES ($1, $2, $3, $4, 90) ON CONFLICT DO NOTHING`,
+                    [restaurantId, o.day, o.open, o.close]
+                );
+            }
+
+            // Create default tables if none exist
+            const tablesCheck = await pool.query(
+                'SELECT COUNT(*) FROM restaurant_tables WHERE restaurant_id = $1',
+                [restaurantId]
+            );
+
+            if (parseInt(tablesCheck.rows[0].count) === 0) {
+                console.log(`📋 Auto-provisioning tables for restaurant: ${restaurantId}`);
+
+                const defaultTables = [
+                    { name: 'Tafel 1', seats: 2 },
+                    { name: 'Tafel 2', seats: 2 },
+                    { name: 'Tafel 3', seats: 4 },
+                    { name: 'Tafel 4', seats: 4 },
+                    { name: 'Tafel 5', seats: 6 },
+                    { name: 'Tafel 6', seats: 6 },
+                    { name: 'Chef\'s Table', seats: 12 },
+                ];
+
+                for (let i = 0; i < defaultTables.length; i++) {
+                    const t = defaultTables[i];
+                    await pool.query(
+                        `INSERT INTO restaurant_tables (id, restaurant_id, name, seats, zone, is_active)
+                         VALUES ($1, $2, $3, $4, 'Binnen', true) ON CONFLICT DO NOTHING`,
+                        [`${restaurantId}-t${i + 1}`, restaurantId, t.name, t.seats]
+                    );
+                }
+            }
+
+            // Re-fetch opening hours after provisioning
+            openingResult = await pool.query(
+                `SELECT open_time, close_time, slot_duration_minutes, is_closed 
+                 FROM restaurant_openings 
+                 WHERE restaurant_id = $1 AND day_of_week = $2
+                 LIMIT 1`,
+                [restaurantId, dayOfWeek]
+            );
+        }
 
         if (openingResult.rowCount === 0 || openingResult.rows[0].is_closed) {
             return res.json({ slots: [], message: 'Restaurant is closed' });
