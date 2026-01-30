@@ -134,19 +134,19 @@ export async function sendLargeGroupNotification({
     }
 
     try {
-        // Customer email for large groups
+        // Customer email for large groups - same as regular, just a confirmation
         if (customerEmail) {
             await resend.emails.send({
                 from: FROM_EMAIL,
                 to: customerEmail,
                 replyTo: REPLY_TO_EMAIL,
-                subject: `Groepsaanvraag ontvangen - ${escapeHtml(eventTitle)}`,
+                subject: `Je reservering staat! 🎉`,
                 html: `
                     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: 0 auto; background: #0f0f0f; color: #fff; padding: 32px; border-radius: 16px;">
                         <p style="color: #fff; font-size: 16px; margin: 0 0 20px;">Hi ${escapeHtml(customerName) || 'daar'},</p>
                         
                         <p style="color: #fff; font-size: 18px; margin: 0 0 24px;">
-                            <strong>Dankjewel! We hebben je groepsaanvraag goed ontvangen.</strong>
+                            <strong>Yes, je reservering staat!</strong> 🎉
                         </p>
                         
                         <div style="background: #1a1a1a; border-left: 3px solid #c9a227; padding: 16px 20px; margin: 0 0 24px; border-radius: 0 8px 8px 0;">
@@ -156,21 +156,13 @@ export async function sendLargeGroupNotification({
                             </p>
                         </div>
                         
-                        <p style="color: #fff; font-size: 14px; margin: 0 0 16px;">
-                            We nemen snel contact met je op om alles af te stemmen.
-                        </p>
-                        
-                        <p style="color: #888; font-size: 14px; margin: 0 0 16px;">
-                            Je gegevens die we hebben:<br>
-                            📧 ${escapeHtml(customerEmail)} • 📞 ${escapeHtml(customerPhone) || '-'}
-                        </p>
-                        
                         <p style="color: #888; font-size: 14px; margin: 0 0 24px; line-height: 1.5;">
-                            Wil je alvast iets doorgeven?<br>
-                            Antwoord op deze mail of app/bel: <strong style="color: #fff;">${PHONE_NUMBER}</strong>
+                            Iets doorgeven (allergieën/wensen) of wijzigen?<br>
+                            Antwoord op deze mail of app/bel ons: <strong style="color: #fff;">${PHONE_NUMBER}</strong>
                         </p>
                         
                         <p style="color: #888; font-size: 14px; margin: 0;">
+                            Tot snel!<br>
                             <strong style="color: #c9a227;">De Tafelaar</strong>
                         </p>
                     </div>
@@ -179,16 +171,14 @@ export async function sendLargeGroupNotification({
             console.log(`📧 Large group confirmation sent to ${customerEmail}`);
         }
 
-        // Admin notification - priority flag
+        // Admin notification - simplified for events (no action needed)
         await resend.emails.send({
             from: FROM_EMAIL,
             to: ADMIN_EMAIL,
-            subject: `⚠️ GROEP: ${escapeHtml(customerName) || 'Gast'} - ${guestCount}p`,
+            subject: `📋 ${escapeHtml(customerName) || 'Gast'} - ${guestCount}p - ${escapeHtml(eventTitle)}`,
             html: `
                 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; max-width: 500px;">
-                    <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px;">
-                        <strong style="color: #856404;">⚠️ GROTE GROEP (OPVOLGEN)</strong>
-                    </div>
+                    <h2 style="margin: 0 0 16px; font-size: 18px; color: #333;">NIEUWE EVENTBOEKING</h2>
                     
                     <p style="margin: 4px 0; color: #333;"><strong>Naam:</strong> ${escapeHtml(customerName) || 'Niet opgegeven'}</p>
                     <p style="margin: 4px 0; color: #333;">📧 ${escapeHtml(customerEmail) || '-'}</p>
@@ -202,10 +192,6 @@ export async function sendLargeGroupNotification({
                     <hr style="border: none; border-top: 1px solid #eee; margin: 16px 0;">
                     
                     <p style="margin: 4px 0; color: #666;"><strong>Opmerking:</strong> ${escapeHtml(remarks) || 'Geen'}</p>
-                    
-                    <p style="margin: 16px 0 0; color: #856404; font-weight: bold;">
-                        Actie: neem contact op om details af te stemmen.
-                    </p>
                 </div>
             `,
         });
