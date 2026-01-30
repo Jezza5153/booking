@@ -1505,6 +1505,8 @@ app.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
     const { restaurantId } = req.params;
     const { date, guests } = req.query;
 
+    console.log(`🔍 Availability request: restaurant=${restaurantId}, date=${date}, guests=${guests}`);
+
     if (!date) {
         return res.status(400).json({ error: 'date is required (YYYY-MM-DD)' });
     }
@@ -1512,6 +1514,7 @@ app.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
     const guestCount = parseInt(guests) || 2;
     const bookingDate = new Date(date);
     const dayOfWeek = bookingDate.getDay();
+    console.log(`🔍 Parsed: dayOfWeek=${dayOfWeek} (0=Sun, 5=Fri, 6=Sat)`);
 
     try {
         // Get opening hours
