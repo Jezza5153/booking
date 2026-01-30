@@ -87,31 +87,35 @@ export async function sendBookingConfirmation({
             console.log(`📧 Event confirmation sent to ${customerEmail}`);
         }
 
-        // Admin notification
-        await resend.emails.send({
-            from: FROM_EMAIL,
-            to: ADMIN_EMAIL,
-            subject: `📋 ${escapeHtml(customerName) || 'Gast'} - ${guestCount}p - ${escapeHtml(eventTitle)}`,
-            html: `
-                <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; max-width: 500px;">
-                    <h2 style="margin: 0 0 16px; font-size: 18px; color: #333;">NIEUWE EVENTBOEKING</h2>
-                    
-                    <p style="margin: 4px 0; color: #333;"><strong>Naam:</strong> ${escapeHtml(customerName) || 'Niet opgegeven'}</p>
-                    <p style="margin: 4px 0; color: #333;">📧 ${escapeHtml(customerEmail) || '-'}</p>
-                    <p style="margin: 4px 0; color: #333;">📞 ${escapeHtml(customerPhone) || '-'}</p>
-                    
-                    <hr style="border: none; border-top: 1px solid #eee; margin: 16px 0;">
-                    
-                    <p style="margin: 4px 0; color: #333;"><strong>Event:</strong> ${escapeHtml(eventTitle)}</p>
-                    <p style="margin: 4px 0; color: #333;">📅 ${escapeHtml(slotDate)} • 🕐 ${escapeHtml(slotTime)} • 👥 ${guestCount}</p>
-                    
-                    <hr style="border: none; border-top: 1px solid #eee; margin: 16px 0;">
-                    
-                    <p style="margin: 4px 0; color: #666;"><strong>Opmerking:</strong> ${escapeHtml(remarks) || 'Geen'}</p>
-                </div>
-            `,
-        });
-        console.log(`📧 Admin notification sent to ${ADMIN_EMAIL}`);
+        // Admin notification - separate try-catch to ensure customer email success doesn't mask admin failures
+        try {
+            const adminResult = await resend.emails.send({
+                from: FROM_EMAIL,
+                to: ADMIN_EMAIL,
+                subject: `📋 ${escapeHtml(customerName) || 'Gast'} - ${guestCount}p - ${escapeHtml(eventTitle)}`,
+                html: `
+                    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; max-width: 500px;">
+                        <h2 style="margin: 0 0 16px; font-size: 18px; color: #333;">NIEUWE EVENTBOEKING</h2>
+                        
+                        <p style="margin: 4px 0; color: #333;"><strong>Naam:</strong> ${escapeHtml(customerName) || 'Niet opgegeven'}</p>
+                        <p style="margin: 4px 0; color: #333;">📧 ${escapeHtml(customerEmail) || '-'}</p>
+                        <p style="margin: 4px 0; color: #333;">📞 ${escapeHtml(customerPhone) || '-'}</p>
+                        
+                        <hr style="border: none; border-top: 1px solid #eee; margin: 16px 0;">
+                        
+                        <p style="margin: 4px 0; color: #333;"><strong>Event:</strong> ${escapeHtml(eventTitle)}</p>
+                        <p style="margin: 4px 0; color: #333;">📅 ${escapeHtml(slotDate)} • 🕐 ${escapeHtml(slotTime)} • 👥 ${guestCount}</p>
+                        
+                        <hr style="border: none; border-top: 1px solid #eee; margin: 16px 0;">
+                        
+                        <p style="margin: 4px 0; color: #666;"><strong>Opmerking:</strong> ${escapeHtml(remarks) || 'Geen'}</p>
+                    </div>
+                `,
+            });
+            console.log(`📧 Admin notification sent to ${ADMIN_EMAIL}`, adminResult);
+        } catch (adminError) {
+            console.error(`📧 ADMIN EMAIL FAILED to ${ADMIN_EMAIL}:`, adminError.message, adminError);
+        }
 
         return { success: true };
     } catch (error) {
