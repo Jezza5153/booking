@@ -7,7 +7,7 @@ import pool from './db-postgres.js';
 import { loginHandler, authMiddleware } from './auth.js';
 import { loginRateLimiter, bookingRateLimiter, widgetRateLimiter, calendarRateLimiter, isRedisConnected } from './ratelimit.js';
 import { initSentry, sentryErrorHandler, captureException } from './sentry.js';
-import { sendBookingConfirmation, sendLargeGroupNotification } from './email.js';
+import { sendBookingConfirmation, sendLargeGroupNotification, sendRestaurantBookingConfirmation, sendChefsChoiceNotification } from './email.js';
 
 dotenv.config();
 
@@ -1550,7 +1550,17 @@ app.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
         const openMins = parseInt(open_time.split(':')[0]) * 60 + parseInt(open_time.split(':')[1]);
         const closeMins = parseInt(close_time.split(':')[0]) * 60 + parseInt(close_time.split(':')[1]);
 
+        // Check if booking is for today - filter out past times
+        const now = new Date();
+        const isToday = bookingDate.toDateString() === now.toDateString();
+        const currentMins = isToday ? now.getHours() * 60 + now.getMinutes() : 0;
+
         for (let m = openMins; m + slotDuration <= closeMins; m += 30) {
+            // Skip past time slots for today
+            if (isToday && m <= currentMins) {
+                continue;
+            }
+
             const slotTime = `${Math.floor(m / 60).toString().padStart(2, '0')}:${(m % 60).toString().padStart(2, '0')}`;
             const endTime = `${Math.floor((m + slotDuration) / 60).toString().padStart(2, '0')}:${((m + slotDuration) % 60).toString().padStart(2, '0')}`;
 
@@ -1574,8 +1584,13 @@ app.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
 app.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
     const { restaurant_id, date, time, guest_count, customer_name, customer_email, customer_phone, remarks } = req.body;
 
-    if (!restaurant_id || !date || !time || !guest_count || !customer_name) {
-        return res.status(400).json({ error: 'Missing required fields' });
+    if (!restaurant_id || !date || !time || !guest_count || !customer_name || !customer_email) {
+        return res.status(400).json({ error: 'Missing required fields (including email)' });
+    }
+
+    // Validate guest count (max 12 for restaurant bookings)
+    if (guest_count < 1 || guest_count > 12) {
+        return res.status(400).json({ error: 'Guest count must be between 1 and 12' });
     }
 
     const client = await pool.connect();
@@ -1619,6 +1634,32 @@ app.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
         );
 
         await client.query('COMMIT');
+
+        // Format date for email
+        const formattedDate = new Date(date).toLocaleDateString('nl-NL', {
+            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+        });
+
+        // Send appropriate email based on guest count
+        const emailData = {
+            customerName: customer_name,
+            customerEmail: customer_email,
+            customerPhone: customer_phone || null,
+            remarks: remarks || null,
+            tableName: table.name,
+            bookingDate: formattedDate,
+            bookingTime: time,
+            guestCount: guest_count,
+        };
+
+        if (guest_count >= 7) {
+            // 7-12 guests get Chef's Choice email
+            sendChefsChoiceNotification(emailData).catch(err => console.error('Chef\'s Choice email failed:', err));
+        } else {
+            // 1-6 guests get regular confirmation
+            sendRestaurantBookingConfirmation(emailData).catch(err => console.error('Restaurant email failed:', err));
+        }
+
         res.status(201).json({ success: true, booking_id: bookingId, table_name: table.name, date, time });
     } catch (error) {
         await client.query('ROLLBACK');

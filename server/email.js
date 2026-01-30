@@ -7,10 +7,12 @@ dotenv.config();
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 // Admin notification email - sends booking alerts to the restaurant
-const ADMIN_EMAIL = process.env.BOOKING_NOTIFICATION_EMAIL || 'chef@tafelaaramersfoort.nl';
+const ADMIN_EMAIL = process.env.BOOKING_NOTIFICATION_EMAIL || 'reserveren@tafelaaramersfoort.nl';
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'noreply@tafelaaramersfoort.nl';
+const REPLY_TO_EMAIL = 'reserveren@tafelaaramersfoort.nl';
+const PHONE_NUMBER = '+31 6 341 279 32';
 
-// P1-10: HTML escape helper to prevent XSS in emails
+// HTML escape helper to prevent XSS in emails
 const escapeHtml = (str) => {
     if (!str) return '';
     return String(str)
@@ -21,6 +23,9 @@ const escapeHtml = (str) => {
         .replace(/'/g, '&#39;');
 };
 
+// ============================================
+// EVENT BOOKING CONFIRMATION (1-6 guests)
+// ============================================
 export async function sendBookingConfirmation({
     customerName,
     customerEmail,
@@ -39,61 +44,64 @@ export async function sendBookingConfirmation({
     }
 
     try {
-        // Send confirmation to customer (if email provided)
+        // Customer confirmation email
         if (customerEmail) {
             await resend.emails.send({
                 from: FROM_EMAIL,
                 to: customerEmail,
-                subject: `Booking Confirmed - ${eventTitle}`,
+                replyTo: REPLY_TO_EMAIL,
+                subject: `Je reservering staat! 🎉`,
                 html: `
-                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0f0f0f; color: #fff; padding: 40px; border-radius: 16px;">
-                        <div style="text-align: center; margin-bottom: 30px;">
-                            <div style="display: inline-block; background: linear-gradient(135deg, #c9a227, #a08020); color: #0f0f0f; font-weight: bold; padding: 12px 16px; border-radius: 8px; font-size: 18px;">E</div>
-                            <h1 style="color: #c9a227; margin: 15px 0 5px;">Booking Confirmed!</h1>
-                            <p style="color: #888; margin: 0;">Bedankt, ${escapeHtml(customerName) || 'Guest'}! 🎉</p>
+                    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: 0 auto; background: #0f0f0f; color: #fff; padding: 32px; border-radius: 16px;">
+                        <p style="color: #fff; font-size: 16px; margin: 0 0 20px;">Hi ${escapeHtml(customerName) || 'daar'},</p>
+                        
+                        <p style="color: #fff; font-size: 18px; margin: 0 0 24px;">
+                            <strong>Yes, je reservering staat!</strong> 🎉
+                        </p>
+                        
+                        <div style="background: #1a1a1a; border-left: 3px solid #c9a227; padding: 16px 20px; margin: 0 0 24px; border-radius: 0 8px 8px 0;">
+                            <p style="color: #c9a227; font-weight: bold; margin: 0 0 8px; font-size: 16px;">${escapeHtml(eventTitle)}</p>
+                            <p style="color: #ccc; margin: 0; font-size: 14px;">
+                                📅 ${escapeHtml(slotDate)} • 🕐 ${escapeHtml(slotTime)} • 👥 ${guestCount} ${guestCount === 1 ? 'persoon' : 'personen'}
+                            </p>
                         </div>
                         
-                        <div style="background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
-                            <h2 style="color: #c9a227; margin: 0 0 15px; font-size: 20px;">${eventTitle}</h2>
-                            <p style="margin: 8px 0; color: #ccc;"><strong style="color: #c9a227;">📅</strong> ${slotDate}</p>
-                            <p style="margin: 8px 0; color: #ccc;"><strong style="color: #c9a227;">🕐</strong> ${slotTime}</p>
-                            <p style="margin: 8px 0; color: #ccc;"><strong style="color: #c9a227;">👥</strong> ${guestCount} gasten</p>
-                            <p style="margin: 8px 0; color: #ccc;"><strong style="color: #c9a227;">🪑</strong> ${tableType}-persoonstafel</p>
-                            <p style="margin: 8px 0; color: #ccc;"><strong style="color: #c9a227;">📍</strong> ${zoneName}</p>
-                            ${remarks ? `<p style="margin: 16px 0 8px; padding-top: 16px; border-top: 1px solid #2a2a2a; color: #888;"><strong style="color: #c9a227;">📝 Opmerkingen:</strong><br/>${escapeHtml(remarks)}</p>` : ''}
-                        </div>
+                        <p style="color: #888; font-size: 14px; margin: 0 0 24px; line-height: 1.5;">
+                            Iets doorgeven (allergieën/wensen) of wijzigen?<br>
+                            Antwoord op deze mail of app/bel ons: <strong style="color: #fff;">${PHONE_NUMBER}</strong>
+                        </p>
                         
-                        <p style="color: #888; font-size: 14px; text-align: center;">
+                        <p style="color: #888; font-size: 14px; margin: 0;">
                             Tot snel!<br>
                             <strong style="color: #c9a227;">De Tafelaar</strong>
                         </p>
                     </div>
                 `,
             });
-            console.log(`📧 Customer confirmation sent to ${customerEmail}`);
+            console.log(`📧 Event confirmation sent to ${customerEmail}`);
         }
 
-        // Send notification to admin with full customer details
+        // Admin notification
         await resend.emails.send({
             from: FROM_EMAIL,
             to: ADMIN_EMAIL,
-            subject: `Nieuwe Reservering: ${escapeHtml(customerName) || 'Gast'} - ${guestCount} gasten voor ${eventTitle}`,
+            subject: `📋 ${escapeHtml(customerName) || 'Gast'} - ${guestCount}p - ${escapeHtml(eventTitle)}`,
             html: `
-                <div style="font-family: Arial, sans-serif; padding: 20px;">
-                    <h2>Nieuwe Reservering Ontvangen</h2>
+                <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; max-width: 500px;">
+                    <h2 style="margin: 0 0 16px; font-size: 18px; color: #333;">NIEUWE EVENTBOEKING</h2>
                     
-                    <h3 style="color: #c9a227; border-bottom: 1px solid #eee; padding-bottom: 8px;">Klant Gegevens</h3>
-                    <p><strong>Naam:</strong> ${escapeHtml(customerName) || 'Niet opgegeven'}</p>
-                    <p><strong>Email:</strong> ${escapeHtml(customerEmail) || 'Niet opgegeven'}</p>
-                    <p><strong>Telefoon:</strong> ${escapeHtml(customerPhone) || 'Niet opgegeven'}</p>
-                    ${remarks ? `<p><strong>Opmerkingen:</strong> ${escapeHtml(remarks)}</p>` : ''}
+                    <p style="margin: 4px 0; color: #333;"><strong>Naam:</strong> ${escapeHtml(customerName) || 'Niet opgegeven'}</p>
+                    <p style="margin: 4px 0; color: #333;">📧 ${escapeHtml(customerEmail) || '-'}</p>
+                    <p style="margin: 4px 0; color: #333;">📞 ${escapeHtml(customerPhone) || '-'}</p>
                     
-                    <h3 style="color: #c9a227; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-top: 24px;">Reservering Details</h3>
-                    <p><strong>Event:</strong> ${eventTitle}</p>
-                    <p><strong>Datum/Tijd:</strong> ${slotDate} om ${slotTime}</p>
-                    <p><strong>Gasten:</strong> ${guestCount}</p>
-                    <p><strong>Tafel:</strong> ${tableType}-persoons</p>
-                    <p><strong>Zone:</strong> ${zoneName}</p>
+                    <hr style="border: none; border-top: 1px solid #eee; margin: 16px 0;">
+                    
+                    <p style="margin: 4px 0; color: #333;"><strong>Event:</strong> ${escapeHtml(eventTitle)}</p>
+                    <p style="margin: 4px 0; color: #333;">📅 ${escapeHtml(slotDate)} • 🕐 ${escapeHtml(slotTime)} • 👥 ${guestCount}</p>
+                    
+                    <hr style="border: none; border-top: 1px solid #eee; margin: 16px 0;">
+                    
+                    <p style="margin: 4px 0; color: #666;"><strong>Opmerking:</strong> ${escapeHtml(remarks) || 'Geen'}</p>
                 </div>
             `,
         });
@@ -106,7 +114,9 @@ export async function sendBookingConfirmation({
     }
 }
 
-// Email for large groups (7+) - "We will contact you" message
+// ============================================
+// LARGE GROUP EVENT NOTIFICATION (7+ guests)
+// ============================================
 export async function sendLargeGroupNotification({
     customerName,
     customerEmail,
@@ -124,72 +134,78 @@ export async function sendLargeGroupNotification({
     }
 
     try {
-        // Send "we will contact you" email to customer
+        // Customer email for large groups
         if (customerEmail) {
             await resend.emails.send({
                 from: FROM_EMAIL,
                 to: customerEmail,
-                subject: `Groepsreservering Ontvangen - ${eventTitle}`,
+                replyTo: REPLY_TO_EMAIL,
+                subject: `Groepsaanvraag ontvangen - ${escapeHtml(eventTitle)}`,
                 html: `
-                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0f0f0f; color: #fff; padding: 40px; border-radius: 16px;">
-                        <div style="text-align: center; margin-bottom: 30px;">
-                            <div style="display: inline-block; background: linear-gradient(135deg, #c9a227, #a08020); color: #0f0f0f; font-weight: bold; padding: 12px 16px; border-radius: 8px; font-size: 18px;">E</div>
-                            <h1 style="color: #c9a227; margin: 15px 0 5px;">Aanvraag Ontvangen!</h1>
-                            <p style="color: #888; margin: 0;">Bedankt, ${escapeHtml(customerName) || 'Guest'}! 🎉</p>
-                        </div>
+                    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: 0 auto; background: #0f0f0f; color: #fff; padding: 32px; border-radius: 16px;">
+                        <p style="color: #fff; font-size: 16px; margin: 0 0 20px;">Hi ${escapeHtml(customerName) || 'daar'},</p>
                         
-                        <div style="background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
-                            <h2 style="color: #c9a227; margin: 0 0 15px; font-size: 20px;">${eventTitle}</h2>
-                            <p style="margin: 8px 0; color: #ccc;"><strong style="color: #c9a227;">📅</strong> ${slotDate}</p>
-                            <p style="margin: 8px 0; color: #ccc;"><strong style="color: #c9a227;">🕐</strong> ${slotTime}</p>
-                            <p style="margin: 8px 0; color: #ccc;"><strong style="color: #c9a227;">👥</strong> ${guestCount} gasten</p>
-                            <p style="margin: 8px 0; color: #ccc;"><strong style="color: #c9a227;">📍</strong> ${zoneName}</p>
-                            ${remarks ? `<p style="margin: 16px 0 8px; padding-top: 16px; border-top: 1px solid #2a2a2a; color: #888;"><strong style="color: #c9a227;">📝 Opmerkingen:</strong><br/>${escapeHtml(remarks)}</p>` : ''}
-                        </div>
+                        <p style="color: #fff; font-size: 18px; margin: 0 0 24px;">
+                            <strong>Dankjewel! We hebben je groepsaanvraag goed ontvangen.</strong>
+                        </p>
                         
-                        <div style="background: #2a2a1a; border: 1px solid #3a3a2a; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
-                            <p style="color: #c9a227; margin: 0 0 10px; font-weight: bold;">📞 Wat nu?</p>
-                            <p style="color: #ccc; margin: 0;">
-                                Voor groepen van ${guestCount} personen nemen we graag persoonlijk contact met je op om de beste plek te regelen.
-                                <br/><br/>
-                                <strong>Je wordt binnen 24 uur gebeld of gemaild.</strong>
+                        <div style="background: #1a1a1a; border-left: 3px solid #c9a227; padding: 16px 20px; margin: 0 0 24px; border-radius: 0 8px 8px 0;">
+                            <p style="color: #c9a227; font-weight: bold; margin: 0 0 8px; font-size: 16px;">${escapeHtml(eventTitle)}</p>
+                            <p style="color: #ccc; margin: 0; font-size: 14px;">
+                                📅 ${escapeHtml(slotDate)} • 🕐 ${escapeHtml(slotTime)} • 👥 ${guestCount} personen
                             </p>
                         </div>
                         
-                        <p style="color: #888; font-size: 14px; text-align: center;">
-                            Tot snel!<br>
+                        <p style="color: #fff; font-size: 14px; margin: 0 0 16px;">
+                            We nemen snel contact met je op om alles af te stemmen.
+                        </p>
+                        
+                        <p style="color: #888; font-size: 14px; margin: 0 0 16px;">
+                            Je gegevens die we hebben:<br>
+                            📧 ${escapeHtml(customerEmail)} • 📞 ${escapeHtml(customerPhone) || '-'}
+                        </p>
+                        
+                        <p style="color: #888; font-size: 14px; margin: 0 0 24px; line-height: 1.5;">
+                            Wil je alvast iets doorgeven?<br>
+                            Antwoord op deze mail of app/bel: <strong style="color: #fff;">${PHONE_NUMBER}</strong>
+                        </p>
+                        
+                        <p style="color: #888; font-size: 14px; margin: 0;">
                             <strong style="color: #c9a227;">De Tafelaar</strong>
                         </p>
                     </div>
                 `,
             });
-            console.log(`📧 Large group notification sent to ${customerEmail}`);
+            console.log(`📧 Large group confirmation sent to ${customerEmail}`);
         }
 
-        // Send notification to admin with PRIORITY flag
+        // Admin notification - priority flag
         await resend.emails.send({
             from: FROM_EMAIL,
             to: ADMIN_EMAIL,
-            subject: `🔔 GROTE GROEP: ${escapeHtml(customerName) || 'Gast'} - ${guestCount} gasten voor ${eventTitle}`,
+            subject: `⚠️ GROEP: ${escapeHtml(customerName) || 'Gast'} - ${guestCount}p`,
             html: `
-                <div style="font-family: Arial, sans-serif; padding: 20px;">
-                    <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
-                        <strong style="color: #856404;">⚠️ ACTIE VEREIST:</strong> Dit is een grote groep (${guestCount} personen). Neem contact op met de klant om te bevestigen.
+                <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; max-width: 500px;">
+                    <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px;">
+                        <strong style="color: #856404;">⚠️ GROTE GROEP (OPVOLGEN)</strong>
                     </div>
                     
-                    <h2>Groepsaanvraag Ontvangen</h2>
+                    <p style="margin: 4px 0; color: #333;"><strong>Naam:</strong> ${escapeHtml(customerName) || 'Niet opgegeven'}</p>
+                    <p style="margin: 4px 0; color: #333;">📧 ${escapeHtml(customerEmail) || '-'}</p>
+                    <p style="margin: 4px 0; color: #333;">📞 ${escapeHtml(customerPhone) || '-'}</p>
                     
-                    <h3 style="color: #c9a227; border-bottom: 1px solid #eee; padding-bottom: 8px;">Klant Gegevens</h3>
-                    <p><strong>Naam:</strong> ${escapeHtml(customerName) || 'Niet opgegeven'}</p>
-                    <p><strong>Email:</strong> ${escapeHtml(customerEmail) || 'Niet opgegeven'}</p>
-                    <p><strong>Telefoon:</strong> ${escapeHtml(customerPhone) || 'Niet opgegeven'}</p>
-                    ${remarks ? `<p><strong>Opmerkingen:</strong> ${escapeHtml(remarks)}</p>` : ''}
+                    <hr style="border: none; border-top: 1px solid #eee; margin: 16px 0;">
                     
-                    <h3 style="color: #c9a227; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-top: 24px;">Reservering Details</h3>
-                    <p><strong>Event:</strong> ${eventTitle}</p>
-                    <p><strong>Datum/Tijd:</strong> ${slotDate} om ${slotTime}</p>
-                    <p><strong>Gasten:</strong> <span style="background: #c9a227; color: #000; padding: 2px 8px; border-radius: 4px; font-weight: bold;">${guestCount}</span></p>
-                    <p><strong>Zone:</strong> ${zoneName}</p>
+                    <p style="margin: 4px 0; color: #333;"><strong>Event:</strong> ${escapeHtml(eventTitle)}</p>
+                    <p style="margin: 4px 0; color: #333;">📅 ${escapeHtml(slotDate)} • 🕐 ${escapeHtml(slotTime)} • 👥 <span style="background: #c9a227; color: #000; padding: 2px 8px; border-radius: 4px; font-weight: bold;">${guestCount}</span></p>
+                    
+                    <hr style="border: none; border-top: 1px solid #eee; margin: 16px 0;">
+                    
+                    <p style="margin: 4px 0; color: #666;"><strong>Opmerking:</strong> ${escapeHtml(remarks) || 'Geen'}</p>
+                    
+                    <p style="margin: 16px 0 0; color: #856404; font-weight: bold;">
+                        Actie: neem contact op om details af te stemmen.
+                    </p>
                 </div>
             `,
         });
@@ -202,3 +218,182 @@ export async function sendLargeGroupNotification({
     }
 }
 
+// ============================================
+// RESTAURANT BOOKING CONFIRMATION (1-6 guests)
+// ============================================
+export async function sendRestaurantBookingConfirmation({
+    customerName,
+    customerEmail,
+    customerPhone,
+    remarks,
+    tableName,
+    bookingDate,
+    bookingTime,
+    guestCount,
+}) {
+    if (!resend) {
+        console.log('📧 Resend not configured - skipping emails');
+        return { success: false, reason: 'Resend not configured' };
+    }
+
+    try {
+        // Customer confirmation
+        if (customerEmail) {
+            await resend.emails.send({
+                from: FROM_EMAIL,
+                to: customerEmail,
+                replyTo: REPLY_TO_EMAIL,
+                subject: `Tafel gereserveerd! ✨`,
+                html: `
+                    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: 0 auto; background: #0f0f0f; color: #fff; padding: 32px; border-radius: 16px;">
+                        <p style="color: #fff; font-size: 16px; margin: 0 0 20px;">Hi ${escapeHtml(customerName) || 'daar'},</p>
+                        
+                        <p style="color: #fff; font-size: 18px; margin: 0 0 24px;">
+                            <strong>Reservering staat genoteerd!</strong> ✨
+                        </p>
+                        
+                        <div style="background: #1a1a1a; border-left: 3px solid #3D9970; padding: 16px 20px; margin: 0 0 24px; border-radius: 0 8px 8px 0;">
+                            <p style="color: #ccc; margin: 0; font-size: 14px;">
+                                📅 ${escapeHtml(bookingDate)} • 🕐 ${escapeHtml(bookingTime)} • 👥 ${guestCount} ${guestCount === 1 ? 'persoon' : 'personen'}
+                            </p>
+                        </div>
+                        
+                        ${remarks ? `
+                        <p style="color: #888; font-size: 14px; margin: 0 0 16px;">
+                            <strong style="color: #ccc;">Opmerking:</strong> ${escapeHtml(remarks)}
+                        </p>
+                        ` : ''}
+                        
+                        <p style="color: #888; font-size: 14px; margin: 0 0 24px; line-height: 1.5;">
+                            Allergieën of iets wijzigen?<br>
+                            Antwoord op deze mail of app/bel: <strong style="color: #fff;">${PHONE_NUMBER}</strong>
+                        </p>
+                        
+                        <p style="color: #888; font-size: 14px; margin: 0;">
+                            Tot snel!<br>
+                            <strong style="color: #3D9970;">De Tafelaar</strong>
+                        </p>
+                    </div>
+                `,
+            });
+            console.log(`📧 Restaurant booking confirmation sent to ${customerEmail}`);
+        }
+
+        // Admin notification
+        await resend.emails.send({
+            from: FROM_EMAIL,
+            to: ADMIN_EMAIL,
+            subject: `🍽️ ${escapeHtml(customerName) || 'Gast'} - ${guestCount}p - ${escapeHtml(bookingTime)}`,
+            html: `
+                <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; max-width: 500px;">
+                    <h2 style="margin: 0 0 16px; font-size: 18px; color: #333;">NIEUWE RESERVERING</h2>
+                    
+                    <p style="margin: 4px 0; color: #333;"><strong>Naam:</strong> ${escapeHtml(customerName) || 'Niet opgegeven'}</p>
+                    <p style="margin: 4px 0; color: #333;">📧 ${escapeHtml(customerEmail) || '-'}</p>
+                    <p style="margin: 4px 0; color: #333;">📞 ${escapeHtml(customerPhone) || '-'}</p>
+                    
+                    <hr style="border: none; border-top: 1px solid #eee; margin: 16px 0;">
+                    
+                    <p style="margin: 4px 0; color: #333;">📅 ${escapeHtml(bookingDate)} • 🕐 ${escapeHtml(bookingTime)} • 👥 ${guestCount}</p>
+                    
+                    <hr style="border: none; border-top: 1px solid #eee; margin: 16px 0;">
+                    
+                    <p style="margin: 4px 0; color: #666;"><strong>Opmerking:</strong> ${escapeHtml(remarks) || 'Geen'}</p>
+                </div>
+            `,
+        });
+        console.log(`📧 Restaurant admin notification sent to ${ADMIN_EMAIL}`);
+
+        return { success: true };
+    } catch (error) {
+        console.error('📧 Restaurant booking email failed:', error.message);
+        return { success: false, reason: error.message };
+    }
+}
+
+// ============================================
+// CHEF'S CHOICE NOTIFICATION (7-12 guests)
+// ============================================
+export async function sendChefsChoiceNotification({
+    customerName,
+    customerEmail,
+    customerPhone,
+    remarks,
+    tableName,
+    bookingDate,
+    bookingTime,
+    guestCount,
+}) {
+    if (!resend) {
+        console.log('📧 Resend not configured - skipping emails');
+        return { success: false, reason: 'Resend not configured' };
+    }
+
+    try {
+        // Customer gets special chef's choice email
+        if (customerEmail) {
+            await resend.emails.send({
+                from: FROM_EMAIL,
+                to: customerEmail,
+                replyTo: REPLY_TO_EMAIL,
+                subject: `Chef's Choice bevestigd 👨‍🍳`,
+                html: `
+                    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: 0 auto; background: #0f0f0f; color: #fff; padding: 32px; border-radius: 16px;">
+                        <p style="color: #fff; font-size: 16px; margin: 0 0 20px;">Hi ${escapeHtml(customerName) || 'daar'},</p>
+                        
+                        <p style="color: #fff; font-size: 18px; margin: 0 0 24px;">
+                            <strong>Top! Chef's Choice staat genoteerd.</strong> 👨‍🍳✨
+                        </p>
+                        
+                        <div style="background: #1a1a1a; border-left: 3px solid #c9a227; padding: 16px 20px; margin: 0 0 24px; border-radius: 0 8px 8px 0;">
+                            <p style="color: #ccc; margin: 0; font-size: 14px;">
+                                📅 ${escapeHtml(bookingDate)} • 🕐 ${escapeHtml(bookingTime)} • 👥 ${guestCount} personen
+                            </p>
+                        </div>
+                        
+                        <p style="color: #888; font-size: 14px; margin: 0 0 24px; line-height: 1.5;">
+                            Heb je allergieën of wensen?<br>
+                            Antwoord op deze mail of app/bel: <strong style="color: #fff;">${PHONE_NUMBER}</strong>
+                        </p>
+                        
+                        <p style="color: #888; font-size: 14px; margin: 0;">
+                            Tot snel!<br>
+                            <strong style="color: #c9a227;">De Tafelaar</strong>
+                        </p>
+                    </div>
+                `,
+            });
+            console.log(`📧 Chef's Choice confirmation sent to ${customerEmail}`);
+        }
+
+        // Admin notification with CHEF'S CHOICE flag
+        await resend.emails.send({
+            from: FROM_EMAIL,
+            to: ADMIN_EMAIL,
+            subject: `👨‍🍳 ${escapeHtml(customerName) || 'Gast'} - ${guestCount}p - ${escapeHtml(bookingTime)}`,
+            html: `
+                <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; max-width: 500px;">
+                    <h2 style="margin: 0 0 16px; font-size: 18px; color: #333;">👨‍🍳 CHEF'S CHOICE</h2>
+                    
+                    <p style="margin: 4px 0; color: #333;"><strong>Naam:</strong> ${escapeHtml(customerName) || 'Niet opgegeven'}</p>
+                    <p style="margin: 4px 0; color: #333;">📧 ${escapeHtml(customerEmail) || '-'}</p>
+                    <p style="margin: 4px 0; color: #333;">📞 ${escapeHtml(customerPhone) || '-'}</p>
+                    
+                    <hr style="border: none; border-top: 1px solid #eee; margin: 16px 0;">
+                    
+                    <p style="margin: 4px 0; color: #333;">📅 ${escapeHtml(bookingDate)} • 🕐 ${escapeHtml(bookingTime)} • 👥 <span style="background: #c9a227; color: #000; padding: 2px 8px; border-radius: 4px; font-weight: bold;">${guestCount}</span></p>
+                    
+                    <hr style="border: none; border-top: 1px solid #eee; margin: 16px 0;">
+                    
+                    <p style="margin: 4px 0; color: #666;"><strong>Opmerking:</strong> ${escapeHtml(remarks) || 'Geen'}</p>
+                </div>
+            `,
+        });
+        console.log(`📧 Chef's Choice admin notification sent to ${ADMIN_EMAIL}`);
+
+        return { success: true };
+    } catch (error) {
+        console.error('📧 Chef\'s Choice email failed:', error.message);
+        return { success: false, reason: error.message };
+    }
+}

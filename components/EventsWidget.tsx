@@ -72,8 +72,23 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
   }, [useApi, loadData])
 
   const activeEvents = useMemo(() => {
-    // Pro filter: only show events with visible slots (avoid empty cards)
-    return (events ?? []).filter((ev) => Array.isArray(ev.slots) && ev.slots.length > 0)
+    const now = new Date()
+
+    // Filter events and their slots:
+    // 1. Only include slots that are in the future
+    // 2. Only include events that have at least one future slot
+    return (events ?? [])
+      .map((ev) => {
+        // Filter out past slots
+        const futureSlots = (ev.slots ?? []).filter((slot) => {
+          if (slot.start_datetime) {
+            return new Date(slot.start_datetime) > now
+          }
+          return true // Keep slots without start_datetime (shouldn't happen)
+        })
+        return { ...ev, slots: futureSlots }
+      })
+      .filter((ev) => ev.slots.length > 0) // Only show events with future slots
   }, [events])
 
   // Silent refresh after booking - no spinner, no disruption

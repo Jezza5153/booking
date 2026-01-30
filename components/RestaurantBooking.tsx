@@ -74,7 +74,7 @@ export const RestaurantBooking: React.FC<RestaurantBookingProps> = ({
 
     // Submit booking
     const handleSubmit = async () => {
-        if (!guests || !selectedDate || !selectedTime || !name) return
+        if (!guests || !selectedDate || !selectedTime || !name || !email) return
         setIsBooking(true)
         setError(null)
         try {
@@ -142,19 +142,24 @@ export const RestaurantBooking: React.FC<RestaurantBookingProps> = ({
                         <div className="text-white/60 text-xs mb-3 flex items-center gap-2">
                             <Users className="w-4 h-4" /> Aantal personen
                         </div>
-                        <div className="grid grid-cols-5 gap-2">
-                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
+                        <div className="grid grid-cols-6 gap-2">
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => (
                                 <button
                                     key={n}
                                     onClick={() => { setGuests(n); setStep(2) }}
-                                    className={`py-2 rounded-lg text-sm font-medium transition-colors ${guests === n
-                                            ? 'bg-[#3D9970] text-white'
-                                            : 'bg-white/5 text-white/80 hover:bg-white/10'
-                                        }`}
+                                    className={`py-2 rounded-lg text-sm font-medium transition-colors relative ${guests === n
+                                        ? 'bg-[#3D9970] text-white'
+                                        : 'bg-white/5 text-white/80 hover:bg-white/10'
+                                        } ${n >= 7 ? 'ring-1 ring-[#c9a227]/30' : ''}`}
                                 >
                                     {n}
+                                    {n >= 7 && <span className="absolute -top-1 -right-1 w-2 h-2 bg-[#c9a227] rounded-full"></span>}
                                 </button>
                             ))}
+                        </div>
+                        <div className="text-[10px] text-white/40 mt-2 flex items-center gap-1">
+                            <span className="inline-block w-2 h-2 bg-[#c9a227] rounded-full"></span>
+                            7-12 personen: Chef's Choice arrangement
                         </div>
                     </div>
                 )}
@@ -192,8 +197,8 @@ export const RestaurantBooking: React.FC<RestaurantBookingProps> = ({
                                         disabled={isPast}
                                         onClick={() => { setSelectedDate(dateStr); setStep(3) }}
                                         className={`py-2 rounded-lg text-sm transition-colors ${isPast ? 'text-white/20 cursor-not-allowed' :
-                                                isSelected ? 'bg-[#3D9970] text-white' :
-                                                    'text-white/80 hover:bg-white/10'
+                                            isSelected ? 'bg-[#3D9970] text-white' :
+                                                'text-white/80 hover:bg-white/10'
                                             }`}
                                     >
                                         {day}
@@ -223,8 +228,8 @@ export const RestaurantBooking: React.FC<RestaurantBookingProps> = ({
                                         key={slot.time}
                                         onClick={() => { setSelectedTime(slot.time); setStep(4) }}
                                         className={`py-2 rounded-lg text-sm font-medium transition-colors ${selectedTime === slot.time
-                                                ? 'bg-[#3D9970] text-white'
-                                                : 'bg-white/5 text-white/80 hover:bg-white/10'
+                                            ? 'bg-[#3D9970] text-white'
+                                            : 'bg-white/5 text-white/80 hover:bg-white/10'
                                             }`}
                                     >
                                         {slot.time}
@@ -248,10 +253,11 @@ export const RestaurantBooking: React.FC<RestaurantBookingProps> = ({
                         />
                         <input
                             type="email"
-                            placeholder="E-mail"
+                            placeholder="E-mail *"
                             value={email}
                             onChange={e => setEmail(e.target.value)}
                             className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder-white/40"
+                            required
                         />
                         <input
                             type="tel"
@@ -269,7 +275,7 @@ export const RestaurantBooking: React.FC<RestaurantBookingProps> = ({
                         {error && <div className="text-red-400 text-sm">{error}</div>}
                         <button
                             onClick={handleSubmit}
-                            disabled={!name || isBooking}
+                            disabled={!name || !email || isBooking}
                             className="w-full py-2.5 rounded-lg bg-[#3D9970] text-white font-semibold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
                         >
                             {isBooking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}

@@ -105,7 +105,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
   const handleLargeGroupInputChange = (value: string) => {
     setLargeGroupInput(value)
     const num = parseInt(value)
-    if (!isNaN(num) && num >= 7 && num <= 50) {
+    if (!isNaN(num) && num >= 7 && num <= 20) {
       setGuestCount(num)
     } else if (value === "") {
       setGuestCount(7)
@@ -113,14 +113,14 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
   }
 
   const emailLooksValid = useMemo(() => {
-    if (!customerEmail.trim()) return true // optional
+    if (!customerEmail.trim()) return false // email is now REQUIRED
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail.trim())
   }, [customerEmail])
 
   const canSubmit = useMemo(() => {
     if (!selectedSlotId) return false
     if (!guestCount) return false
-    if (guestCount > 50) return false
+    if (guestCount > 20) return false // Max 20 for events
     // For 1-6: check table capacity
     if (guestCount <= 6) {
       const tableType = guestCountToTableType(guestCount)
@@ -128,9 +128,10 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
     }
     // For 7+: always allow (manual handling)
     if (!customerName.trim()) return false
+    if (!customerEmail.trim()) return false // Email is REQUIRED
     if (!emailLooksValid) return false
     return true
-  }, [selectedSlotId, guestCount, customerName, emailLooksValid, availability])
+  }, [selectedSlotId, guestCount, customerName, customerEmail, emailLooksValid, availability])
 
   const handleBook = async () => {
     if (!canSubmit || !selectedSlotId || !guestCount) return
@@ -354,11 +355,11 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
 
                     {guestCount && guestCount >= 7 && (
                       <div className="space-y-2">
-                        <label className="text-xs font-medium text-white/60">Exacte aantal personen (7-50)</label>
+                        <label className="text-xs font-medium text-white/60">Exacte aantal personen (7-20)</label>
                         <input
                           type="number"
                           min={7}
-                          max={50}
+                          max={20}
                           value={largeGroupInput}
                           onChange={(e) => handleLargeGroupInputChange(e.target.value)}
                           placeholder="bijv. 12"
@@ -396,7 +397,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
                             </div>
 
                             <div>
-                              <label className="text-xs font-medium text-white/60">E-mail (optioneel, alleen voor bevestiging)</label>
+                              <label className="text-xs font-medium text-white/60">E-mail *</label>
                               <input
                                 type="email"
                                 value={customerEmail}
@@ -404,7 +405,9 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
                                 placeholder="email@voorbeeld.nl"
                                 className="w-full mt-1 px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-white/35 focus:border-[#c9a227]/60 focus:ring-1 focus:ring-[#c9a227]/30 outline-none"
                               />
-                              {!emailLooksValid && (
+                              {!customerEmail.trim() ? (
+                                <div className="mt-1 text-[11px] text-white/40">Vul je e-mail in voor bevestiging.</div>
+                              ) : !emailLooksValid && (
                                 <div className="mt-1 text-[11px] text-red-200/80">Dit e-mailadres lijkt niet te kloppen.</div>
                               )}
                             </div>

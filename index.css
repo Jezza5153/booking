@@ -107,3 +107,52 @@ body {
         margin-bottom: 16px;
     }
 }
+
+/* Mobile responsive fixes */
+@media (max-width: 640px) {
+
+    /* Ensure buttons don't overlap content */
+    .widget-container {
+        padding-bottom: env(safe-area-inset-bottom, 16px);
+    }
+
+    /* Larger touch targets on mobile */
+    button {
+        min-height: 44px;
+    }
+
+    /* Fix potential z-index issues */
+    .booking-button {
+        position: relative;
+        z-index: 10;
+    }
+
+    /* Prevent content overflow */
+    .event-card {
+        overflow: hidden;
+    }
+
+    /* Stack items vertically on very small screens */
+    .slot-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    /* Improve readability */
+    .text-xs {
+        font-size: 12px;
+        line-height: 1.4;
+    }
+}
+
+/* Very small screens (iPhone SE, etc) */
+@media (max-width: 375px) {
+    .slot-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Reduce padding */
+    .px-4 {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+}

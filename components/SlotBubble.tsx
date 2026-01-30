@@ -12,14 +12,17 @@ interface SlotBubbleProps {
 export const SlotBubble: React.FC<SlotBubbleProps> = ({ slot, isSelected, onClick, wijk }) => {
   const { date, time, isNextAvailable } = slot
 
-  // Calculate availability for "bijna vol" indicator
+  // Calculate availability for capacity indicators
   const totalCapacity = wijk
     ? (wijk.count2tops + wijk.count4tops + wijk.count6tops)
     : 0
   const totalBooked = slot.booked2tops + slot.booked4tops + slot.booked6tops
   const fillRatio = totalCapacity > 0 ? totalBooked / totalCapacity : 0
-  const isAlmostFull = fillRatio >= 0.7 && fillRatio < 1
-  const isFull = totalCapacity > 0 && totalBooked >= totalCapacity
+
+  // Capacity indicator thresholds
+  const isPaarPlekkenOver = fillRatio >= 0.6 && fillRatio < 0.9  // 60-89%
+  const isLaatstePlekken = fillRatio >= 0.9 && fillRatio < 1     // 90-99%
+  const isFull = totalCapacity > 0 && totalBooked >= totalCapacity // 100%
 
   // Format date for display (handles both ISO and Dutch formats)
   const displayDate = date?.match(/^\d{4}-\d{2}-\d{2}/)
@@ -70,18 +73,26 @@ export const SlotBubble: React.FC<SlotBubbleProps> = ({ slot, isSelected, onClic
         </div>
       )}
 
-      {/* Almost Full Indicator */}
-      {isAlmostFull && !isSelected && !isFull && (
-        <div className="absolute -top-2 right-1 flex items-center gap-0.5 text-[9px] text-orange-300/80">
+      {/* Capacity Indicator: Paar plekken over (60-89%) */}
+      {isPaarPlekkenOver && !isSelected && !isFull && (
+        <div className="absolute -top-2 right-1 flex items-center gap-0.5 text-[9px] text-amber-400/90">
           <AlertCircle className="w-2.5 h-2.5" />
-          <span className="font-medium">Bijna vol</span>
+          <span className="font-medium">Paar plekken</span>
         </div>
       )}
 
-      {/* Full Indicator */}
+      {/* Capacity Indicator: Laatste plekken (90-99%) */}
+      {isLaatstePlekken && !isSelected && !isFull && (
+        <div className="absolute -top-2 right-1 flex items-center gap-0.5 text-[9px] text-red-400 animate-pulse">
+          <AlertCircle className="w-2.5 h-2.5" />
+          <span className="font-bold">Laatste plekken!</span>
+        </div>
+      )}
+
+      {/* Full Indicator (100%) - Red and prominent */}
       {isFull && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-[10px] font-bold text-white/50 uppercase tracking-wider">Vol</span>
+        <div className="absolute inset-0 flex items-center justify-center bg-red-500/10 rounded-lg">
+          <span className="text-[11px] font-bold text-red-400 uppercase tracking-wider">VOL</span>
         </div>
       )}
 
