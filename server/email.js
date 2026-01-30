@@ -12,6 +12,12 @@ const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'noreply@tafelaaramersfoort.
 const REPLY_TO_EMAIL = 'reserveren@tafelaaramersfoort.nl';
 const PHONE_NUMBER = '+31 6 341 279 32';
 
+// Startup logging - helps debug email issues
+console.log('📧 Email Service Config:');
+console.log(`   - Resend API: ${resend ? '✓ Configured' : '✗ NOT CONFIGURED'}`);
+console.log(`   - Admin Email: ${ADMIN_EMAIL}`);
+console.log(`   - From Email: ${FROM_EMAIL}`);
+
 // HTML escape helper to prevent XSS in emails
 const escapeHtml = (str) => {
     if (!str) return '';
