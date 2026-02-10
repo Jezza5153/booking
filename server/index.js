@@ -1584,9 +1584,12 @@ app.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
     }
 
     const guestCount = parseInt(guests) || 2;
-    const bookingDate = new Date(date);
+    // Parse date parts manually to avoid UTC timezone shift issues
+    // new Date('2026-03-02') creates UTC midnight, which in CET (+1) is still March 1 → wrong dayOfWeek
+    const [year, month, dayNum] = date.split('-').map(Number);
+    const bookingDate = new Date(year, month - 1, dayNum); // Local date, no timezone shift
     const dayOfWeek = bookingDate.getDay();
-    console.log(`🔍 Parsed: dayOfWeek=${dayOfWeek} (0=Sun, 5=Fri, 6=Sat)`);
+    console.log(`🔍 Parsed: date=${date}, dayOfWeek=${dayOfWeek} (0=Sun, 5=Fri, 6=Sat)`);
 
     try {
         // Get opening hours

@@ -41,11 +41,35 @@ export const RestaurantBooking: React.FC<RestaurantBookingProps> = ({
     const [booking, setBooking] = useState<{ booking_id: string; table_name: string } | null>(null)
     const [isBooking, setIsBooking] = useState(false)
 
+    // Opening hours: which days are closed (0=Sun, 1=Mon, ..., 6=Sat)
+    const [closedDays, setClosedDays] = useState<Set<number>>(new Set())
+
     // Calendar state
     const [currentMonth, setCurrentMonth] = useState(() => {
         const now = new Date()
         return new Date(now.getFullYear(), now.getMonth(), 1)
     })
+
+    // Fetch opening hours on mount to know which days are closed
+    useEffect(() => {
+        const fetchOpenings = async () => {
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/openings`)
+                const data = await res.json()
+                const closed = new Set<number>()
+                if (data.openings) {
+                    for (const o of data.openings) {
+                        if (!o.is_open) closed.add(o.day)
+                    }
+                }
+                setClosedDays(closed)
+            } catch (e) {
+                // If we can't fetch openings, don't block — all days will appear open
+                console.warn('Could not fetch opening hours:', e)
+            }
+        }
+        fetchOpenings()
+    }, [restaurantId])
 
     // Fetch availability when date and guests are selected
     const fetchAvailability = useCallback(async () => {
@@ -195,15 +219,22 @@ export const RestaurantBooking: React.FC<RestaurantBookingProps> = ({
                                 const dateStr = formatDate(currentMonth.getFullYear(), currentMonth.getMonth(), day)
                                 const dateObj = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day)
                                 const isPast = dateObj < today
+                                const dayOfWeek = dateObj.getDay() // 0=Sun, 1=Mon, ..., 6=Sat
+                                const isClosed = closedDays.has(dayOfWeek)
+                                const isDisabled = isPast || isClosed
                                 const isSelected = selectedDate === dateStr
                                 return (
                                     <button
                                         key={day}
-                                        disabled={isPast}
-                                        onClick={() => { setSelectedDate(dateStr); setStep(3) }}
-                                        className={`py-2 rounded-lg text-sm transition-colors ${isPast ? 'text-white/20 cursor-not-allowed' :
-                                            isSelected ? 'bg-[#3D9970] text-white' :
-                                                'text-white/80 hover:bg-white/10'
+                                        disabled={isDisabled}
+                                        title={isClosed ? 'Gesloten' : undefined}
+                                        onClick={() => { if (!isDisabled) { setSelectedDate(dateStr); setStep(3) } }}
+                                        className={`py-2 rounded-lg text-sm transition-colors ${isDisabled
+                                            ? isClosed && !isPast
+                                                ? 'text-white/20 cursor-not-allowed bg-red-900/10 line-through'
+                                                : 'text-white/20 cursor-not-allowed'
+                                            : isSelected ? 'bg-[#3D9970] text-white'
+                                                : 'text-white/80 hover:bg-white/10'
                                             }`}
                                     >
                                         {day}
@@ -211,6 +242,11 @@ export const RestaurantBooking: React.FC<RestaurantBookingProps> = ({
                                 )
                             })}
                         </div>
+                        {closedDays.size > 0 && (
+                            <div className="text-[10px] text-white/30 mt-2 flex items-center gap-1">
+                                <span className="inline-block w-2 h-2 bg-red-900/30 rounded-sm" /> = gesloten
+                            </div>
+                        )}
                     </div>
                 )}
 
