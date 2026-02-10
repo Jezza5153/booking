@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Mail, Send, Users, ChevronLeft, CheckCircle, AlertCircle, Search } from 'lucide-react'
+import { Mail, Send, Users, ChevronLeft, CheckCircle, AlertCircle, Search, Paperclip, X, FileText } from 'lucide-react'
 import { API_BASE_URL, RESTAURANT_ID } from '../api'
 
 type Subscriber = {
@@ -30,6 +30,7 @@ export function Newsletter({ restaurantId }: { restaurantId: string }) {
     const [sendToAll, setSendToAll] = useState(false)
     const [sending, setSending] = useState(false)
     const [sendResult, setSendResult] = useState<{ success: boolean; sent: number; failed: number } | null>(null)
+    const [attachment, setAttachment] = useState<File | null>(null)
 
     useEffect(() => {
         loadSubscribers()
@@ -53,33 +54,47 @@ export function Newsletter({ restaurantId }: { restaurantId: string }) {
     }
 
     const handleSend = async () => {
-        if (!subject.trim() || !message.trim()) return
+        if (!subject.trim()) return
+        if (!message.trim() && !attachment) return
         setSending(true)
         setSendResult(null)
         try {
             const token = localStorage.getItem('events_token')
+            const formData = new FormData()
+            formData.append('restaurantId', restaurantId)
+            formData.append('subject', subject.trim())
+            if (message.trim()) formData.append('message', message.trim())
+            formData.append('sendToAll', String(sendToAll))
+            if (attachment) formData.append('attachment', attachment)
+
             const res = await fetch(`${API_BASE_URL}/api/admin/newsletter/send`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({
-                    restaurantId,
-                    subject: subject.trim(),
-                    message: message.trim(),
-                    sendToAll
-                })
+                body: formData
             })
             if (res.ok) {
                 const result = await res.json()
                 setSendResult(result)
+                setAttachment(null)
             }
         } catch (e) {
             console.error('Failed to send newsletter:', e)
             setSendResult({ success: false, sent: 0, failed: 0 })
         } finally {
             setSending(false)
+        }
+    }
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (file) {
+            if (file.size > 10 * 1024 * 1024) {
+                alert('Bestand is te groot (max 10MB)')
+                return
+            }
+            setAttachment(file)
         }
     }
 
@@ -189,7 +204,41 @@ export function Newsletter({ restaurantId }: { restaurantId: string }) {
                                     placeholder="Schrijf hier je promotionele bericht..."
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none"
                                 />
-                                <p className="text-xs text-gray-400 mt-1">Dit bericht wordt automatisch opgemaakt in de De Tafelaar huisstijl.</p>
+                                <p className="text-xs text-gray-400 mt-1">Optioneel als je een PDF bijlage uploadt.</p>
+                            </div>
+
+                            {/* PDF Upload */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">PDF bijlage</label>
+                                {attachment ? (
+                                    <div className="flex items-center gap-3 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+                                        <FileText className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium text-gray-900 truncate">{attachment.name}</p>
+                                            <p className="text-xs text-gray-500">{(attachment.size / 1024).toFixed(0)} KB</p>
+                                        </div>
+                                        <button
+                                            onClick={() => setAttachment(null)}
+                                            className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <label className="flex items-center gap-3 p-4 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-emerald-400 hover:bg-emerald-50/50 transition-colors">
+                                        <Paperclip className="w-5 h-5 text-gray-400" />
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-700">Upload PDF nieuwsbrief</p>
+                                            <p className="text-xs text-gray-400">Ontwerp in Canva, Pages, of Word — upload hier (max 10MB)</p>
+                                        </div>
+                                        <input
+                                            type="file"
+                                            accept=".pdf,application/pdf"
+                                            onChange={handleFileChange}
+                                            className="hidden"
+                                        />
+                                    </label>
+                                )}
                             </div>
 
                             <div className="flex items-center gap-2">
@@ -218,7 +267,7 @@ export function Newsletter({ restaurantId }: { restaurantId: string }) {
                                     </button>
                                     <button
                                         onClick={handleSend}
-                                        disabled={sending || !subject.trim() || !message.trim()}
+                                        disabled={sending || !subject.trim() || (!message.trim() && !attachment)}
                                         className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         {sending ? (

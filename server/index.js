@@ -9,6 +9,7 @@ import { loginRateLimiter, bookingRateLimiter, widgetRateLimiter, calendarRateLi
 import { initSentry, sentryErrorHandler, captureException } from './sentry.js';
 import { sendBookingConfirmation, sendLargeGroupNotification, sendRestaurantBookingConfirmation, sendChefsChoiceNotification } from './email.js';
 import { Resend } from 'resend';
+import multer from 'multer';
 
 dotenv.config();
 
@@ -2329,17 +2330,27 @@ app.get('/api/admin/newsletter/subscribers', authMiddleware, async (req, res) =>
 });
 
 // POST /api/admin/newsletter/send - Send promotional email to subscribers
-app.post('/api/admin/newsletter/send', authMiddleware, async (req, res) => {
+// Multer: store uploads in memory (max 10MB for newsletter PDFs)
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
+// POST /api/admin/newsletter/send - Send newsletter (with optional PDF attachment)
+app.post('/api/admin/newsletter/send', authMiddleware, upload.single('attachment'), async (req, res) => {
     const { restaurantId, subject, message, sendToAll } = req.body;
     const rid = restaurantId || 'demo-restaurant';
+    const attachmentFile = req.file; // multer parsed file
 
-    if (!subject || !message) {
-        return res.status(400).json({ error: 'Subject and message are required' });
+    if (!subject) {
+        return res.status(400).json({ error: 'Subject is required' });
+    }
+
+    // Either a message body or an attachment is required
+    if (!message && !attachmentFile) {
+        return res.status(400).json({ error: 'Message or PDF attachment is required' });
     }
 
     try {
         // Get opted-in subscribers (or all if sendToAll)
-        const query = sendToAll
+        const query = (sendToAll === 'true' || sendToAll === true)
             ? `SELECT email, name FROM customers WHERE restaurant_id = $1 AND email IS NOT NULL AND email != ''`
             : `SELECT email, name FROM customers WHERE restaurant_id = $1 AND email IS NOT NULL AND email != '' AND newsletter_opt_in = true`;
 
@@ -2353,6 +2364,15 @@ app.post('/api/admin/newsletter/send', authMiddleware, async (req, res) => {
             return res.status(503).json({ error: 'Email service not configured' });
         }
 
+        // Build attachment array for Resend
+        const attachments = [];
+        if (attachmentFile) {
+            attachments.push({
+                filename: attachmentFile.originalname || 'nieuwsbrief.pdf',
+                content: attachmentFile.buffer,
+            });
+        }
+
         // Send in batches of 50 (Resend batch limit)
         let sent = 0;
         let failed = 0;
@@ -2364,18 +2384,16 @@ app.post('/api/admin/newsletter/send', authMiddleware, async (req, res) => {
 
             for (const recipient of batch) {
                 try {
-                    await resend.emails.send({
-                        from: FROM_EMAIL,
-                        to: recipient.email,
-                        replyTo: REPLY_TO_EMAIL,
-                        subject: subject,
-                        html: `
+                    const emailBody = message
+                        ? `
                             <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: 0 auto; background: #0f0f0f; color: #fff; padding: 32px; border-radius: 16px;">
                                 <p style="color: #fff; font-size: 16px; margin: 0 0 20px;">Hi ${escapeHtml(recipient.name) || 'daar'},</p>
                                 
                                 <div style="color: #ccc; font-size: 14px; line-height: 1.6; margin: 0 0 24px;">
                                     ${message.replace(/\n/g, '<br>')}
                                 </div>
+                                
+                                ${attachmentFile ? '<p style="color: #3D9970; font-size: 14px; margin: 0 0 24px;">📎 Zie de bijlage voor meer info!</p>' : ''}
                                 
                                 <p style="color: #888; font-size: 14px; margin: 0;">
                                     Tot snel!<br>
@@ -2388,7 +2406,30 @@ app.post('/api/admin/newsletter/send', authMiddleware, async (req, res) => {
                                     <a href="${process.env.API_BASE_URL || 'https://booking-production-de35.up.railway.app'}/api/newsletter/unsubscribe?email=${encodeURIComponent(recipient.email)}&token=${Buffer.from(recipient.email).toString('base64')}" style="color: #666; text-decoration: underline;">Uitschrijven</a>
                                 </p>
                             </div>
-                        `,
+                        `
+                        : `
+                            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: 0 auto; background: #0f0f0f; color: #fff; padding: 32px; border-radius: 16px;">
+                                <p style="color: #fff; font-size: 16px; margin: 0 0 20px;">Hi ${escapeHtml(recipient.name) || 'daar'},</p>
+                                <p style="color: #3D9970; font-size: 14px; margin: 0 0 24px;">📎 Bekijk onze nieuwsbrief in de bijlage!</p>
+                                <p style="color: #888; font-size: 14px; margin: 0;">
+                                    Tot snel!<br>
+                                    <strong style="color: #3D9970;">De Tafelaar</strong>
+                                </p>
+                                <hr style="border: none; border-top: 1px solid #333; margin: 24px 0 16px;">
+                                <p style="color: #555; font-size: 11px; margin: 0;">
+                                    Je ontvangt deze email omdat je hebt gereserveerd bij De Tafelaar.<br>
+                                    <a href="${process.env.API_BASE_URL || 'https://booking-production-de35.up.railway.app'}/api/newsletter/unsubscribe?email=${encodeURIComponent(recipient.email)}&token=${Buffer.from(recipient.email).toString('base64')}" style="color: #666; text-decoration: underline;">Uitschrijven</a>
+                                </p>
+                            </div>
+                        `;
+
+                    await resend.emails.send({
+                        from: FROM_EMAIL,
+                        to: recipient.email,
+                        replyTo: REPLY_TO_EMAIL,
+                        subject: subject,
+                        html: emailBody,
+                        ...(attachments.length > 0 && { attachments }),
                     });
                     sent++;
                 } catch (emailError) {
@@ -2399,7 +2440,7 @@ app.post('/api/admin/newsletter/send', authMiddleware, async (req, res) => {
         }
 
         // Log the campaign
-        console.log(`📧 Newsletter sent: ${sent} delivered, ${failed} failed, subject: "${subject}"`);
+        console.log(`📧 Newsletter sent: ${sent} delivered, ${failed} failed, subject: "${subject}"${attachmentFile ? ', with attachment: ' + attachmentFile.originalname : ''}`);
 
         res.json({
             success: true,
