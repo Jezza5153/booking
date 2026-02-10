@@ -1796,32 +1796,27 @@ app.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
         const isToday = bookingDate.toDateString() === now.toDateString();
         const currentMins = isToday ? now.getHours() * 60 + now.getMinutes() : 0;
 
-        for (let m = openMins; m + slotDuration <= closeMins; m += 30) {
+        // 3-hour booking blocks: tables are occupied for 180 min after start
+        const BOOKING_DURATION = 180; // minutes
+        for (let m = openMins; m < closeMins; m += 30) {
             // Skip past time slots for today
             if (isToday && m <= currentMins) {
                 continue;
             }
 
             const slotTime = `${Math.floor(m / 60).toString().padStart(2, '0')}:${(m % 60).toString().padStart(2, '0')}`;
-            const endTime = `${Math.floor((m + slotDuration) / 60).toString().padStart(2, '0')}:${((m + slotDuration) % 60).toString().padStart(2, '0')}`;
+            // End time for this slot = start + 3h, capped at closing
+            const slotEndMins = Math.min(m + BOOKING_DURATION, closeMins);
+            const slotEndTime = `${Math.floor(slotEndMins / 60).toString().padStart(2, '0')}:${(slotEndMins % 60).toString().padStart(2, '0')}`;
 
+            // Check which tables are free: a table is occupied if any existing booking overlaps
             const availTables = tablesResult.rows.filter(t =>
-                !bookingsResult.rows.some(b => b.table_id === t.id && b.start_time < endTime && b.end_time > slotTime)
+                !bookingsResult.rows.some(b => b.table_id === t.id && b.start_time < slotEndTime && b.end_time > slotTime)
             );
 
             if (availTables.length > 0) {
-                slots.push({ time: slotTime, end_time: endTime, available: availTables.length });
+                slots.push({ time: slotTime, end_time: slotEndTime, available: availTables.length });
             }
-        }
-
-        // Also include near-closing slots as greyed-out/disabled
-        // These are slots where the meal wouldn't finish before closing
-        const lastBookableMin = closeMins - slotDuration;
-        for (let m = lastBookableMin + 30; m < closeMins; m += 30) {
-            if (m <= openMins) continue;
-            if (isToday && m <= currentMins) continue;
-            const slotTime = `${Math.floor(m / 60).toString().padStart(2, '0')}:${(m % 60).toString().padStart(2, '0')}`;
-            slots.push({ time: slotTime, end_time: null, available: 0, disabled: true, reason: 'Te dicht bij sluitingstijd' });
         }
 
         const closeTimeStr = close_time;
@@ -1849,15 +1844,17 @@ app.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
     try {
         await client.query('BEGIN');
 
-        // Get slot duration
+        // 3-hour booking block: end_time = start + 3h, capped at closing
         const dayOfWeek = new Date(date).getDay();
         const openingQ = await client.query(
-            `SELECT slot_duration_minutes FROM restaurant_openings WHERE restaurant_id = $1 AND day_of_week = $2 LIMIT 1`,
+            `SELECT close_time FROM restaurant_openings WHERE restaurant_id = $1 AND day_of_week = $2 LIMIT 1`,
             [restaurant_id, dayOfWeek]
         );
-        const duration = openingQ.rows[0]?.slot_duration_minutes || 90;
+        const closeTime = openingQ.rows[0]?.close_time || '23:59';
         const startMins = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1]);
-        const endTime = `${Math.floor((startMins + duration) / 60).toString().padStart(2, '0')}:${((startMins + duration) % 60).toString().padStart(2, '0')}`;
+        const closeMins = parseInt(closeTime.split(':')[0]) * 60 + parseInt(closeTime.split(':')[1]);
+        const endMins = Math.min(startMins + 180, closeMins);
+        const endTime = `${Math.floor(endMins / 60).toString().padStart(2, '0')}:${(endMins % 60).toString().padStart(2, '0')}`;
 
         // Find available table
         const tableQ = await client.query(
@@ -2474,6 +2471,17 @@ app.use((err, req, res, next) => {
         requestId: req.requestId
     });
 });
+
+// Auto-migration: ensure newsletter columns exist (safe to run repeatedly)
+(async () => {
+    try {
+        await pool.query('ALTER TABLE customers ADD COLUMN IF NOT EXISTS newsletter_opt_in BOOLEAN DEFAULT false');
+        await pool.query('CREATE INDEX IF NOT EXISTS idx_customers_newsletter ON customers(restaurant_id) WHERE newsletter_opt_in = true');
+        console.log('✅ Newsletter migration applied');
+    } catch (e) {
+        console.warn('⚠️ Newsletter migration skipped:', e.message);
+    }
+})();
 
 // Start server
 const server = app.listen(PORT, () => {
