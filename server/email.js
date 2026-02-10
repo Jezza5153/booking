@@ -94,7 +94,7 @@ export async function sendBookingConfirmation({
             const adminResult = await resend.emails.send({
                 from: FROM_EMAIL,
                 to: ADMIN_EMAIL,
-                replyTo: REPLY_TO_EMAIL,
+                replyTo: customerEmail || REPLY_TO_EMAIL,
                 subject: `📋 ${escapeHtml(customerName) || 'Gast'} - ${guestCount}p - ${escapeHtml(eventTitle)}`,
                 html: `
                     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; max-width: 500px;">
@@ -188,7 +188,7 @@ export async function sendLargeGroupNotification({
         await resend.emails.send({
             from: FROM_EMAIL,
             to: ADMIN_EMAIL,
-            replyTo: REPLY_TO_EMAIL,
+            replyTo: customerEmail || REPLY_TO_EMAIL,
             subject: `📋 ${escapeHtml(customerName) || 'Gast'} - ${guestCount}p - ${escapeHtml(eventTitle)}`,
             html: `
                 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; max-width: 500px;">
@@ -283,7 +283,7 @@ export async function sendRestaurantBookingConfirmation({
         await resend.emails.send({
             from: FROM_EMAIL,
             to: ADMIN_EMAIL,
-            replyTo: REPLY_TO_EMAIL,
+            replyTo: customerEmail || REPLY_TO_EMAIL,
             subject: `🍽️ ${escapeHtml(customerName) || 'Gast'} - ${guestCount}p - ${escapeHtml(bookingTime)}`,
             html: `
                 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; max-width: 500px;">
@@ -371,7 +371,7 @@ export async function sendChefsChoiceNotification({
         await resend.emails.send({
             from: FROM_EMAIL,
             to: ADMIN_EMAIL,
-            replyTo: REPLY_TO_EMAIL,
+            replyTo: customerEmail || REPLY_TO_EMAIL,
             subject: `👨‍🍳 ${escapeHtml(customerName) || 'Gast'} - ${guestCount}p - ${escapeHtml(bookingTime)}`,
             html: `
                 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; max-width: 500px;">

@@ -4,7 +4,7 @@ import { LoginPage } from './components/LoginPage';
 import { EVENTS_DATA, WIJKEN_DATA } from './data';
 import { EventData, Wijk } from './types';
 import { API_BASE_URL, fetchWidgetData, fetchAdminData, RESTAURANT_ID } from './api';
-import { Smartphone, Settings, BookOpen, Calendar as CalendarIcon, LogOut, Users, LayoutGrid, BarChart3, Loader2 } from 'lucide-react';
+import { Smartphone, Settings, BookOpen, Calendar as CalendarIcon, LogOut, Users, LayoutGrid, BarChart3, Loader2, Mail } from 'lucide-react';
 
 // Lazy load heavy components for faster initial load
 const AdminDashboard = lazy(() => import('./components/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
@@ -13,8 +13,9 @@ const CalendarManager = lazy(() => import('./components/CalendarManager').then(m
 const BookingsManager = lazy(() => import('./components/BookingsManager').then(m => ({ default: m.BookingsManager })));
 const TimelineGrid = lazy(() => import('./components/TimelineGrid').then(m => ({ default: m.TimelineGrid })));
 const BookingStats = lazy(() => import('./components/BookingStats').then(m => ({ default: m.BookingStats })));
+const Newsletter = lazy(() => import('./components/Newsletter').then(m => ({ default: m.Newsletter })));
 
-type ViewMode = 'widget' | 'admin' | 'guide' | 'calendar' | 'bookings' | 'timeline' | 'stats';
+type ViewMode = 'widget' | 'admin' | 'guide' | 'calendar' | 'bookings' | 'timeline' | 'stats' | 'newsletter';
 
 // Check if we're in embed mode (public widget only, no login required)
 const isEmbedMode = () => {
@@ -224,6 +225,13 @@ const App: React.FC = () => {
                   Stats
                 </button>
                 <button
+                  onClick={() => setView('newsletter')}
+                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-2 whitespace-nowrap ${view === 'newsletter' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                >
+                  <Mail className="w-4 h-4" />
+                  Emails
+                </button>
+                <button
                   onClick={() => setView('guide')}
                   className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-2 whitespace-nowrap ${view === 'guide' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
                 >
@@ -331,6 +339,15 @@ const App: React.FC = () => {
           <Suspense fallback={<div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-gray-400" /></div>}>
             <div className="animate-in slide-in-from-bottom-4 duration-300 max-w-6xl mx-auto px-4">
               <BookingStats restaurantId={getRestaurantId()} onBack={() => setView('timeline')} />
+            </div>
+          </Suspense>
+        )}
+
+        {/* VIEW: NEWSLETTER */}
+        {view === 'newsletter' && (
+          <Suspense fallback={<div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-gray-400" /></div>}>
+            <div className="animate-in slide-in-from-bottom-4 duration-300">
+              <Newsletter restaurantId={getRestaurantId()} />
             </div>
           </Suspense>
         )}

@@ -24,8 +24,14 @@ export const BookingStats: React.FC<BookingStatsProps> = ({ restaurantId, onBack
     })
     const [stats, setStats] = useState<DayStats[]>([])
     const [loading, setLoading] = useState(true)
+    const [extraStats, setExtraStats] = useState<{
+        avgPartySize: number
+        busiestDay: string | null
+        peakHours: { hour: number; count: number }[]
+        activeDays: number
+    }>({ avgPartySize: 0, busiestDay: null, peakHours: [], activeDays: 0 })
 
-    // Fetch real stats from API
+    // Fetch stats from server-side aggregation endpoint
     useEffect(() => {
         const fetchStats = async () => {
             setLoading(true)
@@ -35,22 +41,18 @@ export const BookingStats: React.FC<BookingStatsProps> = ({ restaurantId, onBack
                 const end = new Date(start)
                 end.setDate(end.getDate() + days)
 
-                const token = localStorage.getItem('events_token')
                 const params = new URLSearchParams({
                     restaurantId,
                     from: startDate,
                     to: end.toISOString().split('T')[0]
                 })
 
-                const response = await fetch(`${API_BASE_URL}/api/admin/bookings?${params}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                })
-
+                const response = await fetch(`${API_BASE_URL}/api/admin/stats?${params}`)
                 if (!response.ok) throw new Error('Failed to fetch stats')
 
-                const { bookings } = await response.json()
+                const data = await response.json()
 
-                // Aggregate by day
+                // Map server response to DayStats format, filling in missing days
                 const dayMap: Record<string, DayStats> = {}
                 for (let i = 0; i < days; i++) {
                     const d = new Date(start)
@@ -59,17 +61,23 @@ export const BookingStats: React.FC<BookingStatsProps> = ({ restaurantId, onBack
                     dayMap[dateStr] = { date: dateStr, bookings: 0, couverts: 0, walkins: 0, noShows: 0 }
                 }
 
-                for (const b of bookings || []) {
-                    const dateStr = b.booking_date?.split('T')[0] || b.start_datetime?.split('T')[0]
-                    if (dateStr && dayMap[dateStr]) {
-                        dayMap[dateStr].bookings++
-                        dayMap[dateStr].couverts += b.guest_count || 0
-                        if (b.is_walkin) dayMap[dateStr].walkins++
-                        if (b.status === 'no_show') dayMap[dateStr].noShows++
+                for (const row of data.daily || []) {
+                    const dateStr = row.date
+                    if (dayMap[dateStr]) {
+                        dayMap[dateStr].bookings = parseInt(row.bookings) || 0
+                        dayMap[dateStr].couverts = parseInt(row.couverts) || 0
+                        dayMap[dateStr].walkins = parseInt(row.walkins) || 0
+                        dayMap[dateStr].noShows = parseInt(row.no_shows) || 0
                     }
                 }
 
                 setStats(Object.values(dayMap).sort((a, b) => a.date.localeCompare(b.date)))
+                setExtraStats({
+                    avgPartySize: data.avg_party_size || 0,
+                    busiestDay: data.busiest_day || null,
+                    peakHours: data.peak_hours || [],
+                    activeDays: data.active_days || 0
+                })
             } catch (e) {
                 console.error('Failed to fetch stats:', e)
                 setStats([])
@@ -87,7 +95,7 @@ export const BookingStats: React.FC<BookingStatsProps> = ({ restaurantId, onBack
             avgPerDay: Math.round(stats.reduce((s, d) => s + d.couverts, 0) / (stats.length || 1)),
             totalWalkins: stats.reduce((s, d) => s + d.walkins, 0),
             totalNoShows: stats.reduce((s, d) => s + d.noShows, 0),
-            noShowRate: stats.length ? Math.round((stats.reduce((s, d) => s + d.noShows, 0) / stats.reduce((s, d) => s + d.bookings, 0)) * 100) : 0
+            noShowRate: stats.length ? Math.round((stats.reduce((s, d) => s + d.noShows, 0) / Math.max(stats.reduce((s, d) => s + d.bookings, 0), 1)) * 100) : 0
         }
     }, [stats])
 
@@ -180,6 +188,28 @@ export const BookingStats: React.FC<BookingStatsProps> = ({ restaurantId, onBack
                     </div>
                     <div className="text-2xl font-bold text-red-700">{summary.totalNoShows}</div>
                     <div className="text-xs text-red-500 mt-1">{summary.noShowRate}% rate</div>
+                </div>
+            </div>
+
+            {/* Extra Metrics Row */}
+            <div className="px-4 pb-4 grid grid-cols-3 gap-4 border-b border-gray-200">
+                <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-4">
+                    <div className="text-xs font-medium text-amber-600 mb-1">Ø Gezelschap</div>
+                    <div className="text-2xl font-bold text-amber-700">{extraStats.avgPartySize}</div>
+                    <div className="text-xs text-amber-500 mt-1">pers. per boeking</div>
+                </div>
+                <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl p-4">
+                    <div className="text-xs font-medium text-indigo-600 mb-1">Drukste dag</div>
+                    <div className="text-lg font-bold text-indigo-700">{extraStats.busiestDay || '-'}</div>
+                </div>
+                <div className="bg-gradient-to-br from-teal-50 to-teal-100 rounded-xl p-4">
+                    <div className="text-xs font-medium text-teal-600 mb-1">Piekuur</div>
+                    <div className="text-2xl font-bold text-teal-700">
+                        {extraStats.peakHours.length > 0 ? `${extraStats.peakHours[0].hour}:00` : '-'}
+                    </div>
+                    <div className="text-xs text-teal-500 mt-1">
+                        {extraStats.peakHours.length > 0 ? `${extraStats.peakHours[0].count} boekingen` : ''}
+                    </div>
                 </div>
             </div>
 

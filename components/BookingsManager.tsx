@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react"
 import { fetchBookings, cancelBooking, bookTable, fetchAdminData, RESTAURANT_ID, API_BASE_URL } from "../api"
-import { Search, RefreshCw, Download, X, AlertTriangle, Plus, Calendar, Users, MessageSquare, Mail, ChevronLeft, ChevronRight } from "lucide-react"
+import { Search, RefreshCw, Download, X, AlertTriangle, Plus, Calendar, Users, MessageSquare, Mail, ChevronLeft, ChevronRight, Phone, UserCheck, UserX, Check } from "lucide-react"
 
 const TZ = "Europe/Amsterdam"
 
@@ -32,7 +32,9 @@ type RestaurantBooking = {
     customer_email?: string
     customer_phone?: string
     remarks?: string
+    dietary_notes?: string
     status: string
+    table_name?: string
 }
 
 type Table = {
@@ -69,6 +71,7 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
     // Modal states
     const [showEventBookingModal, setShowEventBookingModal] = useState(false)
     const [showRestaurantBookingModal, setShowRestaurantBookingModal] = useState(false)
+    const [selectedRestaurantBooking, setSelectedRestaurantBooking] = useState<RestaurantBooking | null>(null)
     const [bookingForm, setBookingForm] = useState({
         customer_name: '',
         customer_email: '',
@@ -265,8 +268,8 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
         }
     }
 
-    // Mark booking as arrived
-    const markAsArrived = async (bookingId: string) => {
+    // Update restaurant booking status
+    const updateRestaurantBookingStatus = async (bookingId: string, status: string) => {
         try {
             const token = localStorage.getItem('events_token')
             const res = await fetch(`${API_BASE_URL}/api/admin/restaurant-bookings/${bookingId}/status`, {
@@ -275,18 +278,21 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ status: 'arrived' })
+                body: JSON.stringify({ status })
             })
             if (res.ok) {
-                // Update local state
                 setRestaurantBookings(prev => prev.map(b =>
-                    b.id === bookingId ? { ...b, status: 'arrived' } : b
+                    b.id === bookingId ? { ...b, status } : b
                 ))
+                // Also update the selected booking detail if open
+                setSelectedRestaurantBooking(prev => prev?.id === bookingId ? { ...prev, status } : prev)
             }
         } catch (e) {
-            console.error('Failed to mark as arrived:', e)
+            console.error('Failed to update booking status:', e)
         }
     }
+
+    const markAsArrived = (bookingId: string) => updateRestaurantBookingStatus(bookingId, 'arrived')
 
     const navigateDate = (delta: number) => {
         const d = new Date(timelineDate)
@@ -592,11 +598,11 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                             </div>
                             <div className="divide-y divide-gray-100 max-h-64 overflow-y-auto">
                                 {restaurantBookings.map(booking => (
-                                    <div key={booking.id} className={`px-4 py-3 ${booking.status === 'arrived' ? 'bg-emerald-50/50' : ''}`}>
+                                    <div key={booking.id} className={`px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors ${booking.status === 'arrived' ? 'bg-emerald-50/50' : ''}`} onClick={() => setSelectedRestaurantBooking(booking)}>
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="flex-1">
                                                 <div className="flex items-center gap-3">
-                                                    <span className="font-semibold text-gray-900">{booking.customer_name}</span>
+                                                    <span className="font-semibold text-gray-900 hover:text-emerald-700 transition-colors">{booking.customer_name}</span>
                                                     <span className="text-sm text-gray-600 flex items-center gap-1">
                                                         <Users className="w-3.5 h-3.5" />
                                                         {booking.guest_count}
@@ -604,6 +610,16 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                                                     {booking.status === 'arrived' && (
                                                         <span className="text-xs bg-emerald-500 text-white px-2 py-0.5 rounded-full font-medium">
                                                             ✓ Binnen
+                                                        </span>
+                                                    )}
+                                                    {booking.status === 'no_show' && (
+                                                        <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full font-medium">
+                                                            ✗ No-show
+                                                        </span>
+                                                    )}
+                                                    {booking.status === 'cancelled' && (
+                                                        <span className="text-xs bg-gray-400 text-white px-2 py-0.5 rounded-full font-medium line-through">
+                                                            Geannuleerd
                                                         </span>
                                                     )}
                                                 </div>
@@ -618,9 +634,9 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                                                 <div className="text-right text-sm font-mono text-gray-700">
                                                     {booking.start_time}
                                                 </div>
-                                                {booking.status !== 'arrived' && (
+                                                {booking.status !== 'arrived' && booking.status !== 'cancelled' && (
                                                     <button
-                                                        onClick={() => markAsArrived(booking.id)}
+                                                        onClick={(e) => { e.stopPropagation(); markAsArrived(booking.id) }}
                                                         className="px-3 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 transition-colors"
                                                     >
                                                         Binnen
@@ -708,6 +724,120 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                                         {isCancelling ? "Bezig…" : "Annuleren"}
                                     </button>
                                 )}
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+
+            {/* Restaurant Booking Detail Modal */}
+            {
+                selectedRestaurantBooking && (
+                    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedRestaurantBooking(null)}>
+                        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4" onClick={e => e.stopPropagation()}>
+                            <div className="flex items-start justify-between">
+                                <div>
+                                    <div className="text-xs font-bold text-gray-500 uppercase">Reservering details</div>
+                                    <div className="text-xl font-bold text-gray-900">{selectedRestaurantBooking.customer_name}</div>
+                                </div>
+                                <button onClick={() => setSelectedRestaurantBooking(null)} className="p-2 rounded-xl hover:bg-gray-100">
+                                    <X className="w-5 h-5 text-gray-600" />
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-3">
+                                <div className="rounded-xl border border-gray-200 p-3">
+                                    <div className="text-xs font-bold text-gray-500 uppercase">Gasten</div>
+                                    <div className="font-semibold text-gray-900 flex items-center gap-1">
+                                        <Users className="w-4 h-4" />
+                                        {selectedRestaurantBooking.guest_count}
+                                    </div>
+                                </div>
+                                <div className="rounded-xl border border-gray-200 p-3">
+                                    <div className="text-xs font-bold text-gray-500 uppercase">Tijd</div>
+                                    <div className="font-semibold text-gray-900">{selectedRestaurantBooking.start_time}</div>
+                                </div>
+                                <div className="rounded-xl border border-gray-200 p-3">
+                                    <div className="text-xs font-bold text-gray-500 uppercase">Status</div>
+                                    <div className={`text-sm font-semibold capitalize ${selectedRestaurantBooking.status === 'arrived' ? 'text-emerald-600' :
+                                            selectedRestaurantBooking.status === 'no_show' ? 'text-red-600' :
+                                                selectedRestaurantBooking.status === 'cancelled' ? 'text-gray-400' :
+                                                    'text-blue-600'
+                                        }`}>
+                                        {selectedRestaurantBooking.status === 'arrived' ? '✓ Binnen' :
+                                            selectedRestaurantBooking.status === 'no_show' ? '✗ No-show' :
+                                                selectedRestaurantBooking.status === 'cancelled' ? 'Geannuleerd' :
+                                                    'Bevestigd'}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Contact info */}
+                            <div className="space-y-2">
+                                {selectedRestaurantBooking.customer_phone && (
+                                    <a href={`tel:${selectedRestaurantBooking.customer_phone}`} className="flex items-center gap-2 text-sm text-blue-600 hover:underline p-2 rounded-lg hover:bg-blue-50">
+                                        <Phone className="w-4 h-4" />
+                                        {selectedRestaurantBooking.customer_phone}
+                                    </a>
+                                )}
+                                {selectedRestaurantBooking.customer_email && (
+                                    <a href={`mailto:${selectedRestaurantBooking.customer_email}`} className="flex items-center gap-2 text-sm text-blue-600 hover:underline p-2 rounded-lg hover:bg-blue-50">
+                                        <Mail className="w-4 h-4" />
+                                        {selectedRestaurantBooking.customer_email}
+                                    </a>
+                                )}
+                            </div>
+
+                            {selectedRestaurantBooking.remarks && (
+                                <div className="rounded-xl border-2 border-amber-200 bg-amber-50 p-3">
+                                    <div className="text-xs font-bold text-amber-600 uppercase flex items-center gap-1">
+                                        <MessageSquare className="w-3.5 h-3.5" />
+                                        Opmerkingen
+                                    </div>
+                                    <div className="text-amber-900 font-medium mt-1">{selectedRestaurantBooking.remarks}</div>
+                                </div>
+                            )}
+
+                            {selectedRestaurantBooking.dietary_notes && (
+                                <div className="rounded-xl border-2 border-red-200 bg-red-50 p-3">
+                                    <div className="text-xs font-bold text-red-600 uppercase">⚠️ Dieetwensen</div>
+                                    <div className="text-red-900 font-medium mt-1">{selectedRestaurantBooking.dietary_notes}</div>
+                                </div>
+                            )}
+
+                            {/* Status buttons */}
+                            <div className="border-t pt-3">
+                                <label className="text-xs text-gray-500 block mb-2">Status wijzigen</label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                        onClick={() => updateRestaurantBookingStatus(selectedRestaurantBooking.id, 'arrived')}
+                                        className="flex items-center justify-center gap-2 px-3 py-2 bg-amber-500 text-white rounded-lg text-sm hover:bg-amber-600 transition-colors"
+                                    >
+                                        <UserCheck className="w-4 h-4" />
+                                        Gearriveerd
+                                    </button>
+                                    <button
+                                        onClick={() => updateRestaurantBookingStatus(selectedRestaurantBooking.id, 'no_show')}
+                                        className="flex items-center justify-center gap-2 px-3 py-2 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 transition-colors"
+                                    >
+                                        <UserX className="w-4 h-4" />
+                                        No-show
+                                    </button>
+                                    <button
+                                        onClick={() => updateRestaurantBookingStatus(selectedRestaurantBooking.id, 'confirmed')}
+                                        className="flex items-center justify-center gap-2 px-3 py-2 bg-emerald-500 text-white rounded-lg text-sm hover:bg-emerald-600 transition-colors"
+                                    >
+                                        <Check className="w-4 h-4" />
+                                        Bevestigd
+                                    </button>
+                                    <button
+                                        onClick={() => updateRestaurantBookingStatus(selectedRestaurantBooking.id, 'cancelled')}
+                                        className="flex items-center justify-center gap-2 px-3 py-2 bg-gray-500 text-white rounded-lg text-sm hover:bg-gray-600 transition-colors"
+                                    >
+                                        <X className="w-4 h-4" />
+                                        Annuleren
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>

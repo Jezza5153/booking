@@ -8,8 +8,18 @@ import { loginHandler, authMiddleware } from './auth.js';
 import { loginRateLimiter, bookingRateLimiter, widgetRateLimiter, calendarRateLimiter, isRedisConnected } from './ratelimit.js';
 import { initSentry, sentryErrorHandler, captureException } from './sentry.js';
 import { sendBookingConfirmation, sendLargeGroupNotification, sendRestaurantBookingConfirmation, sendChefsChoiceNotification } from './email.js';
+import { Resend } from 'resend';
 
 dotenv.config();
+
+// Email config for newsletter (shared with email.js)
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'De Tafelaar <reserveren@tafelaaramersfoort.nl>';
+const REPLY_TO_EMAIL = 'reserveren@tafelaaramersfoort.nl';
+const escapeHtml = (str) => {
+    if (!str) return '';
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+};
 
 // ============================================
 // NON-NEGOTIABLE: Fail fast if JWT_SECRET missing
@@ -1005,6 +1015,92 @@ app.get('/api/admin/bookings', async (req, res) => {
     }
 });
 
+// GET /api/admin/stats - Aggregated stats for dashboard (efficient server-side)
+app.get('/api/admin/stats', async (req, res) => {
+    const restaurantId = req.query.restaurantId || 'demo-restaurant';
+    const from = req.query.from || new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
+    const to = req.query.to || new Date().toISOString().split('T')[0];
+
+    try {
+        // Daily breakdown
+        const dailyResult = await pool.query(
+            `SELECT 
+                booking_date::text as date,
+                COUNT(*) FILTER (WHERE status != 'cancelled') as bookings,
+                COALESCE(SUM(guest_count) FILTER (WHERE status != 'cancelled'), 0) as couverts,
+                COUNT(*) FILTER (WHERE is_walkin = true AND status != 'cancelled') as walkins,
+                COUNT(*) FILTER (WHERE status = 'no_show') as no_shows,
+                COUNT(*) FILTER (WHERE status = 'cancelled') as cancellations,
+                COUNT(*) FILTER (WHERE status = 'arrived') as arrived
+            FROM restaurant_bookings
+            WHERE restaurant_id = $1 AND booking_date BETWEEN $2 AND $3
+            GROUP BY booking_date
+            ORDER BY booking_date`,
+            [restaurantId, from, to]
+        );
+
+        // Peak hours
+        const peakHoursResult = await pool.query(
+            `SELECT 
+                EXTRACT(HOUR FROM start_time::time) as hour,
+                COUNT(*) as count
+            FROM restaurant_bookings
+            WHERE restaurant_id = $1 AND booking_date BETWEEN $2 AND $3 AND status != 'cancelled'
+            GROUP BY EXTRACT(HOUR FROM start_time::time)
+            ORDER BY count DESC`,
+            [restaurantId, from, to]
+        );
+
+        // Average party size
+        const avgResult = await pool.query(
+            `SELECT 
+                ROUND(AVG(guest_count), 1) as avg_party_size,
+                COUNT(DISTINCT booking_date) as active_days
+            FROM restaurant_bookings
+            WHERE restaurant_id = $1 AND booking_date BETWEEN $2 AND $3 AND status != 'cancelled'`,
+            [restaurantId, from, to]
+        );
+
+        // Busiest day of week
+        const busiestDayResult = await pool.query(
+            `SELECT 
+                EXTRACT(DOW FROM booking_date) as day_of_week,
+                COUNT(*) as count
+            FROM restaurant_bookings
+            WHERE restaurant_id = $1 AND booking_date BETWEEN $2 AND $3 AND status != 'cancelled'
+            GROUP BY EXTRACT(DOW FROM booking_date)
+            ORDER BY count DESC
+            LIMIT 1`,
+            [restaurantId, from, to]
+        );
+
+        // Totals
+        const totals = dailyResult.rows.reduce((acc, row) => ({
+            bookings: acc.bookings + parseInt(row.bookings),
+            couverts: acc.couverts + parseInt(row.couverts),
+            walkins: acc.walkins + parseInt(row.walkins),
+            no_shows: acc.no_shows + parseInt(row.no_shows),
+            cancellations: acc.cancellations + parseInt(row.cancellations),
+            arrived: acc.arrived + parseInt(row.arrived)
+        }), { bookings: 0, couverts: 0, walkins: 0, no_shows: 0, cancellations: 0, arrived: 0 });
+
+        const dayNames = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag'];
+
+        res.json({
+            daily: dailyResult.rows,
+            totals,
+            peak_hours: peakHoursResult.rows.map(r => ({ hour: parseInt(r.hour), count: parseInt(r.count) })),
+            avg_party_size: parseFloat(avgResult.rows[0]?.avg_party_size) || 0,
+            active_days: parseInt(avgResult.rows[0]?.active_days) || 0,
+            busiest_day: busiestDayResult.rows[0] ? dayNames[parseInt(busiestDayResult.rows[0].day_of_week)] : null,
+            period: { from, to }
+        });
+    } catch (error) {
+        console.error('Stats error:', error.message);
+        res.status(500).json({ error: 'Failed to fetch stats' });
+    }
+});
+
 // Reconciliation endpoint - verify slot counters match booking counts
 // GET /api/admin/reconcile?restaurantId=xxx&repair=true
 app.get('/api/admin/reconcile', async (req, res) => {
@@ -1738,7 +1834,7 @@ app.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
 
 // POST /api/restaurant/book - Book a table
 app.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
-    const { restaurant_id, date, time, guest_count, customer_name, customer_email, customer_phone, remarks } = req.body;
+    const { restaurant_id, date, time, guest_count, customer_name, customer_email, customer_phone, remarks, newsletter_opt_in } = req.body;
 
     if (!restaurant_id || !date || !time || !guest_count || !customer_name || !customer_email) {
         return res.status(400).json({ error: 'Missing required fields (including email)' });
@@ -1783,10 +1879,37 @@ app.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
         const table = tableQ.rows[0];
         const bookingId = crypto.randomUUID();
 
+        // Auto-create or find customer profile (CRM)
+        let customerId = null;
+        try {
+            if (customer_email || customer_phone) {
+                const existingCustomer = await client.query(
+                    `SELECT id FROM customers WHERE restaurant_id = $1 AND (email = $2 OR phone = $3) LIMIT 1`,
+                    [restaurant_id, customer_email || '', customer_phone || '']
+                );
+                if (existingCustomer.rowCount > 0) {
+                    customerId = existingCustomer.rows[0].id;
+                    // Update customer name and newsletter preference
+                    await client.query(
+                        `UPDATE customers SET name = $1, newsletter_opt_in = COALESCE($2, newsletter_opt_in), updated_at = NOW() WHERE id = $3`,
+                        [customer_name, newsletter_opt_in ?? null, customerId]
+                    );
+                } else {
+                    customerId = crypto.randomUUID();
+                    await client.query(
+                        `INSERT INTO customers (id, restaurant_id, name, email, phone, newsletter_opt_in) VALUES ($1, $2, $3, $4, $5, $6)`,
+                        [customerId, restaurant_id, customer_name, customer_email || null, customer_phone || null, newsletter_opt_in ?? false]
+                    );
+                }
+            }
+        } catch (custErr) {
+            console.warn('Customer profile creation failed (non-fatal):', custErr.message);
+        }
+
         await client.query(
-            `INSERT INTO restaurant_bookings (id, restaurant_id, table_id, booking_date, start_time, end_time, guest_count, customer_name, customer_email, customer_phone, remarks)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-            [bookingId, restaurant_id, table.id, date, time, endTime, guest_count, customer_name, customer_email, customer_phone, remarks]
+            `INSERT INTO restaurant_bookings (id, restaurant_id, table_id, booking_date, start_time, end_time, guest_count, customer_name, customer_email, customer_phone, remarks, customer_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+            [bookingId, restaurant_id, table.id, date, time, endTime, guest_count, customer_name, customer_email, customer_phone, remarks, customerId]
         );
 
         await client.query('COMMIT');
@@ -2173,6 +2296,122 @@ app.post('/api/admin/restaurant-settings', authMiddleware, async (req, res) => {
         res.status(500).json({ error: 'Failed to save restaurant settings' });
     } finally {
         client.release();
+    }
+});
+
+// ============================================
+// NEWSLETTER / EMAIL LIST ENDPOINTS
+// ============================================
+
+// GET /api/admin/newsletter/subscribers - Get all customer emails for mailing list
+app.get('/api/admin/newsletter/subscribers', authMiddleware, async (req, res) => {
+    const restaurantId = req.query.restaurantId || 'demo-restaurant';
+    try {
+        const result = await pool.query(
+            `SELECT c.id, c.name, c.email, c.phone, c.newsletter_opt_in, c.total_visits, c.tags, c.dietary_notes, c.created_at,
+                    (SELECT MAX(rb.booking_date) FROM restaurant_bookings rb WHERE rb.customer_id = c.id) as last_visit
+             FROM customers c
+             WHERE c.restaurant_id = $1 AND c.email IS NOT NULL AND c.email != ''
+             ORDER BY c.created_at DESC`,
+            [restaurantId]
+        );
+
+        const subscribers = result.rows;
+        const optedIn = subscribers.filter(s => s.newsletter_opt_in === true);
+
+        res.json({
+            total: subscribers.length,
+            opted_in: optedIn.length,
+            opted_out: subscribers.length - optedIn.length,
+            subscribers
+        });
+    } catch (error) {
+        console.error('Newsletter subscribers error:', error.message);
+        res.status(500).json({ error: 'Failed to fetch subscribers' });
+    }
+});
+
+// POST /api/admin/newsletter/send - Send promotional email to subscribers
+app.post('/api/admin/newsletter/send', authMiddleware, async (req, res) => {
+    const { restaurantId, subject, message, sendToAll } = req.body;
+    const rid = restaurantId || 'demo-restaurant';
+
+    if (!subject || !message) {
+        return res.status(400).json({ error: 'Subject and message are required' });
+    }
+
+    try {
+        // Get opted-in subscribers (or all if sendToAll)
+        const query = sendToAll
+            ? `SELECT email, name FROM customers WHERE restaurant_id = $1 AND email IS NOT NULL AND email != ''`
+            : `SELECT email, name FROM customers WHERE restaurant_id = $1 AND email IS NOT NULL AND email != '' AND newsletter_opt_in = true`;
+
+        const result = await pool.query(query, [rid]);
+
+        if (result.rowCount === 0) {
+            return res.json({ success: true, sent: 0, message: 'No subscribers found' });
+        }
+
+        if (!resend) {
+            return res.status(503).json({ error: 'Email service not configured' });
+        }
+
+        // Send in batches of 50 (Resend batch limit)
+        let sent = 0;
+        let failed = 0;
+        const batchSize = 50;
+        const recipients = result.rows;
+
+        for (let i = 0; i < recipients.length; i += batchSize) {
+            const batch = recipients.slice(i, i + batchSize);
+
+            for (const recipient of batch) {
+                try {
+                    await resend.emails.send({
+                        from: FROM_EMAIL,
+                        to: recipient.email,
+                        replyTo: REPLY_TO_EMAIL,
+                        subject: subject,
+                        html: `
+                            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: 0 auto; background: #0f0f0f; color: #fff; padding: 32px; border-radius: 16px;">
+                                <p style="color: #fff; font-size: 16px; margin: 0 0 20px;">Hi ${escapeHtml(recipient.name) || 'daar'},</p>
+                                
+                                <div style="color: #ccc; font-size: 14px; line-height: 1.6; margin: 0 0 24px;">
+                                    ${message.replace(/\n/g, '<br>')}
+                                </div>
+                                
+                                <p style="color: #888; font-size: 14px; margin: 0;">
+                                    Tot snel!<br>
+                                    <strong style="color: #3D9970;">De Tafelaar</strong>
+                                </p>
+                                
+                                <hr style="border: none; border-top: 1px solid #333; margin: 24px 0 16px;">
+                                <p style="color: #555; font-size: 11px; margin: 0;">
+                                    Je ontvangt deze email omdat je hebt gereserveerd bij De Tafelaar.
+                                </p>
+                            </div>
+                        `,
+                    });
+                    sent++;
+                } catch (emailError) {
+                    console.error(`Newsletter send failed for ${recipient.email}:`, emailError.message);
+                    failed++;
+                }
+            }
+        }
+
+        // Log the campaign
+        console.log(`📧 Newsletter sent: ${sent} delivered, ${failed} failed, subject: "${subject}"`);
+
+        res.json({
+            success: true,
+            sent,
+            failed,
+            total_recipients: recipients.length
+        });
+    } catch (error) {
+        console.error('Newsletter send error:', error.message);
+        res.status(500).json({ error: 'Failed to send newsletter' });
     }
 });
 

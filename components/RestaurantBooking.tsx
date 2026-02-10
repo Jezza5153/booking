@@ -36,6 +36,7 @@ export const RestaurantBooking: React.FC<RestaurantBookingProps> = ({
     const [email, setEmail] = useState('')
     const [phone, setPhone] = useState('')
     const [remarks, setRemarks] = useState('')
+    const [newsletterOptIn, setNewsletterOptIn] = useState(true)
 
     // Booking result
     const [booking, setBooking] = useState<{ booking_id: string; table_name: string } | null>(null)
@@ -118,7 +119,8 @@ export const RestaurantBooking: React.FC<RestaurantBookingProps> = ({
                     customer_name: name,
                     customer_email: email || null,
                     customer_phone: phone || null,
-                    remarks: remarks || null
+                    remarks: remarks || null,
+                    newsletter_opt_in: newsletterOptIn
                 })
             })
             const data = await res.json()
@@ -324,6 +326,15 @@ export const RestaurantBooking: React.FC<RestaurantBookingProps> = ({
                             onChange={e => setRemarks(e.target.value)}
                             className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder-white/40 resize-none h-16"
                         />
+                        <label className="flex items-center gap-2 cursor-pointer py-1">
+                            <input
+                                type="checkbox"
+                                checked={newsletterOptIn}
+                                onChange={e => setNewsletterOptIn(e.target.checked)}
+                                className="w-4 h-4 rounded border-white/20 bg-white/10 text-[#3D9970] focus:ring-[#3D9970] focus:ring-offset-0"
+                            />
+                            <span className="text-white/60 text-xs">Ja, ik ontvang graag de nieuwsbrief van De Tafelaar</span>
+                        </label>
                         {error && <div className="text-red-400 text-sm">{error}</div>}
                         <button
                             onClick={handleSubmit}

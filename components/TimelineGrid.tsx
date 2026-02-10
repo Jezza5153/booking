@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import {
     ChevronLeft, ChevronRight, Plus, X, RefreshCw,
     Check, Clock, UserX, UserCheck, Users, Edit3, Trash2,
-    StickyNote, Star, AlertCircle, Phone, Mail, Printer, Copy
+    StickyNote, Star, AlertCircle, Phone, Mail, Printer, Copy, Calendar
 } from 'lucide-react'
 import { API_BASE_URL } from '../api'
 import { RestaurantBooking } from './RestaurantBooking'
@@ -86,6 +86,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
     const [showWalkinModal, setShowWalkinModal] = useState(false)
     const [showBookingDetail, setShowBookingDetail] = useState<Booking | null>(null)
     const [showCustomerSearch, setShowCustomerSearch] = useState(false)
+    const [showCalendarPopup, setShowCalendarPopup] = useState(false)
 
     // Toast notification
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
@@ -617,7 +618,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                     <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
                         {/* Left: Date Navigation & View Mode */}
                         <div className="flex items-center gap-4">
-                            <div className="flex items-center bg-gray-50 rounded-lg p-1 border border-gray-100 shadow-sm">
+                            <div className="flex items-center bg-gray-50 rounded-lg p-1 border border-gray-100 shadow-sm relative">
                                 <button
                                     onClick={() => navigateDate(-1)}
                                     className="p-1.5 hover:bg-white hover:shadow-sm rounded-md transition-all text-gray-500 hover:text-gray-900"
@@ -625,9 +626,10 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                     <ChevronLeft className="w-5 h-5" />
                                 </button>
                                 <button
-                                    onClick={goToToday}
-                                    className="px-3 py-1 text-sm font-semibold text-gray-700 hover:text-gray-900 transition-colors"
+                                    onClick={() => setShowCalendarPopup(!showCalendarPopup)}
+                                    className="px-3 py-1 text-sm font-semibold text-gray-700 hover:text-gray-900 transition-colors flex items-center gap-1"
                                 >
+                                    <Calendar className="w-3.5 h-3.5" />
                                     Vandaag
                                 </button>
                                 <button
@@ -636,6 +638,95 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                 >
                                     <ChevronRight className="w-5 h-5" />
                                 </button>
+
+                                {/* Mini Calendar Popup */}
+                                {showCalendarPopup && (
+                                    <>
+                                        <div className="fixed inset-0 z-30" onClick={() => setShowCalendarPopup(false)} />
+                                        <div className="absolute top-full left-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-40 w-72">
+                                            {(() => {
+                                                const calDate = new Date(date)
+                                                const calYear = calDate.getFullYear()
+                                                const calMonth = calDate.getMonth()
+                                                const firstDayRaw = new Date(calYear, calMonth, 1).getDay()
+                                                const firstDay = firstDayRaw === 0 ? 6 : firstDayRaw - 1
+                                                const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate()
+                                                const todayStr = new Date().toISOString().split('T')[0]
+                                                return (
+                                                    <>
+                                                        <div className="flex items-center justify-between mb-3">
+                                                            <button
+                                                                onClick={() => {
+                                                                    const d = new Date(date)
+                                                                    d.setMonth(d.getMonth() - 1)
+                                                                    setDate(d.toISOString().split('T')[0])
+                                                                }}
+                                                                className="p-1 hover:bg-gray-100 rounded-md text-gray-500"
+                                                            >
+                                                                <ChevronLeft className="w-4 h-4" />
+                                                            </button>
+                                                            <span className="text-sm font-semibold text-gray-900 capitalize">
+                                                                {calDate.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' })}
+                                                            </span>
+                                                            <button
+                                                                onClick={() => {
+                                                                    const d = new Date(date)
+                                                                    d.setMonth(d.getMonth() + 1)
+                                                                    setDate(d.toISOString().split('T')[0])
+                                                                }}
+                                                                className="p-1 hover:bg-gray-100 rounded-md text-gray-500"
+                                                            >
+                                                                <ChevronRight className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                        <div className="grid grid-cols-7 gap-1 text-center mb-1">
+                                                            {['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'].map(d => (
+                                                                <div key={d} className="text-[10px] text-gray-400 uppercase font-medium">{d}</div>
+                                                            ))}
+                                                        </div>
+                                                        <div className="grid grid-cols-7 gap-1">
+                                                            {Array(firstDay).fill(null).map((_, i) => <div key={`e-${i}`} />)}
+                                                            {Array.from({ length: daysInMonth }, (_, i) => {
+                                                                const day = i + 1
+                                                                const dayStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+                                                                const isToday = dayStr === todayStr
+                                                                const isSelected = dayStr === date
+                                                                return (
+                                                                    <button
+                                                                        key={day}
+                                                                        onClick={() => {
+                                                                            setDate(dayStr)
+                                                                            setShowCalendarPopup(false)
+                                                                        }}
+                                                                        className={`py-1.5 rounded-lg text-sm transition-all ${isSelected
+                                                                            ? 'bg-gray-900 text-white font-bold'
+                                                                            : isToday
+                                                                                ? 'bg-emerald-100 text-emerald-800 font-semibold'
+                                                                                : 'text-gray-700 hover:bg-gray-100'
+                                                                            }`}
+                                                                    >
+                                                                        {day}
+                                                                    </button>
+                                                                )
+                                                            })}
+                                                        </div>
+                                                        <div className="mt-2 pt-2 border-t flex justify-between">
+                                                            <button
+                                                                onClick={() => {
+                                                                    setDate(todayStr)
+                                                                    setShowCalendarPopup(false)
+                                                                }}
+                                                                className="text-xs text-emerald-600 font-medium hover:underline"
+                                                            >
+                                                                Naar vandaag
+                                                            </button>
+                                                        </div>
+                                                    </>
+                                                )
+                                            })()}
+                                        </div>
+                                    </>
+                                )}
                             </div>
 
                             <div className="flex flex-col">
@@ -700,6 +791,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                     <option value={60}>1u</option>
                                     <option value={30}>30m</option>
                                     <option value={15}>15m</option>
+                                    <option value={5}>5m</option>
                                 </select>
                             </div>
 
