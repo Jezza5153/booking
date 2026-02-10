@@ -2387,7 +2387,8 @@ app.post('/api/admin/newsletter/send', authMiddleware, async (req, res) => {
                                 
                                 <hr style="border: none; border-top: 1px solid #333; margin: 24px 0 16px;">
                                 <p style="color: #555; font-size: 11px; margin: 0;">
-                                    Je ontvangt deze email omdat je hebt gereserveerd bij De Tafelaar.
+                                    Je ontvangt deze email omdat je hebt gereserveerd bij De Tafelaar.<br>
+                                    <a href="${process.env.API_BASE_URL || 'https://booking-production-de35.up.railway.app'}/api/newsletter/unsubscribe?email=${encodeURIComponent(recipient.email)}&token=${Buffer.from(recipient.email).toString('base64')}" style="color: #666; text-decoration: underline;">Uitschrijven</a>
                                 </p>
                             </div>
                         `,
@@ -2412,6 +2413,43 @@ app.post('/api/admin/newsletter/send', authMiddleware, async (req, res) => {
     } catch (error) {
         console.error('Newsletter send error:', error.message);
         res.status(500).json({ error: 'Failed to send newsletter' });
+    }
+});
+
+// GET /api/newsletter/unsubscribe - Public unsubscribe endpoint (no auth)
+app.get('/api/newsletter/unsubscribe', async (req, res) => {
+    const { email, token } = req.query;
+
+    if (!email) {
+        return res.status(400).send('<html><body style="font-family:sans-serif;text-align:center;padding:60px"><h2>Ongeldige link</h2></body></html>');
+    }
+
+    // Simple token validation: base64 of email must match
+    const expectedToken = Buffer.from(email).toString('base64');
+    if (token !== expectedToken) {
+        return res.status(400).send('<html><body style="font-family:sans-serif;text-align:center;padding:60px"><h2>Ongeldige link</h2></body></html>');
+    }
+
+    try {
+        await pool.query(
+            `UPDATE customers SET newsletter_opt_in = false WHERE email = $1`,
+            [email]
+        );
+
+        res.send(`
+            <html>
+            <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; text-align: center; padding: 60px; background: #0f0f0f; color: #fff;">
+                <div style="max-width: 400px; margin: 0 auto;">
+                    <h2 style="color: #3D9970;">✓ Uitgeschreven</h2>
+                    <p style="color: #ccc;">Je ontvangt geen nieuwsbrief meer van De Tafelaar.</p>
+                    <p style="color: #888; font-size: 14px; margin-top: 24px;">Je kunt je altijd opnieuw aanmelden bij je volgende reservering.</p>
+                </div>
+            </body>
+            </html>
+        `);
+    } catch (error) {
+        console.error('Unsubscribe error:', error.message);
+        res.status(500).send('<html><body style="font-family:sans-serif;text-align:center;padding:60px"><h2>Er is iets misgegaan</h2></body></html>');
     }
 });
 
