@@ -10,8 +10,10 @@ interface RestaurantBookingProps {
 
 interface TimeSlot {
     time: string
-    end_time: string
+    end_time: string | null
     available: number
+    disabled?: boolean
+    reason?: string
 }
 
 export const RestaurantBooking: React.FC<RestaurantBookingProps> = ({
@@ -25,6 +27,7 @@ export const RestaurantBooking: React.FC<RestaurantBookingProps> = ({
     const [selectedDate, setSelectedDate] = useState<string | null>(null)
     const [selectedTime, setSelectedTime] = useState<string | null>(null)
     const [slots, setSlots] = useState<TimeSlot[]>([])
+    const [closeTime, setCloseTime] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
@@ -55,12 +58,14 @@ export const RestaurantBooking: React.FC<RestaurantBookingProps> = ({
             )
             const data = await res.json()
             setSlots(data.slots || [])
+            setCloseTime(data.close_time || null)
             if (data.slots?.length === 0) {
                 setError(data.message || 'Geen beschikbare tijden')
             }
         } catch (e) {
             setError('Kon beschikbaarheid niet laden')
             setSlots([])
+            setCloseTime(null)
         } finally {
             setLoading(false)
         }
@@ -222,20 +227,31 @@ export const RestaurantBooking: React.FC<RestaurantBookingProps> = ({
                         ) : error ? (
                             <div className="text-red-400 text-sm py-4">{error}</div>
                         ) : (
-                            <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto">
-                                {slots.map(slot => (
-                                    <button
-                                        key={slot.time}
-                                        onClick={() => { setSelectedTime(slot.time); setStep(4) }}
-                                        className={`py-2 rounded-lg text-sm font-medium transition-colors ${selectedTime === slot.time
-                                            ? 'bg-[#3D9970] text-white'
-                                            : 'bg-white/5 text-white/80 hover:bg-white/10'
-                                            }`}
-                                    >
-                                        {slot.time}
-                                    </button>
-                                ))}
-                            </div>
+                            <>
+                                <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto">
+                                    {slots.map(slot => (
+                                        <button
+                                            key={slot.time}
+                                            onClick={() => { if (!slot.disabled) { setSelectedTime(slot.time); setStep(4) } }}
+                                            disabled={slot.disabled}
+                                            title={slot.disabled ? slot.reason : undefined}
+                                            className={`py-2 rounded-lg text-sm font-medium transition-colors ${slot.disabled
+                                                ? 'bg-white/5 text-white/20 cursor-not-allowed line-through'
+                                                : selectedTime === slot.time
+                                                    ? 'bg-[#3D9970] text-white'
+                                                    : 'bg-white/5 text-white/80 hover:bg-white/10'
+                                                }`}
+                                        >
+                                            {slot.time}
+                                        </button>
+                                    ))}
+                                </div>
+                                {closeTime && (
+                                    <div className="text-[10px] text-white/30 mt-2 flex items-center gap-1">
+                                        🕐 Keuken sluit om {closeTime}
+                                    </div>
+                                )}
+                            </>
                         )}
                     </div>
                 )}

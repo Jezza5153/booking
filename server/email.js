@@ -8,7 +8,9 @@ const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KE
 
 // Admin notification email - sends booking alerts to the restaurant
 const ADMIN_EMAIL = process.env.BOOKING_NOTIFICATION_EMAIL || 'reserveren@tafelaaramersfoort.nl';
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'noreply@tafelaaramersfoort.nl';
+// FROM_EMAIL: Use display name so customers see "De Tafelaar" in their inbox
+// Replies go to REPLY_TO_EMAIL (reserveren@) regardless of FROM
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'De Tafelaar <reserveren@tafelaaramersfoort.nl>';
 const REPLY_TO_EMAIL = 'reserveren@tafelaaramersfoort.nl';
 const PHONE_NUMBER = '+31 6 341 279 32';
 
@@ -92,6 +94,7 @@ export async function sendBookingConfirmation({
             const adminResult = await resend.emails.send({
                 from: FROM_EMAIL,
                 to: ADMIN_EMAIL,
+                replyTo: REPLY_TO_EMAIL,
                 subject: `📋 ${escapeHtml(customerName) || 'Gast'} - ${guestCount}p - ${escapeHtml(eventTitle)}`,
                 html: `
                     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; max-width: 500px;">
@@ -185,6 +188,7 @@ export async function sendLargeGroupNotification({
         await resend.emails.send({
             from: FROM_EMAIL,
             to: ADMIN_EMAIL,
+            replyTo: REPLY_TO_EMAIL,
             subject: `📋 ${escapeHtml(customerName) || 'Gast'} - ${guestCount}p - ${escapeHtml(eventTitle)}`,
             html: `
                 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; max-width: 500px;">
@@ -279,6 +283,7 @@ export async function sendRestaurantBookingConfirmation({
         await resend.emails.send({
             from: FROM_EMAIL,
             to: ADMIN_EMAIL,
+            replyTo: REPLY_TO_EMAIL,
             subject: `🍽️ ${escapeHtml(customerName) || 'Gast'} - ${guestCount}p - ${escapeHtml(bookingTime)}`,
             html: `
                 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; max-width: 500px;">
@@ -366,6 +371,7 @@ export async function sendChefsChoiceNotification({
         await resend.emails.send({
             from: FROM_EMAIL,
             to: ADMIN_EMAIL,
+            replyTo: REPLY_TO_EMAIL,
             subject: `👨‍🍳 ${escapeHtml(customerName) || 'Gast'} - ${guestCount}p - ${escapeHtml(bookingTime)}`,
             html: `
                 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; max-width: 500px;">

@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS slots (
   booked_count_2_tops INTEGER DEFAULT 0 CHECK (booked_count_2_tops >= 0),
   booked_count_4_tops INTEGER DEFAULT 0 CHECK (booked_count_4_tops >= 0),
   booked_count_6_tops INTEGER DEFAULT 0 CHECK (booked_count_6_tops >= 0),
+  current_couverts INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -52,8 +53,8 @@ CREATE TABLE IF NOT EXISTS bookings (
   id TEXT PRIMARY KEY,
   restaurant_id TEXT NOT NULL REFERENCES restaurants(id),
   slot_id TEXT NOT NULL REFERENCES slots(id) ON DELETE RESTRICT,
-  table_type TEXT NOT NULL CHECK (table_type IN ('2','4','6','7+')),
-  guest_count INTEGER NOT NULL CHECK (guest_count >= 1 AND guest_count <= 20),
+  table_type TEXT CHECK (table_type IS NULL OR table_type IN ('2','4','6','7+')),
+  guest_count INTEGER NOT NULL CHECK (guest_count >= 1 AND guest_count <= 50),
   
   -- Customer information
   customer_name TEXT NOT NULL,
@@ -63,6 +64,10 @@ CREATE TABLE IF NOT EXISTS bookings (
   
   -- Idempotency key for duplicate prevention
   idempotency_key TEXT,
+  
+  -- Large group support
+  is_large_group BOOLEAN DEFAULT false,
+  tables_allocated JSONB,
   
   -- Timestamps and status
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),

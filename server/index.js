@@ -34,7 +34,28 @@ initSentry(app);
 // Trust proxy for Cloudflare + Railway (required for rate limiting to work correctly)
 app.set('trust proxy', 1);
 
-app.use(cors());
+// SECURITY: Restrict CORS to known frontend origins
+const ALLOWED_ORIGINS = [
+    process.env.FRONTEND_URL || 'https://events-widget.vercel.app',
+    'http://localhost:5173',  // Vite dev server
+    'http://localhost:3000',  // Local dev
+];
+app.use(cors({
+    origin: function (origin, callback) {
+        // Allow requests with no origin (e.g. server-to-server, mobile apps, curl)
+        if (!origin) return callback(null, true);
+        if (ALLOWED_ORIGINS.includes(origin) || process.env.NODE_ENV === 'development') {
+            return callback(null, true);
+        }
+        // In production, also allow any *.vercel.app preview deploys
+        if (origin.endsWith('.vercel.app')) {
+            return callback(null, true);
+        }
+        console.warn(`CORS blocked origin: ${origin}`);
+        return callback(new Error('Not allowed by CORS'), false);
+    },
+    credentials: true
+}));
 app.use(express.json({ limit: '16kb' }));
 
 // Helmet for security headers including CSP
@@ -80,7 +101,7 @@ app.get('/api/auth/verify', authMiddleware, (req, res) => {
 // Input sanitization helper
 function sanitizeString(str, maxLength = 100) {
     if (typeof str !== 'string') return '';
-    return str.slice(0, maxLength).replace(/[<>"'&]/g, '');
+    return str.slice(0, maxLength).replace(/[<>"']/g, '');
 }
 
 function validateRestaurantId(id) {
@@ -123,55 +144,65 @@ app.get('/api/widget/:restaurantId', widgetRateLimiter, async (req, res) => {
             [restaurantId]
         );
 
-        // For each event, get slots
-        const eventsWithSlots = await Promise.all(
-            eventsResult.rows.map(async (event) => {
-                const slotsResult = await pool.query(
-                    `SELECT id, zone_id as "wijkId", start_datetime, is_highlighted,
-                  booked_count_2_tops as booked2tops, booked_count_4_tops as booked4tops, booked_count_6_tops as booked6tops
-           FROM slots WHERE event_id = $1 ORDER BY start_datetime ASC`,
-                    [event.id]
-                );
+        // FIX #12: Single JOIN query instead of N+1
+        const allSlotsResult = await pool.query(
+            `SELECT s.id, s.event_id, s.zone_id as "wijkId", s.start_datetime, s.is_highlighted,
+                    s.booked_count_2_tops as booked2tops, s.booked_count_4_tops as booked4tops, s.booked_count_6_tops as booked6tops
+             FROM slots s
+             JOIN events e ON e.id = s.event_id
+             WHERE e.restaurant_id = $1 AND e.is_active = true
+             ORDER BY s.start_datetime ASC`,
+            [restaurantId]
+        );
 
-                const formattedSlots = slotsResult.rows.map(slot => {
-                    const dt = new Date(slot.start_datetime);
-                    // P0-1 FIX: Always use Europe/Amsterdam timezone for consistent formatting
-                    const dateFormatter = new Intl.DateTimeFormat('nl-NL', {
-                        weekday: 'short', day: 'numeric', month: 'short',
-                        timeZone: 'Europe/Amsterdam'
-                    });
-                    const timeFormatter = new Intl.DateTimeFormat('nl-NL', {
-                        hour: '2-digit', minute: '2-digit', hour12: false,
-                        timeZone: 'Europe/Amsterdam'
-                    });
-                    const parts = dateFormatter.formatToParts(dt);
-                    const weekday = parts.find(p => p.type === 'weekday')?.value || '';
-                    const day = parts.find(p => p.type === 'day')?.value || '';
-                    const month = parts.find(p => p.type === 'month')?.value?.replace('.', '') || '';
-                    const timeStr = timeFormatter.format(dt);
+        // Group slots by event_id
+        const slotsByEvent = new Map();
+        for (const slot of allSlotsResult.rows) {
+            if (!slotsByEvent.has(slot.event_id)) slotsByEvent.set(slot.event_id, []);
+            slotsByEvent.get(slot.event_id).push(slot);
+        }
 
-                    return {
-                        id: slot.id,
-                        date: `${weekday.charAt(0).toUpperCase() + weekday.slice(1)} ${day} ${month}`,
-                        time: timeStr,
-                        start_datetime: slot.start_datetime, // P0-2: Include ISO for client-side consistency
-                        isNextAvailable: slot.is_highlighted,
-                        wijkId: slot.wijkId,
-                        booked2tops: slot.booked2tops,
-                        booked4tops: slot.booked4tops,
-                        booked6tops: slot.booked6tops
-                    };
-                });
+        // Reusable formatters (created once, not per-slot)
+        const dateFormatter = new Intl.DateTimeFormat('nl-NL', {
+            weekday: 'short', day: 'numeric', month: 'short',
+            timeZone: 'Europe/Amsterdam'
+        });
+        const timeFormatter = new Intl.DateTimeFormat('nl-NL', {
+            hour: '2-digit', minute: '2-digit', hour12: false,
+            timeZone: 'Europe/Amsterdam'
+        });
+
+        const eventsWithSlots = eventsResult.rows.map(event => {
+            const slots = slotsByEvent.get(event.id) || [];
+            const formattedSlots = slots.map(slot => {
+                const dt = new Date(slot.start_datetime);
+                const parts = dateFormatter.formatToParts(dt);
+                const weekday = parts.find(p => p.type === 'weekday')?.value || '';
+                const day = parts.find(p => p.type === 'day')?.value || '';
+                const month = parts.find(p => p.type === 'month')?.value?.replace('.', '') || '';
+                const timeStr = timeFormatter.format(dt);
 
                 return {
-                    id: event.id,
-                    title: event.title,
-                    description: event.description || null,
-                    price_per_person: event.price_per_person ? parseFloat(event.price_per_person) : null,
-                    slots: formattedSlots
+                    id: slot.id,
+                    date: `${weekday.charAt(0).toUpperCase() + weekday.slice(1)} ${day} ${month}`,
+                    time: timeStr,
+                    start_datetime: slot.start_datetime,
+                    isNextAvailable: slot.is_highlighted,
+                    wijkId: slot.wijkId,
+                    booked2tops: slot.booked2tops,
+                    booked4tops: slot.booked4tops,
+                    booked6tops: slot.booked6tops
                 };
-            })
-        );
+            });
+
+            return {
+                id: event.id,
+                title: event.title,
+                description: event.description || null,
+                price_per_person: event.price_per_person ? parseFloat(event.price_per_person) : null,
+                slots: formattedSlots
+            };
+        });
 
         // Set caching header for widget data (short TTL, fresh data)
         res.set('Cache-Control', 'public, max-age=5, s-maxage=30');
@@ -182,19 +213,8 @@ app.get('/api/widget/:restaurantId', widgetRateLimiter, async (req, res) => {
     }
 });
 
-// ============================================
-// BOOKING: Idempotency cache (in-memory, for demo)
-// ============================================
-const idempotencyCache = new Map();
-const IDEMPOTENCY_TTL_MS = 5 * 60 * 1000; // 5 minutes
-
-// Cleanup old entries periodically
-setInterval(() => {
-    const now = Date.now();
-    for (const [key, entry] of idempotencyCache) {
-        if (now > entry.expiresAt) idempotencyCache.delete(key);
-    }
-}, 60 * 1000);
+// NOTE: Idempotency is handled at the DB level via unique constraint on idempotency_key.
+// In-memory cache removed (audit fix #13/#21) — it didn't survive restarts or work across instances.
 
 // ============================================
 // TABLE ALLOCATION: Greedy algorithm for large groups
@@ -289,6 +309,7 @@ app.post('/api/book', bookingRateLimiter, async (req, res) => {
 
     const email = (customer_email || '').trim();
     if (email && email.length > 254) return res.status(422).json({ error: 'customer_email too long' });
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(422).json({ error: 'Invalid email format' });
 
     const phone = (customer_phone || '').trim();
     if (phone && phone.length > 30) return res.status(422).json({ error: 'customer_phone too long' });
@@ -536,10 +557,13 @@ app.get('/api/calendar/:restaurantId.ics', calendarRateLimiter, async (req, res)
 
         const slotsResult = await pool.query(
             `SELECT s.*, e.title as event_title, z.name as zone_name,
-              z.capacity_2_tops, z.capacity_4_tops, z.capacity_6_tops
+              z.capacity_2_tops, z.capacity_4_tops, z.capacity_6_tops,
+              ro.slot_duration_minutes
        FROM slots s
        JOIN events e ON s.event_id = e.id
        JOIN zones z ON s.zone_id = z.id
+       LEFT JOIN restaurant_openings ro ON ro.restaurant_id = e.restaurant_id
+         AND ro.day_of_week = EXTRACT(DOW FROM s.start_datetime)::int
        WHERE e.restaurant_id = $1 AND e.is_active = true
        ORDER BY s.start_datetime ASC`,
             [restaurantId]
@@ -570,7 +594,9 @@ app.get('/api/calendar/:restaurantId.ics', calendarRateLimiter, async (req, res)
 
         for (const slot of slots) {
             const start = new Date(slot.start_datetime);
-            const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
+            // FIX #25: Use slot_duration_minutes from DB instead of hardcoded 2h
+            const durationMs = (slot.slot_duration_minutes || 120) * 60 * 1000;
+            const end = new Date(start.getTime() + durationMs);
             const formatICalDate = (d) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
             const totalBooked = slot.booked_count_2_tops + slot.booked_count_4_tops + slot.booked_count_6_tops;
             const totalCapacity = slot.capacity_2_tops + slot.capacity_4_tops + slot.capacity_6_tops;
@@ -736,6 +762,8 @@ app.get('/api/admin/data', async (req, res) => {
             })
         );
 
+        // FIX #26: Admin endpoints should not be cached
+        res.set('Cache-Control', 'no-store');
         res.json({ zones: zonesResult.rows, events: eventsWithSlots });
     } catch (error) {
         console.error('Admin data error:', error);
@@ -744,9 +772,18 @@ app.get('/api/admin/data', async (req, res) => {
 });
 
 // Clear all events and slots (Admin - for fresh start)
-// P0-7 FIX: Scope to restaurant
-app.delete('/api/admin/clear', async (req, res) => {
+// FIX #19: Requires confirm=true to prevent accidental deletion
+app.delete('/api/admin/clear', authMiddleware, async (req, res) => {
     const restaurantId = req.query.restaurantId || 'demo-restaurant';
+    const confirm = req.query.confirm === 'true';
+
+    if (!confirm) {
+        return res.status(400).json({
+            error: 'This will delete ALL events and slots. Send confirm=true to proceed.',
+            hint: 'DELETE /api/admin/clear?restaurantId=X&confirm=true'
+        });
+    }
+
     try {
         // Delete in order: slots -> events (due to foreign keys)
         await pool.query(
@@ -807,24 +844,53 @@ app.post('/api/admin/bookings/:id/cancel', async (req, res) => {
             [bookingId]
         );
 
-        // Decrement slot counter based on table_type
+        // Decrement slot counters
+        // For large-group bookings with tables_allocated, decrement each table type
+        // For regular bookings, decrement based on table_type
         const colMap = { '2': 'booked_count_2_tops', '4': 'booked_count_4_tops', '6': 'booked_count_6_tops' };
-        const col = colMap[booking.table_type];
 
-        if (col) {
-            const currentCount = booking[col] || 0;
-
-            // Warn if counter already 0 (data inconsistency)
-            if (currentCount <= 0) {
-                console.warn(`[${req.requestId}] Counter mismatch: ${col} already 0 for slot ${booking.slot_id}, booking ${bookingId}`);
+        if (booking.is_large_group && booking.tables_allocated) {
+            // Large group: parse tables_allocated JSON and decrement each type
+            let tablesAllocated;
+            try {
+                tablesAllocated = typeof booking.tables_allocated === 'string'
+                    ? JSON.parse(booking.tables_allocated)
+                    : booking.tables_allocated;
+            } catch (e) {
+                console.error(`[${req.requestId}] Failed to parse tables_allocated for booking ${bookingId}`);
+                tablesAllocated = [];
             }
 
-            // Decrement with floor at 0 (never negative)
-            await client.query(
-                `UPDATE slots SET ${col} = GREATEST(0, ${col} - 1) WHERE id = $1`,
-                [booking.slot_id]
-            );
+            for (const table of tablesAllocated) {
+                const col = colMap[String(table.seats)];
+                if (col) {
+                    await client.query(
+                        `UPDATE slots SET ${col} = GREATEST(0, ${col} - $1) WHERE id = $2`,
+                        [table.count, booking.slot_id]
+                    );
+                    console.log(`[${req.requestId}] Decremented ${col} by ${table.count} for slot ${booking.slot_id}`);
+                }
+            }
+        } else {
+            // Regular booking: decrement single table counter
+            const col = colMap[booking.table_type];
+            if (col) {
+                const currentCount = booking[col] || 0;
+                if (currentCount <= 0) {
+                    console.warn(`[${req.requestId}] Counter mismatch: ${col} already 0 for slot ${booking.slot_id}, booking ${bookingId}`);
+                }
+                await client.query(
+                    `UPDATE slots SET ${col} = GREATEST(0, ${col} - 1) WHERE id = $1`,
+                    [booking.slot_id]
+                );
+            }
         }
+
+        // FIX #5: Always decrement current_couverts by guest_count
+        await client.query(
+            `UPDATE slots SET current_couverts = GREATEST(0, COALESCE(current_couverts, 0) - $1) WHERE id = $2`,
+            [booking.guest_count, booking.slot_id]
+        );
 
         await client.query('COMMIT');
         console.log(`[${req.requestId}] Booking ${bookingId} cancelled for restaurant ${restaurantId}`);
@@ -1355,7 +1421,7 @@ app.get('/api/restaurant/:restaurantId/opening-hours', async (req, res) => {
 // ============================================
 
 // GET /api/restaurant/:restaurantId/waitlist - Get waitlist entries
-app.get('/api/restaurant/:restaurantId/waitlist', async (req, res) => {
+app.get('/api/restaurant/:restaurantId/waitlist', authMiddleware, async (req, res) => {
     const { restaurantId } = req.params;
     const { date } = req.query;
 
@@ -1379,13 +1445,19 @@ app.get('/api/restaurant/:restaurantId/waitlist', async (req, res) => {
 });
 
 // POST /api/restaurant/:restaurantId/waitlist - Add to waitlist
-app.post('/api/restaurant/:restaurantId/waitlist', async (req, res) => {
+app.post('/api/restaurant/:restaurantId/waitlist', bookingRateLimiter, async (req, res) => {
     const { restaurantId } = req.params;
     const { date, time_preference, guest_count, customer_name, phone, email, notes } = req.body;
 
     if (!date || !guest_count || !customer_name) {
         return res.status(400).json({ error: 'date, guest_count, and customer_name are required' });
     }
+
+    // Input validation
+    const name = (customer_name || '').trim();
+    if (name.length > 120) return res.status(422).json({ error: 'customer_name too long' });
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(422).json({ error: 'Invalid email format' });
+    if (phone && phone.length > 30) return res.status(422).json({ error: 'phone too long' });
 
     try {
         const posResult = await pool.query(
@@ -1398,7 +1470,7 @@ app.post('/api/restaurant/:restaurantId/waitlist', async (req, res) => {
             `INSERT INTO waitlist (restaurant_id, date, time_preference, guest_count, customer_name, phone, email, notes, position)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
              RETURNING *`,
-            [restaurantId, date, time_preference, guest_count, customer_name, phone, email, notes, position]
+            [restaurantId, date, time_preference, guest_count, name, phone, email, notes, position]
         );
 
         res.status(201).json({ entry: result.rows[0] });
@@ -1526,8 +1598,8 @@ app.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
             [restaurantId, dayOfWeek, date]
         );
 
-        // AUTO-PROVISION: If no opening hours exist, create default hours for this restaurant
-        if (openingResult.rowCount === 0) {
+        // AUTO-PROVISION: Only for authenticated admin users (prevents data injection)
+        if (openingResult.rowCount === 0 && req.headers.authorization) {
             console.log(`📋 Auto-provisioning opening hours for restaurant: ${restaurantId}`);
 
             // Create default opening hours (Mon-Sun 17:00-22:00)
@@ -1588,7 +1660,12 @@ app.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
             );
         }
 
-        if (openingResult.rowCount === 0 || openingResult.rows[0].is_closed) {
+        // If still no opening hours (unauthenticated or provisioning failed), return empty
+        if (openingResult.rowCount === 0) {
+            return res.json({ slots: [], message: 'No opening hours configured for this restaurant' });
+        }
+
+        if (openingResult.rows[0].is_closed) {
             return res.json({ slots: [], message: 'Restaurant is closed' });
         }
 
@@ -1638,7 +1715,18 @@ app.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
             }
         }
 
-        res.json({ date, guest_count: guestCount, slots });
+        // Also include near-closing slots as greyed-out/disabled
+        // These are slots where the meal wouldn't finish before closing
+        const lastBookableMin = closeMins - slotDuration;
+        for (let m = lastBookableMin + 30; m < closeMins; m += 30) {
+            if (m <= openMins) continue;
+            if (isToday && m <= currentMins) continue;
+            const slotTime = `${Math.floor(m / 60).toString().padStart(2, '0')}:${(m % 60).toString().padStart(2, '0')}`;
+            slots.push({ time: slotTime, end_time: null, available: 0, disabled: true, reason: 'Te dicht bij sluitingstijd' });
+        }
+
+        const closeTimeStr = close_time;
+        res.json({ date, guest_count: guestCount, close_time: closeTimeStr, slots });
     } catch (error) {
         console.error('Restaurant availability error:', error);
         res.status(500).json({ error: 'Failed to check availability' });
@@ -1831,12 +1919,13 @@ app.post('/api/admin/bookings', authMiddleware, async (req, res) => {
         );
         const startDatetime = eventResult.rows[0]?.start_datetime || new Date();
 
-        // Create booking
+        // Create booking — table_type is optional (NULL allowed for admin bookings)
         const bookingId = crypto.randomUUID();
+        const tableType = guest_count <= 2 ? '2' : guest_count <= 4 ? '4' : guest_count <= 6 ? '6' : null;
         await pool.query(
-            `INSERT INTO bookings (id, restaurant_id, slot_id, customer_id, customer_name, customer_email, customer_phone, guest_count, status, confirmation_token, remarks, created_at)
-             VALUES ($1, $2, (SELECT id FROM slots WHERE event_id = $3 LIMIT 1), $4, $5, $6, $7, $8, 'confirmed', $9, $10, NOW())`,
-            [bookingId, restaurantId, eventId, customerId, customer_name, customer_email || null, customer_phone || null, guest_count, crypto.randomUUID(), remarks || null]
+            `INSERT INTO bookings (id, restaurant_id, slot_id, customer_id, table_type, customer_name, customer_email, customer_phone, guest_count, status, idempotency_key, remarks, created_at)
+             VALUES ($1, $2, (SELECT id FROM slots WHERE event_id = $3 LIMIT 1), $4, $5, $6, $7, $8, $9, 'confirmed', $10, $11, NOW())`,
+            [bookingId, restaurantId, eventId, customerId, tableType, customer_name, customer_email || null, customer_phone || null, guest_count, crypto.randomUUID(), remarks || null]
         );
 
         res.json({ success: true, booking_id: bookingId });
@@ -1998,117 +2087,13 @@ app.get('/api/restaurant/:id/openings', async (req, res) => {
     }
 });
 
-// POST /api/restaurant/book - Enhanced with multi-table support
-app.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
-    const {
-        restaurant_id, table_id, table_ids, date, time, end_time,
-        guest_count, customer_name, customer_email, customer_phone,
-        remarks, status, is_walkin, tables_linked
-    } = req.body;
-
-    if (!restaurant_id || !date || !time || !guest_count || !customer_name) {
-        return res.status(400).json({ error: 'Missing required fields' });
-    }
-
-    // Use table_ids if provided, otherwise fall back to single table_id
-    const allTableIds = table_ids?.length > 0 ? table_ids : [table_id];
-    if (!allTableIds[0]) {
-        return res.status(400).json({ error: 'Table ID required' });
-    }
-
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
-
-        const bookingId = crypto.randomUUID();
-        const bookingStatus = status || 'confirmed';
-        const walkin = is_walkin || false;
-
-        // Calculate end time if not provided
-        let finalEndTime = end_time;
-        if (!finalEndTime) {
-            const startMins = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1]);
-            const endMins = startMins + 90;
-            finalEndTime = `${Math.floor(endMins / 60).toString().padStart(2, '0')}:${(endMins % 60).toString().padStart(2, '0')}`;
-        }
-
-        // Check for customer or create new one
-        let customerId = null;
-        if (customer_phone || customer_email) {
-            const existingCustomer = await client.query(
-                `SELECT id FROM customers WHERE restaurant_id = $1 AND (phone = $2 OR email = $3) LIMIT 1`,
-                [restaurant_id, customer_phone || '', customer_email || '']
-            );
-
-            if (existingCustomer.rowCount > 0) {
-                customerId = existingCustomer.rows[0].id;
-            } else if (customer_phone || customer_email) {
-                customerId = crypto.randomUUID();
-                await client.query(
-                    `INSERT INTO customers (id, restaurant_id, name, email, phone) VALUES ($1, $2, $3, $4, $5)`,
-                    [customerId, restaurant_id, customer_name, customer_email || null, customer_phone || null]
-                );
-            }
-        }
-
-        // Create booking for each table (linked bookings for large parties)
-        const linkedTableIds = allTableIds.length > 1 ? allTableIds : null;
-
-        for (let i = 0; i < allTableIds.length; i++) {
-            const currentTableId = allTableIds[i];
-            const currentBookingId = i === 0 ? bookingId : crypto.randomUUID();
-
-            await client.query(
-                `INSERT INTO restaurant_bookings 
-                 (id, restaurant_id, table_id, booking_date, start_time, end_time, guest_count, 
-                  customer_name, customer_email, customer_phone, remarks, status, is_walkin, customer_id, arrived_at, tables_linked)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
-                [currentBookingId, restaurant_id, currentTableId, date, time, finalEndTime,
-                    i === 0 ? guest_count : 0, // Only primary booking has guest count
-                    customer_name, customer_email || null, customer_phone || null, remarks || null,
-                    bookingStatus, walkin, customerId, bookingStatus === 'arrived' ? new Date() : null,
-                    linkedTableIds]
-            );
-        }
-
-        // Update customer visits if walk-in (already arrived)
-        if (customerId && bookingStatus === 'arrived') {
-            await client.query(
-                `UPDATE customers SET total_visits = total_visits + 1, last_visit = CURRENT_DATE WHERE id = $1`,
-                [customerId]
-            );
-        }
-
-        await client.query('COMMIT');
-
-        // Get table names for response
-        const tableNamesQ = await pool.query(
-            `SELECT name FROM restaurant_tables WHERE id = ANY($1)`,
-            [allTableIds]
-        );
-        const tableNames = tableNamesQ.rows.map(r => r.name).join(' + ');
-
-        res.status(201).json({
-            success: true,
-            booking_id: bookingId,
-            date,
-            startTime,
-            tables: tableNames,
-            tables_count: allTableIds.length
-        });
-    } catch (error) {
-        await client.query('ROLLBACK');
-        console.error('Restaurant booking error:', error);
-        res.status(500).json({ error: 'Booking failed' });
-    } finally {
-        client.release();
-    }
-});
+// NOTE: Duplicate POST /api/restaurant/book route removed (audit fix #1).
+// Multi-table booking is handled via POST /api/admin/restaurant-bookings.
 
 // POST /api/admin/restaurant-settings - Save restaurant tables & settings
 app.post('/api/admin/restaurant-settings', authMiddleware, async (req, res) => {
     const { restaurantId, tables, openingHours, settings } = req.body;
-    console.log('DEBUG: /api/admin/restaurant-settings called with:', JSON.stringify(req.body, null, 2));
+    // DEBUG log removed (audit fix #27)
 
     if (!restaurantId) {
         return res.status(400).json({ error: 'restaurantId required' });
@@ -2211,9 +2196,28 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`🚀 EVENTS API server running on http://localhost:${PORT}`);
     console.log(`📅 Calendar: http://localhost:${PORT}/api/calendar/demo-restaurant.ics`);
     console.log(`🔐 Auth: POST /api/auth/login`);
     console.log(`🛡️  Security: Rate limiting, input validation, SERIALIZABLE transactions enabled`);
 });
+
+// FIX #29: Graceful shutdown — drain connections on SIGTERM/SIGINT
+function gracefulShutdown(signal) {
+    console.log(`\n⚡ ${signal} received. Shutting down gracefully...`);
+    server.close(() => {
+        console.log('🔌 HTTP server closed');
+        pool.end().then(() => {
+            console.log('🗄️  Database pool closed');
+            process.exit(0);
+        }).catch(() => process.exit(1));
+    });
+    // Force exit after 10s if graceful shutdown hangs
+    setTimeout(() => {
+        console.error('⏰ Forced exit after timeout');
+        process.exit(1);
+    }, 10000);
+}
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));

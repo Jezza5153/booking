@@ -62,8 +62,10 @@ const App: React.FC = () => {
           }
         })
         .catch(() => {
-          // Server not reachable, allow local mode
-          setIsAuthenticated(true);
+          // FIX #20: Don't grant admin access when server is unreachable
+          console.warn('Auth verification failed: server unreachable');
+          localStorage.removeItem('events_token');
+          localStorage.removeItem('events_user');
         })
         .finally(() => setIsCheckingAuth(false));
     } else {

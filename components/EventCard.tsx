@@ -105,7 +105,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
   const handleLargeGroupInputChange = (value: string) => {
     setLargeGroupInput(value)
     const num = parseInt(value)
-    if (!isNaN(num) && num >= 7 && num <= 20) {
+    if (!isNaN(num) && num >= 7 && num <= 50) {
       setGuestCount(num)
     } else if (value === "") {
       setGuestCount(7)
