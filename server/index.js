@@ -2330,22 +2330,22 @@ app.get('/api/admin/newsletter/subscribers', authMiddleware, async (req, res) =>
 });
 
 // POST /api/admin/newsletter/send - Send promotional email to subscribers
-// Multer: store uploads in memory (max 10MB for newsletter PDFs)
+// Multer: store uploads in memory (max 10MB for newsletter images)
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
-// POST /api/admin/newsletter/send - Send newsletter (with optional PDF attachment)
+// POST /api/admin/newsletter/send - Send newsletter (with optional inline image)
 app.post('/api/admin/newsletter/send', authMiddleware, upload.single('attachment'), async (req, res) => {
     const { restaurantId, subject, message, sendToAll } = req.body;
     const rid = restaurantId || 'demo-restaurant';
-    const attachmentFile = req.file; // multer parsed file
+    const imageFile = req.file; // multer parsed file (PNG/JPG)
 
     if (!subject) {
         return res.status(400).json({ error: 'Subject is required' });
     }
 
-    // Either a message body or an attachment is required
-    if (!message && !attachmentFile) {
-        return res.status(400).json({ error: 'Message or PDF attachment is required' });
+    // Either a message body or an image is required
+    if (!message && !imageFile) {
+        return res.status(400).json({ error: 'Message or image is required' });
     }
 
     try {
@@ -2364,12 +2364,18 @@ app.post('/api/admin/newsletter/send', authMiddleware, upload.single('attachment
             return res.status(503).json({ error: 'Email service not configured' });
         }
 
-        // Build attachment array for Resend
-        const attachments = [];
-        if (attachmentFile) {
+        // Build inline image HTML if image uploaded
+        let inlineImageHtml = '';
+        let attachments = [];
+        if (imageFile) {
+            // Use CID (Content-ID) for inline embedding — works in all major email clients
+            const cid = 'newsletter-image';
+            inlineImageHtml = `<img src="cid:${cid}" alt="Nieuwsbrief" style="width: 100%; max-width: 600px; border-radius: 12px; display: block; margin: 0 auto 24px;" />`;
             attachments.push({
-                filename: attachmentFile.originalname || 'nieuwsbrief.pdf',
-                content: attachmentFile.buffer,
+                filename: imageFile.originalname || 'nieuwsbrief.png',
+                content: imageFile.buffer,
+                contentType: imageFile.mimetype || 'image/png',
+                cid: cid,
             });
         }
 
@@ -2378,50 +2384,36 @@ app.post('/api/admin/newsletter/send', authMiddleware, upload.single('attachment
         let failed = 0;
         const batchSize = 50;
         const recipients = result.rows;
+        const unsubBase = process.env.API_BASE_URL || 'https://booking-production-de35.up.railway.app';
 
         for (let i = 0; i < recipients.length; i += batchSize) {
             const batch = recipients.slice(i, i + batchSize);
 
             for (const recipient of batch) {
                 try {
-                    const emailBody = message
-                        ? `
-                            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: 0 auto; background: #0f0f0f; color: #fff; padding: 32px; border-radius: 16px;">
-                                <p style="color: #fff; font-size: 16px; margin: 0 0 20px;">Hi ${escapeHtml(recipient.name) || 'daar'},</p>
-                                
-                                <div style="color: #ccc; font-size: 14px; line-height: 1.6; margin: 0 0 24px;">
-                                    ${message.replace(/\n/g, '<br>')}
-                                </div>
-                                
-                                ${attachmentFile ? '<p style="color: #3D9970; font-size: 14px; margin: 0 0 24px;">📎 Zie de bijlage voor meer info!</p>' : ''}
-                                
-                                <p style="color: #888; font-size: 14px; margin: 0;">
-                                    Tot snel!<br>
-                                    <strong style="color: #3D9970;">De Tafelaar</strong>
-                                </p>
-                                
-                                <hr style="border: none; border-top: 1px solid #333; margin: 24px 0 16px;">
-                                <p style="color: #555; font-size: 11px; margin: 0;">
-                                    Je ontvangt deze email omdat je hebt gereserveerd bij De Tafelaar.<br>
-                                    <a href="${process.env.API_BASE_URL || 'https://booking-production-de35.up.railway.app'}/api/newsletter/unsubscribe?email=${encodeURIComponent(recipient.email)}&token=${Buffer.from(recipient.email).toString('base64')}" style="color: #666; text-decoration: underline;">Uitschrijven</a>
-                                </p>
-                            </div>
-                        `
-                        : `
-                            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: 0 auto; background: #0f0f0f; color: #fff; padding: 32px; border-radius: 16px;">
-                                <p style="color: #fff; font-size: 16px; margin: 0 0 20px;">Hi ${escapeHtml(recipient.name) || 'daar'},</p>
-                                <p style="color: #3D9970; font-size: 14px; margin: 0 0 24px;">📎 Bekijk onze nieuwsbrief in de bijlage!</p>
-                                <p style="color: #888; font-size: 14px; margin: 0;">
-                                    Tot snel!<br>
-                                    <strong style="color: #3D9970;">De Tafelaar</strong>
-                                </p>
-                                <hr style="border: none; border-top: 1px solid #333; margin: 24px 0 16px;">
-                                <p style="color: #555; font-size: 11px; margin: 0;">
-                                    Je ontvangt deze email omdat je hebt gereserveerd bij De Tafelaar.<br>
-                                    <a href="${process.env.API_BASE_URL || 'https://booking-production-de35.up.railway.app'}/api/newsletter/unsubscribe?email=${encodeURIComponent(recipient.email)}&token=${Buffer.from(recipient.email).toString('base64')}" style="color: #666; text-decoration: underline;">Uitschrijven</a>
-                                </p>
-                            </div>
-                        `;
+                    const unsubLink = `${unsubBase}/api/newsletter/unsubscribe?email=${encodeURIComponent(recipient.email)}&token=${Buffer.from(recipient.email).toString('base64')}`;
+                    const greeting = escapeHtml(recipient.name) || 'daar';
+
+                    const emailBody = `
+                        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #0f0f0f; color: #fff; padding: 32px; border-radius: 16px;">
+                            <p style="color: #fff; font-size: 16px; margin: 0 0 20px;">Hi ${greeting},</p>
+                            
+                            ${inlineImageHtml}
+                            
+                            ${message ? `<div style="color: #ccc; font-size: 14px; line-height: 1.6; margin: 0 0 24px;">${message.replace(/\n/g, '<br>')}</div>` : ''}
+                            
+                            <p style="color: #888; font-size: 14px; margin: 0;">
+                                Tot snel!<br>
+                                <strong style="color: #3D9970;">De Tafelaar</strong>
+                            </p>
+                            
+                            <hr style="border: none; border-top: 1px solid #333; margin: 24px 0 16px;">
+                            <p style="color: #555; font-size: 11px; margin: 0;">
+                                Je ontvangt deze email omdat je hebt gereserveerd bij De Tafelaar.<br>
+                                <a href="${unsubLink}" style="color: #666; text-decoration: underline;">Uitschrijven</a>
+                            </p>
+                        </div>
+                    `;
 
                     await resend.emails.send({
                         from: FROM_EMAIL,
@@ -2440,7 +2432,7 @@ app.post('/api/admin/newsletter/send', authMiddleware, upload.single('attachment
         }
 
         // Log the campaign
-        console.log(`📧 Newsletter sent: ${sent} delivered, ${failed} failed, subject: "${subject}"${attachmentFile ? ', with attachment: ' + attachmentFile.originalname : ''}`);
+        console.log(`📧 Newsletter sent: ${sent} delivered, ${failed} failed, subject: "${subject}"${imageFile ? ', with inline image: ' + imageFile.originalname : ''}`);
 
         res.json({
             success: true,

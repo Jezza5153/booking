@@ -204,12 +204,12 @@ export function Newsletter({ restaurantId }: { restaurantId: string }) {
                                     placeholder="Schrijf hier je promotionele bericht..."
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none"
                                 />
-                                <p className="text-xs text-gray-400 mt-1">Optioneel als je een PDF bijlage uploadt.</p>
+                                <p className="text-xs text-gray-400 mt-1">Optioneel als je een afbeelding uploadt.</p>
                             </div>
 
-                            {/* PDF Upload */}
+                            {/* Image Upload */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">PDF bijlage</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Nieuwsbrief afbeelding</label>
                                 {attachment ? (
                                     <div className="flex items-center gap-3 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
                                         <FileText className="w-5 h-5 text-emerald-600 flex-shrink-0" />
@@ -228,12 +228,12 @@ export function Newsletter({ restaurantId }: { restaurantId: string }) {
                                     <label className="flex items-center gap-3 p-4 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-emerald-400 hover:bg-emerald-50/50 transition-colors">
                                         <Paperclip className="w-5 h-5 text-gray-400" />
                                         <div>
-                                            <p className="text-sm font-medium text-gray-700">Upload PDF nieuwsbrief</p>
-                                            <p className="text-xs text-gray-400">Ontwerp in Canva, Pages, of Word — upload hier (max 10MB)</p>
+                                            <p className="text-sm font-medium text-gray-700">Upload nieuwsbrief afbeelding</p>
+                                            <p className="text-xs text-gray-400">Ontwerp in Canva — exporteer als PNG of JPG (max 10MB)</p>
                                         </div>
                                         <input
                                             type="file"
-                                            accept=".pdf,application/pdf"
+                                            accept="image/png,image/jpeg,image/jpg,image/webp"
                                             onChange={handleFileChange}
                                             className="hidden"
                                         />
