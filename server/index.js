@@ -2373,9 +2373,8 @@ app.post('/api/admin/newsletter/send', authMiddleware, upload.single('attachment
             inlineImageHtml = `<img src="cid:${cid}" alt="Nieuwsbrief" style="width: 100%; max-width: 600px; border-radius: 12px; display: block; margin: 0 auto 24px;" />`;
             attachments.push({
                 filename: imageFile.originalname || 'nieuwsbrief.png',
-                content: imageFile.buffer,
-                contentType: imageFile.mimetype || 'image/png',
-                cid: cid,
+                content: imageFile.buffer.toString('base64'),
+                contentId: cid,
             });
         }
 
