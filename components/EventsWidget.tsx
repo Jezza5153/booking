@@ -23,50 +23,20 @@ interface EventsWidgetProps {
 
 const DAY_ABBR = ['Zo', 'Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za']
 
-/** Compact opening hours bar — groups identical time ranges */
+/** Compact — only shows today's hours */
 const OpeningHoursBar: React.FC<{ hours: OpeningHour[] }> = ({ hours }) => {
   const today = new Date().getDay() // 0=Sun
-
-  // Group consecutive days with same hours
-  const groups: { days: number[], open: string, close: string, isOpen: boolean }[] = []
-  const sorted = [...hours].sort((a, b) => a.dayOfWeek - b.dayOfWeek)
-
-  for (const h of sorted) {
-    const last = groups[groups.length - 1]
-    if (last && last.open === h.open && last.close === h.close && last.isOpen === h.isOpen) {
-      last.days.push(h.dayOfWeek)
-    } else {
-      groups.push({ days: [h.dayOfWeek], open: h.open, close: h.close, isOpen: h.isOpen })
-    }
-  }
-
-  const formatDays = (days: number[]) => {
-    if (days.length === 1) return DAY_ABBR[days[0]]
-    return `${DAY_ABBR[days[0]]}–${DAY_ABBR[days[days.length - 1]]}`
-  }
-
-  const todayGroup = groups.find(g => g.days.includes(today))
+  const todayHours = hours.find(h => h.dayOfWeek === today)
+  if (!todayHours) return null
 
   return (
-    <div className="px-4 py-2">
-      <div className="flex items-center gap-2 text-[11px] text-white/40">
-        <Clock className="w-3 h-3 text-white/30 flex-shrink-0" />
-        <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-          {groups.map((g, i) => {
-            const isToday = g.days.includes(today)
-            return (
-              <span key={i} className={isToday ? 'text-white/70 font-medium' : ''}>
-                {formatDays(g.days)}{' '}
-                {g.isOpen ? (
-                  <span>{g.open}–{g.close}</span>
-                ) : (
-                  <span className="text-white/25">gesloten</span>
-                )}
-              </span>
-            )
-          })}
-        </div>
-      </div>
+    <div className="px-4 py-1.5 flex items-center justify-center gap-1.5 text-[11px] text-white/35">
+      <Clock className="w-3 h-3" />
+      {todayHours.isOpen ? (
+        <span>Vandaag {todayHours.open}–{todayHours.close}</span>
+      ) : (
+        <span>Vandaag gesloten</span>
+      )}
     </div>
   )
 }
@@ -296,23 +266,19 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
           )}
         </div>
 
-        {/* Compact footer — sits right under content, no dead space */}
-        <div className="relative mt-auto">
-          {/* Subtle gradient fade from content to footer */}
-          <div className="h-6 bg-gradient-to-b from-transparent to-white/[0.02]" />
-          <div className="px-4 pb-4 pt-1 flex items-center justify-center">
-            <a
-              href="https://jezzacooks.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[9px] tracking-[0.2em] uppercase text-white/20 hover:text-white/40 transition-colors duration-200"
-            >
-              Powered by{' '}
-              <span className="bg-gradient-to-r from-[#c9a227] to-[#3D9970] bg-clip-text text-transparent font-semibold">
-                jezzacooks.com
-              </span>
-            </a>
-          </div>
+        {/* Powered by — pushed to bottom of container, fills the grey area */}
+        <div className="flex-1 flex items-end justify-center pb-3 pt-4">
+          <a
+            href="https://jezzacooks.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[9px] tracking-[0.2em] uppercase text-white/20 hover:text-white/40 transition-colors duration-200"
+          >
+            Powered by{' '}
+            <span className="bg-gradient-to-r from-[#c9a227] to-[#3D9970] bg-clip-text text-transparent font-semibold">
+              jezzacooks.com
+            </span>
+          </a>
         </div>
       </div>
     </div>
