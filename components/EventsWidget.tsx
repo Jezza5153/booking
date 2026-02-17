@@ -126,7 +126,7 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
   }, [useApi, loadData])
 
   return (
-    <div className="w-full bg-[#0b0b0b] text-white font-sans">
+    <div className="w-full h-full bg-[#0b0b0b] text-white font-sans">
       {/* Fade-in animation keyframes */}
       <style>{`
         @keyframes fadeInUp {
@@ -137,7 +137,7 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
           animation: fadeInUp 0.4s ease-out both;
         }
       `}</style>
-      <div className="mx-auto max-w-[380px]">
+      <div className="mx-auto max-w-[380px] h-full flex flex-col">
         {/* Fixed Restaurant Header */}
         {showHeader && (
           <div className="sticky top-0 z-30 bg-[#0b0b0b]/80 backdrop-blur-xl">
@@ -266,18 +266,30 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
           )}
         </div>
 
-        {/* Powered by — compact, right after content */}
-        <div className="py-3 flex justify-center">
+        {/* Branded jezzacooks footer — fills remaining space */}
+        <div className="flex-1 flex flex-col items-center justify-center px-6 py-6 gap-3">
           <a
             href="https://jezzacooks.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[9px] tracking-[0.2em] uppercase text-white/20 hover:text-white/40 transition-colors duration-200"
+            className="flex flex-col items-center gap-2.5 group"
           >
-            Powered by{' '}
-            <span className="bg-gradient-to-r from-[#c9a227] to-[#b68a64] bg-clip-text text-transparent font-semibold">
-              jezzacooks.com
-            </span>
+            <img
+              src="/jezzacooks-logo.jpg"
+              alt="jezzacooks"
+              className="w-16 h-16 rounded-xl object-cover opacity-60 group-hover:opacity-80 transition-opacity duration-300"
+            />
+            <div className="text-center">
+              <div className="text-[10px] tracking-[0.25em] uppercase text-white/25">
+                Powered by
+              </div>
+              <div className="text-sm font-bold tracking-wide bg-gradient-to-r from-[#c9a227] to-[#b68a64] bg-clip-text text-transparent mt-0.5">
+                jezzacooks.com
+              </div>
+              <div className="text-[9px] text-white/20 mt-1">
+                Chef-Led Restaurant Consulting
+              </div>
+            </div>
           </a>
         </div>
       </div>
