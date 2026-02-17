@@ -178,7 +178,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
   const slotCount = event.slots.length
 
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.02]">
+    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] shadow-[0_0_0_1px_rgba(201,162,39,0.04)]">
       <div className="px-4 py-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1">

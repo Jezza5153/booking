@@ -98,14 +98,26 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
 
   return (
     <div className="w-full h-full bg-[#0b0b0b] text-white font-sans">
+      {/* Fade-in animation keyframes */}
+      <style>{`
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(12px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-up {
+          animation: fadeInUp 0.4s ease-out both;
+        }
+      `}</style>
       <div className="mx-auto max-w-[380px] h-full flex flex-col">
         {/* Fixed Restaurant Header */}
         {showHeader && (
-          <div className="sticky top-0 z-30 bg-[#0b0b0b] border-b border-white/10">
+          <div className="sticky top-0 z-30 bg-[#0b0b0b]/80 backdrop-blur-xl">
             <div className="px-4 py-3 text-center">
               <h1 className="text-lg font-bold tracking-wide text-white">{restaurantName}</h1>
               <p className="text-xs text-white/50 tracking-wide">{restaurantSubtitle}</p>
             </div>
+            {/* Subtle gradient fade instead of harsh white line */}
+            <div className="h-[1px] bg-gradient-to-r from-transparent via-white/8 to-transparent" />
           </div>
         )}
 
@@ -113,7 +125,7 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
         <div className="px-4 pt-4 pb-2">
           <button
             onClick={() => setShowRestaurantBooking(!showRestaurantBooking)}
-            className="w-full flex items-center justify-between gap-3 p-3 rounded-xl bg-[#3D9970] hover:bg-[#3D9970]/90 transition-colors"
+            className="group w-full flex items-center justify-between gap-3 p-3 rounded-xl bg-[#3D9970] hover:bg-[#3D9970]/90 transition-all duration-200 shadow-[0_0_20px_rgba(61,153,112,0.15)] hover:shadow-[0_0_30px_rgba(61,153,112,0.25)]"
           >
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
@@ -124,7 +136,7 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
                 <div className="text-[11px] text-white/70">Tafel boeken à la carte</div>
               </div>
             </div>
-            <ChevronRight className={`w-5 h-5 text-white/70 transition-transform ${showRestaurantBooking ? 'rotate-90' : ''}`} />
+            <ChevronRight className={`w-5 h-5 text-white/70 transition-transform duration-200 ${showRestaurantBooking ? 'rotate-90' : 'group-hover:translate-x-0.5'}`} />
           </button>
 
           {/* Restaurant booking flow */}
@@ -186,10 +198,10 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
               </div>
             </div>
           ) : (
-            <div className="divide-y divide-white/10">
+            <div className="divide-y divide-white/[0.06]">
               {activeEvents.length > 0 ? (
-                activeEvents.map((event) => (
-                  <div key={event.id} className="px-5 py-5">
+                activeEvents.map((event, index) => (
+                  <div key={event.id} className="px-5 py-5 animate-fade-in-up" style={{ animationDelay: `${index * 80}ms` }}>
                     <EventCard
                       event={event}
                       wijken={wijken}
@@ -219,10 +231,18 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
             </div>
           )}
 
-          <div className="py-8 flex flex-col items-center gap-2 text-white/35">
-            <div className="text-[10px] tracking-widest uppercase">
-              Powered by EVENTS
-            </div>
+          <div className="py-8 flex flex-col items-center gap-2">
+            <a
+              href="https://jezzacooks.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] tracking-widest uppercase text-white/30 hover:text-white/50 transition-colors duration-200"
+            >
+              Powered by{' '}
+              <span className="bg-gradient-to-r from-[#c9a227] to-[#3D9970] bg-clip-text text-transparent font-semibold">
+                jezzacooks.com
+              </span>
+            </a>
           </div>
         </div>
       </div>

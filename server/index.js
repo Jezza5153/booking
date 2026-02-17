@@ -1772,12 +1772,12 @@ app.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
         const { open_time, close_time, slot_duration_minutes } = openingResult.rows[0];
         const slotDuration = slot_duration_minutes || 90;
 
-        // Get tables that fit party size
+        // Get ALL active tables (needed for multi-table combination for large groups)
         const tablesResult = await pool.query(
             `SELECT id, name, seats, zone FROM restaurant_tables 
-             WHERE restaurant_id = $1 AND is_active = true AND seats >= $2
-             ORDER BY seats ASC`,
-            [restaurantId, guestCount]
+             WHERE restaurant_id = $1 AND is_active = true
+             ORDER BY seats DESC`,
+            [restaurantId]
         );
 
         // Get existing bookings
@@ -1811,12 +1811,27 @@ app.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
             const slotEndTime = `${Math.floor(slotEndMins / 60).toString().padStart(2, '0')}:${(slotEndMins % 60).toString().padStart(2, '0')}`;
 
             // Check which tables are free: a table is occupied if any existing booking overlaps
-            const availTables = tablesResult.rows.filter(t =>
+            const freeTables = tablesResult.rows.filter(t =>
                 !bookingsResult.rows.some(b => b.table_id === t.id && b.start_time < slotEndTime && b.end_time > slotTime)
             );
 
-            if (availTables.length > 0) {
-                slots.push({ time: slotTime, end_time: slotEndTime, available: availTables.length });
+            // Strategy 1: Single table fits the party
+            const singleTable = freeTables.find(t => t.seats >= guestCount);
+            if (singleTable) {
+                slots.push({ time: slotTime, end_time: slotEndTime, available: 1, tables_needed: 1 });
+                continue;
+            }
+
+            // Strategy 2: Combine multiple tables (greedy, biggest-first — already sorted DESC)
+            let totalSeats = 0;
+            let tablesUsed = 0;
+            for (const t of freeTables) {
+                totalSeats += t.seats;
+                tablesUsed++;
+                if (totalSeats >= guestCount) break;
+            }
+            if (totalSeats >= guestCount) {
+                slots.push({ time: slotTime, end_time: slotEndTime, available: 1, tables_needed: tablesUsed });
             }
         }
 
@@ -1857,25 +1872,42 @@ app.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
         const endMins = Math.min(startMins + 180, closeMins);
         const endTime = `${Math.floor(endMins / 60).toString().padStart(2, '0')}:${(endMins % 60).toString().padStart(2, '0')}`;
 
-        // Find available table
-        const tableQ = await client.query(
-            `SELECT id, name FROM restaurant_tables rt
-             WHERE rt.restaurant_id = $1 AND rt.is_active = true AND rt.seats >= $2
+        // Find available tables — get ALL active tables sorted biggest-first
+        const allTablesQ = await client.query(
+            `SELECT id, name, seats FROM restaurant_tables rt
+             WHERE rt.restaurant_id = $1 AND rt.is_active = true
              AND NOT EXISTS (
                  SELECT 1 FROM restaurant_bookings rb 
-                 WHERE rb.table_id = rt.id AND rb.booking_date = $3 AND rb.status != 'cancelled'
-                 AND rb.start_time < $5 AND rb.end_time > $4
-             ) ORDER BY rt.seats ASC LIMIT 1`,
-            [restaurant_id, guest_count, date, time, endTime]
+                 WHERE rb.table_id = rt.id AND rb.booking_date = $2 AND rb.status != 'cancelled'
+                 AND rb.start_time < $4 AND rb.end_time > $3
+             ) ORDER BY rt.seats DESC`,
+            [restaurant_id, date, time, endTime]
         );
 
-        if (tableQ.rowCount === 0) {
-            await client.query('ROLLBACK');
-            return res.status(409).json({ error: 'No tables available' });
+        const freeTables = allTablesQ.rows;
+
+        // Strategy 1: Single table fits the party
+        let selectedTables = [];
+        const singleTable = freeTables.find(t => t.seats >= guest_count);
+        if (singleTable) {
+            selectedTables = [singleTable];
+        } else {
+            // Strategy 2: Combine tables (greedy, biggest-first)
+            let totalSeats = 0;
+            for (const t of freeTables) {
+                selectedTables.push(t);
+                totalSeats += t.seats;
+                if (totalSeats >= guest_count) break;
+            }
+            if (totalSeats < guest_count) {
+                await client.query('ROLLBACK');
+                return res.status(409).json({ error: 'No tables available' });
+            }
         }
 
-        const table = tableQ.rows[0];
         const bookingId = crypto.randomUUID();
+        // For multi-table bookings, all rows share the same booking_id as group_id
+        const groupId = selectedTables.length > 1 ? bookingId : null;
 
         // Auto-create or find customer profile (CRM)
         let customerId = null;
@@ -1904,13 +1936,21 @@ app.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
             console.warn('Customer profile creation failed (non-fatal):', custErr.message);
         }
 
-        await client.query(
-            `INSERT INTO restaurant_bookings (id, restaurant_id, table_id, booking_date, start_time, end_time, guest_count, customer_name, customer_email, customer_phone, remarks, customer_id)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-            [bookingId, restaurant_id, table.id, date, time, endTime, guest_count, customer_name, customer_email, customer_phone, remarks, customerId]
-        );
+        // Insert booking row(s) — one per table used
+        for (let i = 0; i < selectedTables.length; i++) {
+            const tbl = selectedTables[i];
+            const rowId = i === 0 ? bookingId : crypto.randomUUID();
+            await client.query(
+                `INSERT INTO restaurant_bookings (id, restaurant_id, table_id, booking_date, start_time, end_time, guest_count, customer_name, customer_email, customer_phone, remarks, customer_id)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+                [rowId, restaurant_id, tbl.id, date, time, endTime, guest_count, customer_name, customer_email, customer_phone, i === 0 ? remarks : `[Groep: ${bookingId.slice(0, 8)}] ${remarks || ''}`.trim(), customerId]
+            );
+        }
 
         await client.query('COMMIT');
+
+        // Build table name string for email/response
+        const tableNames = selectedTables.map(t => t.name).join(' + ');
 
         // Format date for email
         const formattedDate = new Date(date).toLocaleDateString('nl-NL', {
@@ -1923,7 +1963,7 @@ app.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
             customerEmail: customer_email,
             customerPhone: customer_phone || null,
             remarks: remarks || null,
-            tableName: table.name,
+            tableName: tableNames,
             bookingDate: formattedDate,
             bookingTime: time,
             guestCount: guest_count,
@@ -1937,7 +1977,7 @@ app.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
             sendRestaurantBookingConfirmation(emailData).catch(err => console.error('Restaurant email failed:', err));
         }
 
-        res.status(201).json({ success: true, booking_id: bookingId, table_name: table.name, date, time });
+        res.status(201).json({ success: true, booking_id: bookingId, table_name: tableNames, tables_used: selectedTables.length, date, time });
     } catch (error) {
         await client.query('ROLLBACK');
         console.error('Restaurant booking error:', error);
@@ -2086,27 +2126,61 @@ app.post('/api/admin/restaurant-bookings', authMiddleware, async (req, res) => {
             }
         }
 
-        // Find best available table
-        const tablesResult = await pool.query(
-            `SELECT id, seats FROM tables WHERE restaurant_id = $1 AND seats >= $2 ORDER BY seats ASC LIMIT 1`,
-            [restaurantId, guest_count]
+        // Calculate end time: 180 min, capped at closing time
+        const dayOfWeek = new Date(date).getDay();
+        const openingQ = await pool.query(
+            `SELECT close_time FROM restaurant_openings WHERE restaurant_id = $1 AND day_of_week = $2 LIMIT 1`,
+            [restaurantId, dayOfWeek]
         );
-        const tableId = tablesResult.rows[0]?.id || null;
+        const closeTime = openingQ.rows[0]?.close_time || '23:59';
+        const startMins = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1]);
+        const closeMins = parseInt(closeTime.split(':')[0]) * 60 + parseInt(closeTime.split(':')[1]);
+        const endMins = Math.min(startMins + 180, closeMins);
+        const endTime = `${Math.floor(endMins / 60).toString().padStart(2, '0')}:${(endMins % 60).toString().padStart(2, '0')}`;
 
-        // Calculate end time (default 90 min)
-        const startDatetime = new Date(`${date}T${time}`);
-        const endDatetime = new Date(startDatetime.getTime() + 90 * 60 * 1000);
-        const endTime = endDatetime.toTimeString().slice(0, 5);
+        // Find available tables with overlap check (multi-table support)
+        const allTablesQ = await pool.query(
+            `SELECT id, name, seats FROM restaurant_tables rt
+             WHERE rt.restaurant_id = $1 AND rt.is_active = true
+             AND NOT EXISTS (
+                 SELECT 1 FROM restaurant_bookings rb 
+                 WHERE rb.table_id = rt.id AND rb.booking_date = $2 AND rb.status != 'cancelled'
+                 AND rb.start_time < $4 AND rb.end_time > $3
+             ) ORDER BY rt.seats DESC`,
+            [restaurantId, date, time, endTime]
+        );
 
-        // Create booking
+        const freeTables = allTablesQ.rows;
+        let selectedTables = [];
+        const singleTable = freeTables.find(t => t.seats >= guest_count);
+        if (singleTable) {
+            selectedTables = [singleTable];
+        } else {
+            let totalSeats = 0;
+            for (const t of freeTables) {
+                selectedTables.push(t);
+                totalSeats += t.seats;
+                if (totalSeats >= guest_count) break;
+            }
+            if (totalSeats < guest_count) {
+                return res.status(409).json({ error: 'No tables available for this time slot' });
+            }
+        }
+
+        // Create booking row(s)
         const bookingId = crypto.randomUUID();
-        await pool.query(
-            `INSERT INTO restaurant_bookings (id, restaurant_id, table_id, customer_id, customer_name, customer_email, customer_phone, guest_count, date, start_time, end_time, status, remarks, created_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'confirmed', $12, NOW())`,
-            [bookingId, restaurantId, tableId, customerId, customer_name, customer_email || null, customer_phone || null, guest_count, date, time, endTime, remarks || null]
-        );
+        for (let i = 0; i < selectedTables.length; i++) {
+            const tbl = selectedTables[i];
+            const rowId = i === 0 ? bookingId : crypto.randomUUID();
+            await pool.query(
+                `INSERT INTO restaurant_bookings (id, restaurant_id, table_id, customer_id, customer_name, customer_email, customer_phone, guest_count, booking_date, start_time, end_time, status, remarks, created_at)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'confirmed', $12, NOW())`,
+                [rowId, restaurantId, tbl.id, customerId, customer_name, customer_email || null, customer_phone || null, guest_count, date, time, endTime, i === 0 ? (remarks || null) : `[Groep: ${bookingId.slice(0, 8)}]`]
+            );
+        }
 
-        res.json({ success: true, booking_id: bookingId });
+        const tableNames = selectedTables.map(t => t.name).join(' + ');
+        res.json({ success: true, booking_id: bookingId, table_name: tableNames, tables_used: selectedTables.length });
     } catch (error) {
         console.error('Admin restaurant booking error:', error);
         res.status(500).json({ error: 'Failed to create booking' });
