@@ -266,28 +266,31 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
           )}
         </div>
 
-        {/* Branded jezzacooks footer — fills remaining space */}
-        <div className="flex-1 flex flex-col items-center justify-center px-6 py-8">
-          {/* Subtle separator */}
-          <div className="w-16 h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent mb-6" />
+        {/* Branded footer — brain logo blended into background */}
+        <div className="flex-1 relative overflow-hidden">
+          {/* Background brain image — faded and blended */}
+          <div className="absolute inset-0">
+            <img
+              src="/jezzacooks-brain.png"
+              alt=""
+              className="w-full h-full object-cover opacity-[0.08]"
+            />
+            {/* Top fade: blends image into widget content */}
+            <div className="absolute inset-0 bg-gradient-to-b from-[#0b0b0b] via-transparent to-[#0b0b0b]/80" />
+          </div>
+
+          {/* Text overlay */}
           <a
             href="https://jezzacooks.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex flex-col items-center gap-4 group"
+            className="relative z-10 flex flex-col items-center justify-end h-full pb-4 pt-8 group"
           >
-            <img
-              src="/jezzacooks-logo.jpg"
-              alt="jezzacooks"
-              className="w-20 h-20 rounded-2xl object-cover opacity-50 group-hover:opacity-75 transition-opacity duration-300 shadow-lg shadow-black/30"
-            />
-            <div className="text-center space-y-1.5">
-              <div className="text-sm font-bold tracking-wide bg-gradient-to-r from-[#c9a227] to-[#b68a64] bg-clip-text text-transparent">
-                jezzacooks.com
-              </div>
-              <div className="text-[9px] tracking-[0.2em] uppercase text-white/20">
-                Powered by jezzacooks
-              </div>
+            <div className="text-[9px] tracking-[0.2em] uppercase text-white/20 group-hover:text-white/35 transition-colors">
+              Powered by
+            </div>
+            <div className="text-sm font-bold tracking-wide bg-gradient-to-r from-[#c9a227] to-[#b68a64] bg-clip-text text-transparent mt-0.5">
+              jezzacooks.com
             </div>
           </a>
         </div>
