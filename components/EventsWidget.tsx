@@ -159,7 +159,7 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
         <div className="px-4 pt-4 pb-2">
           <button
             onClick={() => setShowRestaurantBooking(!showRestaurantBooking)}
-            className="group w-full flex items-center justify-between gap-3 p-3 rounded-xl bg-[#3D9970] hover:bg-[#3D9970]/90 transition-all duration-200 shadow-[0_0_20px_rgba(61,153,112,0.15)] hover:shadow-[0_0_30px_rgba(61,153,112,0.25)]"
+            className="group w-full flex items-center justify-between gap-3 p-3 rounded-xl bg-[#b68a64] hover:bg-[#c49b72] transition-all duration-200 shadow-[0_0_20px_rgba(182,138,100,0.15)] hover:shadow-[0_0_30px_rgba(182,138,100,0.25)]"
           >
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
@@ -275,7 +275,7 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
             className="text-[9px] tracking-[0.2em] uppercase text-white/20 hover:text-white/40 transition-colors duration-200"
           >
             Powered by{' '}
-            <span className="bg-gradient-to-r from-[#c9a227] to-[#3D9970] bg-clip-text text-transparent font-semibold">
+            <span className="bg-gradient-to-r from-[#c9a227] to-[#b68a64] bg-clip-text text-transparent font-semibold">
               jezzacooks.com
             </span>
           </a>

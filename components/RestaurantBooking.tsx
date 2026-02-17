@@ -155,9 +155,9 @@ export const RestaurantBooking: React.FC<RestaurantBookingProps> = ({
         `${year}-${(month + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`
 
     return (
-        <div className="bg-[#0b0b0b] rounded-xl border border-[#3D9970]/30 overflow-hidden">
+        <div className="bg-[#0b0b0b] rounded-xl border border-[#b68a64]/30 overflow-hidden">
             {/* Header */}
-            <div className="bg-[#3D9970] px-4 py-3 flex items-center justify-between">
+            <div className="bg-[#b68a64] px-4 py-3 flex items-center justify-between">
                 <div className="text-white font-semibold text-sm">Tafel Reserveren</div>
                 {step > 1 && step < 5 && (
                     <button onClick={() => setStep(step - 1)} className="text-white/80 hover:text-white text-xs flex items-center gap-1">
@@ -179,7 +179,7 @@ export const RestaurantBooking: React.FC<RestaurantBookingProps> = ({
                                     key={n}
                                     onClick={() => { setGuests(n); setStep(2) }}
                                     className={`py-2 rounded-lg text-sm font-medium transition-colors relative ${guests === n
-                                        ? 'bg-[#3D9970] text-white'
+                                        ? 'bg-[#b68a64] text-white'
                                         : 'bg-white/5 text-white/80 hover:bg-white/10'
                                         } ${n >= 7 ? 'ring-1 ring-[#c9a227]/30' : ''}`}
                                 >
@@ -235,7 +235,7 @@ export const RestaurantBooking: React.FC<RestaurantBookingProps> = ({
                                             ? isClosed && !isPast
                                                 ? 'text-white/20 cursor-not-allowed bg-red-900/10 line-through'
                                                 : 'text-white/20 cursor-not-allowed'
-                                            : isSelected ? 'bg-[#3D9970] text-white'
+                                            : isSelected ? 'bg-[#b68a64] text-white'
                                                 : 'text-white/80 hover:bg-white/10'
                                             }`}
                                     >
@@ -276,7 +276,7 @@ export const RestaurantBooking: React.FC<RestaurantBookingProps> = ({
                                             className={`py-2 rounded-lg text-sm font-medium transition-colors ${slot.disabled
                                                 ? 'bg-white/5 text-white/20 cursor-not-allowed line-through'
                                                 : selectedTime === slot.time
-                                                    ? 'bg-[#3D9970] text-white'
+                                                    ? 'bg-[#b68a64] text-white'
                                                     : 'bg-white/5 text-white/80 hover:bg-white/10'
                                                 }`}
                                         >
@@ -331,7 +331,7 @@ export const RestaurantBooking: React.FC<RestaurantBookingProps> = ({
                                 type="checkbox"
                                 checked={newsletterOptIn}
                                 onChange={e => setNewsletterOptIn(e.target.checked)}
-                                className="w-4 h-4 rounded border-white/20 bg-white/10 text-[#3D9970] focus:ring-[#3D9970] focus:ring-offset-0"
+                                className="w-4 h-4 rounded border-white/20 bg-white/10 text-[#b68a64] focus:ring-[#b68a64] focus:ring-offset-0"
                             />
                             <span className="text-white/60 text-xs">Ja, ik ontvang graag de nieuwsbrief van De Tafelaar</span>
                         </label>
@@ -339,7 +339,7 @@ export const RestaurantBooking: React.FC<RestaurantBookingProps> = ({
                         <button
                             onClick={handleSubmit}
                             disabled={!name || !email || isBooking}
-                            className="w-full py-2.5 rounded-lg bg-[#3D9970] text-white font-semibold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                            className="w-full py-2.5 rounded-lg bg-[#b68a64] text-white font-semibold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
                         >
                             {isBooking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                             Bevestig Reservering
