@@ -273,10 +273,10 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
             <img
               src="/jezzacooks-brain.png"
               alt=""
-              className="w-full h-full object-cover opacity-[0.08]"
+              className="w-full h-full object-cover opacity-[0.15]"
             />
             {/* Top fade: blends image into widget content */}
-            <div className="absolute inset-0 bg-gradient-to-b from-[#0b0b0b] via-transparent to-[#0b0b0b]/80" />
+            <div className="absolute inset-0 bg-gradient-to-b from-[#0b0b0b] via-transparent to-transparent" />
           </div>
 
           {/* Text overlay */}
