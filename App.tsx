@@ -155,7 +155,7 @@ const App: React.FC = () => {
   // EMBED MODE: Show only the public widget (no login required)
   if (embedMode) {
     return (
-      <div className="min-h-screen bg-transparent flex items-start justify-center">
+      <div className="h-full bg-transparent">
         <EventsWidget events={events} wijken={wijken} useApi={true} restaurantId={getRestaurantId()} />
       </div>
     );
