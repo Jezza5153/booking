@@ -267,27 +267,26 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
         </div>
 
         {/* Branded jezzacooks footer — fills remaining space */}
-        <div className="flex-1 flex flex-col items-center justify-center px-6 py-6 gap-3">
+        <div className="flex-1 flex flex-col items-center justify-center px-6 py-8">
+          {/* Subtle separator */}
+          <div className="w-16 h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent mb-6" />
           <a
             href="https://jezzacooks.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex flex-col items-center gap-2.5 group"
+            className="flex flex-col items-center gap-4 group"
           >
             <img
               src="/jezzacooks-logo.jpg"
               alt="jezzacooks"
-              className="w-16 h-16 rounded-xl object-cover opacity-60 group-hover:opacity-80 transition-opacity duration-300"
+              className="w-20 h-20 rounded-2xl object-cover opacity-50 group-hover:opacity-75 transition-opacity duration-300 shadow-lg shadow-black/30"
             />
-            <div className="text-center">
-              <div className="text-[10px] tracking-[0.25em] uppercase text-white/25">
-                Powered by
-              </div>
-              <div className="text-sm font-bold tracking-wide bg-gradient-to-r from-[#c9a227] to-[#b68a64] bg-clip-text text-transparent mt-0.5">
+            <div className="text-center space-y-1.5">
+              <div className="text-sm font-bold tracking-wide bg-gradient-to-r from-[#c9a227] to-[#b68a64] bg-clip-text text-transparent">
                 jezzacooks.com
               </div>
-              <div className="text-[9px] text-white/20 mt-1">
-                Chef-Led Restaurant Consulting
+              <div className="text-[9px] tracking-[0.2em] uppercase text-white/20">
+                Powered by jezzacooks
               </div>
             </div>
           </a>
