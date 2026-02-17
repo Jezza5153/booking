@@ -1470,10 +1470,19 @@ function parseSlotDateTime(dateStr, timeStr) {
 // ============================================
 
 const BOOKING_DURATION_MINS = 180; // 3-hour booking blocks
+// Slot step is intentionally 30 min (fine-grained granularity), independent of BOOKING_DURATION_MINS
+const SLOT_STEP_MINS = 30;
+
+/** Normalize any time string ("HH:MM:SS" or "HH:MM" or "H:MM") to "HH:MM" */
+function normalizeToHHMM(t) {
+    const s = (t || '00:00').trim();
+    const parts = s.split(':');
+    return parts[0].padStart(2, '0') + ':' + (parts[1] || '00').padStart(2, '0');
+}
 
 function timeToMins(t) {
-    const parts = t.split(':');
-    return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+    const n = normalizeToHHMM(t);
+    return parseInt(n.slice(0, 2)) * 60 + parseInt(n.slice(3, 5));
 }
 
 function minsToTime(m) {
@@ -1487,9 +1496,13 @@ function computeEndTime(startTime, closeTime) {
     return minsToTime(Math.min(startMins + BOOKING_DURATION_MINS, closeMins));
 }
 
-/** Check if two time intervals overlap (string comparison works for HH:MM format) */
+/** Check if two time intervals overlap. Compares as minutes to avoid format bugs. */
 function overlaps(aStart, aEnd, bStart, bEnd) {
-    return aStart < bEnd && aEnd > bStart;
+    const as = timeToMins(aStart);
+    const ae = timeToMins(aEnd);
+    const bs = timeToMins(bStart);
+    const be = timeToMins(bEnd);
+    return as < be && ae > bs;
 }
 
 /** Greedy: pick biggest tables until total seats >= guestCount. Returns null if impossible. */
@@ -1862,8 +1875,7 @@ app.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
             return res.json({ slots: [], message: 'Restaurant is closed' });
         }
 
-        const { open_time, close_time, slot_duration_minutes } = openingResult.rows[0];
-        const slotDuration = slot_duration_minutes || 90;
+        const { open_time, close_time } = openingResult.rows[0];
 
         // Get ALL active tables (sorted seats DESC for greedy combo)
         const tablesResult = await pool.query(
@@ -1876,8 +1888,9 @@ app.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
 
         // Prefetch all bookings for this day, build lookup map
         const bookingsResult = await pool.query(
-            `SELECT table_id, start_time::text, end_time::text FROM restaurant_bookings 
-             WHERE restaurant_id = $1 AND booking_date = $2 AND status != 'cancelled'`,
+            `SELECT table_id, to_char(start_time, 'HH24:MI') AS start_time, to_char(end_time, 'HH24:MI') AS end_time
+             FROM restaurant_bookings 
+             WHERE restaurant_id = $1 AND booking_date = $2 AND lower(status) != 'cancelled'`,
             [restaurantId, date]
         );
         const bookingsByTableId = buildBookingsMap(bookingsResult.rows);
@@ -1892,7 +1905,7 @@ app.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
         const isToday = bookingDate.toDateString() === now.toDateString();
         const currentMins = isToday ? now.getHours() * 60 + now.getMinutes() : 0;
 
-        for (let m = openMins; m < closeMins; m += 30) {
+        for (let m = openMins; m < closeMins; m += SLOT_STEP_MINS) {
             // Skip past time slots for today
             if (isToday && m <= currentMins) continue;
 
@@ -1941,6 +1954,12 @@ app.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
         const closeTime = openingQ.rows[0]?.close_time || '23:59';
         const endTime = computeEndTime(time, closeTime);
 
+        // Reject bookings at or after closing time (zero-length booking)
+        if (timeToMins(endTime) <= timeToMins(time)) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ error: 'Buiten openingstijden' });
+        }
+
         // 1) Fetch ALL active tables
         const allTablesQ = await client.query(
             `SELECT id, name, seats, zone FROM restaurant_tables
@@ -1952,8 +1971,9 @@ app.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
 
         // 2) Fetch existing bookings for this date, build map
         const bookingsQ = await client.query(
-            `SELECT table_id, start_time::text, end_time::text FROM restaurant_bookings
-             WHERE restaurant_id = $1 AND booking_date = $2 AND status != 'cancelled'`,
+            `SELECT table_id, to_char(start_time, 'HH24:MI') AS start_time, to_char(end_time, 'HH24:MI') AS end_time
+             FROM restaurant_bookings
+             WHERE restaurant_id = $1 AND booking_date = $2 AND lower(status) != 'cancelled'`,
             [restaurant_id, date]
         );
         const bookingsByTableId = buildBookingsMap(bookingsQ.rows);
@@ -1966,17 +1986,18 @@ app.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
         }
 
         // 4) Lock the selected table rows to prevent concurrent double-booking
-        const tableIds = selectedTables.map(t => t.id);
+        //    Sort for stable lock order (prevents deadlocks)
+        const tableIds = selectedTables.map(t => t.id).sort();
         await client.query(
-            `SELECT id FROM restaurant_tables WHERE id = ANY($1::text[]) FOR UPDATE`,
+            `SELECT id FROM restaurant_tables WHERE id::text = ANY($1::text[]) ORDER BY id FOR UPDATE`,
             [tableIds]
         );
 
         // 5) Re-check overlap AFTER acquiring locks (prevents race condition)
         const overlapCheck = await client.query(
             `SELECT 1 FROM restaurant_bookings
-             WHERE restaurant_id = $1 AND table_id = ANY($2::text[])
-             AND booking_date = $3 AND status != 'cancelled'
+             WHERE restaurant_id = $1 AND table_id::text = ANY($2::text[])
+             AND booking_date = $3 AND lower(status) != 'cancelled'
              AND start_time < $5 AND end_time > $4
              LIMIT 1`,
             [restaurant_id, tableIds, date, time, endTime]
@@ -2196,6 +2217,12 @@ app.post('/api/admin/restaurant-bookings', authMiddleware, async (req, res) => {
         const closeTime = openingQ.rows[0]?.close_time || '23:59';
         const endTime = computeEndTime(time, closeTime);
 
+        // Reject bookings at or after closing time (zero-length booking)
+        if (timeToMins(endTime) <= timeToMins(time)) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ error: 'Buiten openingstijden' });
+        }
+
         // 1) Fetch ALL active tables
         const allTablesQ = await client.query(
             `SELECT id, name, seats, zone FROM restaurant_tables
@@ -2207,8 +2234,9 @@ app.post('/api/admin/restaurant-bookings', authMiddleware, async (req, res) => {
 
         // 2) Fetch existing bookings, build map
         const bookingsQ = await client.query(
-            `SELECT table_id, start_time::text, end_time::text FROM restaurant_bookings
-             WHERE restaurant_id = $1 AND booking_date = $2 AND status != 'cancelled'`,
+            `SELECT table_id, to_char(start_time, 'HH24:MI') AS start_time, to_char(end_time, 'HH24:MI') AS end_time
+             FROM restaurant_bookings
+             WHERE restaurant_id = $1 AND booking_date = $2 AND lower(status) != 'cancelled'`,
             [restaurantId, date]
         );
         const bookingsByTableId = buildBookingsMap(bookingsQ.rows);
@@ -2220,18 +2248,18 @@ app.post('/api/admin/restaurant-bookings', authMiddleware, async (req, res) => {
             return res.status(409).json({ error: 'No tables available for this time slot' });
         }
 
-        // 4) Lock selected table rows
-        const tableIds = selectedTables.map(t => t.id);
+        // 4) Lock selected table rows (sorted for stable lock order — prevents deadlocks)
+        const tableIds = selectedTables.map(t => t.id).sort();
         await client.query(
-            `SELECT id FROM restaurant_tables WHERE id = ANY($1::text[]) FOR UPDATE`,
+            `SELECT id FROM restaurant_tables WHERE id::text = ANY($1::text[]) ORDER BY id FOR UPDATE`,
             [tableIds]
         );
 
         // 5) Re-check overlap after lock
         const overlapCheck = await client.query(
             `SELECT 1 FROM restaurant_bookings
-             WHERE restaurant_id = $1 AND table_id = ANY($2::text[])
-             AND booking_date = $3 AND status != 'cancelled'
+             WHERE restaurant_id = $1 AND table_id::text = ANY($2::text[])
+             AND booking_date = $3 AND lower(status) != 'cancelled'
              AND start_time < $5 AND end_time > $4
              LIMIT 1`,
             [restaurantId, tableIds, date, time, endTime]
@@ -2688,13 +2716,16 @@ app.use((err, req, res, next) => {
     }
 })();
 
-// Auto-migration: ensure multi-table group columns exist
+// Auto-migration: ensure multi-table group columns exist (safe to run repeatedly)
+// NOTE: migration-multi-table.sql is the canonical source of truth for this schema change
 (async () => {
     try {
         await pool.query('ALTER TABLE restaurant_bookings ADD COLUMN IF NOT EXISTS group_id TEXT');
-        await pool.query('ALTER TABLE restaurant_bookings ADD COLUMN IF NOT EXISTS is_primary BOOLEAN DEFAULT true');
+        await pool.query('ALTER TABLE restaurant_bookings ADD COLUMN IF NOT EXISTS is_primary BOOLEAN NOT NULL DEFAULT false');
+        // Backfill: existing single bookings (no group_id) should be treated as primary
+        await pool.query('UPDATE restaurant_bookings SET is_primary = true WHERE group_id IS NULL AND is_primary = false');
         await pool.query('CREATE INDEX IF NOT EXISTS idx_restaurant_bookings_group ON restaurant_bookings(group_id) WHERE group_id IS NOT NULL');
-        await pool.query(`CREATE INDEX IF NOT EXISTS idx_restaurant_bookings_overlap ON restaurant_bookings(table_id, booking_date, start_time, end_time) WHERE status != 'cancelled'`);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_restaurant_bookings_lookup ON restaurant_bookings(restaurant_id, booking_date, table_id, start_time, end_time) WHERE lower(status) != 'cancelled'`);
         console.log('✅ Multi-table group migration applied');
     } catch (e) {
         console.warn('⚠️ Multi-table migration skipped:', e.message);
