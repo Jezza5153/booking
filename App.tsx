@@ -155,7 +155,7 @@ const App: React.FC = () => {
   // EMBED MODE: Show only the public widget (no login required)
   if (embedMode) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4 flex items-start justify-center">
+      <div className="min-h-screen bg-transparent flex items-start justify-center">
         <EventsWidget events={events} wijken={wijken} useApi={true} restaurantId={getRestaurantId()} />
       </div>
     );
@@ -270,7 +270,7 @@ const App: React.FC = () => {
               </div>
 
               {/* The Live Widget Instance */}
-              <div className="bg-white rounded-3xl border border-gray-200 shadow-2xl shadow-gray-200 overflow-hidden relative min-h-[600px] h-[600px]">
+              <div className="bg-[#0b0b0b] rounded-3xl border border-white/10 shadow-2xl shadow-black/30 overflow-hidden relative min-h-[600px] h-[600px]">
                 <EventsWidget events={events} wijken={wijken} useApi={true} restaurantId={getRestaurantId()} />
               </div>
 

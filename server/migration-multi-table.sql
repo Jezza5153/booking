@@ -1,4 +1,4 @@
--- Multi-table booking: group_id and is_primary
+-- Multi-table booking: group_id, is_primary, and exclusion constraint
 -- This is the canonical migration; auto-migration in index.js mirrors this.
 
 ALTER TABLE restaurant_bookings
@@ -19,3 +19,22 @@ CREATE INDEX IF NOT EXISTS idx_restaurant_bookings_group
 CREATE INDEX IF NOT EXISTS idx_restaurant_bookings_lookup
   ON restaurant_bookings(restaurant_id, booking_date, table_id, start_time, end_time)
   WHERE lower(status) != 'cancelled';
+
+-- DB-level guarantee: no overlapping bookings per table
+-- Requires btree_gist extension for GiST index on non-range types
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
+-- '[)' means: end time == another start time is allowed (back-to-back bookings OK)
+DO $$ BEGIN
+    ALTER TABLE restaurant_bookings
+    ADD CONSTRAINT restaurant_bookings_no_overlap
+    EXCLUDE USING gist (
+        table_id WITH =,
+        tsrange(
+            (booking_date + start_time),
+            (booking_date + end_time),
+            '[)'
+        ) WITH &&
+    ) WHERE (lower(status) <> 'cancelled');
+EXCEPTION WHEN duplicate_table THEN NULL;
+END $$;

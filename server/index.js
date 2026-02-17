@@ -2077,6 +2077,10 @@ app.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
         res.status(201).json({ success: true, booking_id: primaryBookingId, group_id: groupId, table_name: tableNames, tables_used: selectedTables.length, date, time });
     } catch (error) {
         await client.query('ROLLBACK');
+        // SQLSTATE 23P01 = exclusion_violation (DB-level overlap constraint fired)
+        if (error.code === '23P01') {
+            return res.status(409).json({ error: 'Slot net geboekt door iemand anders. Kies een andere tijd.' });
+        }
         console.error('Restaurant booking error:', error);
         res.status(500).json({ error: 'Booking failed' });
     } finally {
@@ -2307,6 +2311,9 @@ app.post('/api/admin/restaurant-bookings', authMiddleware, async (req, res) => {
         res.json({ success: true, booking_id: primaryBookingId, group_id: groupId, table_name: tableNames, tables_used: selectedTables.length });
     } catch (error) {
         await client.query('ROLLBACK');
+        if (error.code === '23P01') {
+            return res.status(409).json({ error: 'Tables just booked by someone else' });
+        }
         console.error('Admin restaurant booking error:', error);
         res.status(500).json({ error: 'Failed to create booking' });
     } finally {
@@ -2726,7 +2733,24 @@ app.use((err, req, res, next) => {
         await pool.query('UPDATE restaurant_bookings SET is_primary = true WHERE group_id IS NULL AND is_primary = false');
         await pool.query('CREATE INDEX IF NOT EXISTS idx_restaurant_bookings_group ON restaurant_bookings(group_id) WHERE group_id IS NOT NULL');
         await pool.query(`CREATE INDEX IF NOT EXISTS idx_restaurant_bookings_lookup ON restaurant_bookings(restaurant_id, booking_date, table_id, start_time, end_time) WHERE lower(status) != 'cancelled'`);
-        console.log('✅ Multi-table group migration applied');
+        // Exclusion constraint: DB-level guarantee against overlapping bookings per table
+        await pool.query('CREATE EXTENSION IF NOT EXISTS btree_gist');
+        await pool.query(`
+            DO $$ BEGIN
+                ALTER TABLE restaurant_bookings
+                ADD CONSTRAINT restaurant_bookings_no_overlap
+                EXCLUDE USING gist (
+                    table_id WITH =,
+                    tsrange(
+                        (booking_date + start_time),
+                        (booking_date + end_time),
+                        '[)'
+                    ) WITH &&
+                ) WHERE (lower(status) <> 'cancelled');
+            EXCEPTION WHEN duplicate_table THEN NULL;
+            END $$;
+        `);
+        console.log('✅ Multi-table group migration + exclusion constraint applied');
     } catch (e) {
         console.warn('⚠️ Multi-table migration skipped:', e.message);
     }

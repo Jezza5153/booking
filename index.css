@@ -7,7 +7,8 @@
 /* Custom styles for the booking widget */
 body {
     font-family: 'Inter', sans-serif;
-    background-color: #f3f4f6;
+    background-color: transparent;
+    margin: 0;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
