@@ -161,7 +161,7 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto no-scrollbar pb-10">
+        <div className="overflow-y-auto no-scrollbar">
           {loading ? (
             <div className="px-5 py-8">
               <div className="flex items-center gap-3 text-white/70">
@@ -230,13 +230,18 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
               )}
             </div>
           )}
+        </div>
 
-          <div className="py-8 flex flex-col items-center gap-2">
+        {/* Compact footer — sits right under content, no dead space */}
+        <div className="relative mt-auto">
+          {/* Subtle gradient fade from content to footer */}
+          <div className="h-6 bg-gradient-to-b from-transparent to-white/[0.02]" />
+          <div className="px-4 pb-4 pt-1 flex items-center justify-center">
             <a
               href="https://jezzacooks.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[10px] tracking-widest uppercase text-white/30 hover:text-white/50 transition-colors duration-200"
+              className="text-[9px] tracking-[0.2em] uppercase text-white/20 hover:text-white/40 transition-colors duration-200"
             >
               Powered by{' '}
               <span className="bg-gradient-to-r from-[#c9a227] to-[#3D9970] bg-clip-text text-transparent font-semibold">
