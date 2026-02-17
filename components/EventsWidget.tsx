@@ -126,7 +126,7 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
   }, [useApi, loadData])
 
   return (
-    <div className="w-full h-full bg-[#0b0b0b] text-white font-sans">
+    <div className="w-full bg-[#0b0b0b] text-white font-sans">
       {/* Fade-in animation keyframes */}
       <style>{`
         @keyframes fadeInUp {
@@ -137,7 +137,7 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
           animation: fadeInUp 0.4s ease-out both;
         }
       `}</style>
-      <div className="mx-auto max-w-[380px] h-full flex flex-col">
+      <div className="mx-auto max-w-[380px]">
         {/* Fixed Restaurant Header */}
         {showHeader && (
           <div className="sticky top-0 z-30 bg-[#0b0b0b]/80 backdrop-blur-xl">
@@ -266,8 +266,8 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
           )}
         </div>
 
-        {/* Powered by — pushed to bottom of container, fills the grey area */}
-        <div className="flex-1 flex items-end justify-center pb-3 pt-4">
+        {/* Powered by — compact, right after content */}
+        <div className="py-3 flex justify-center">
           <a
             href="https://jezzacooks.com"
             target="_blank"
