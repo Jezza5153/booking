@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react"
-import { Loader2, RefreshCcw, Calendar, ChevronRight } from "lucide-react"
+import { Loader2, RefreshCcw, Calendar, ChevronRight, Clock } from "lucide-react"
 import { EventCard } from "./EventCard"
 import { RestaurantBooking } from "./RestaurantBooking"
 import { EventData, Wijk } from "../types"
 import { WIJKEN_DATA, EVENTS_DATA } from "../data"
-import { fetchWidgetData, RESTAURANT_ID } from "../api"
+import { fetchWidgetData, fetchOpeningHours, RESTAURANT_ID } from "../api"
+import type { OpeningHour } from "../api"
 
 interface EventsWidgetProps {
   events?: EventData[]
@@ -18,6 +19,56 @@ interface EventsWidgetProps {
   restaurantName?: string
   /** Restaurant subtitle */
   restaurantSubtitle?: string
+}
+
+const DAY_ABBR = ['Zo', 'Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za']
+
+/** Compact opening hours bar — groups identical time ranges */
+const OpeningHoursBar: React.FC<{ hours: OpeningHour[] }> = ({ hours }) => {
+  const today = new Date().getDay() // 0=Sun
+
+  // Group consecutive days with same hours
+  const groups: { days: number[], open: string, close: string, isOpen: boolean }[] = []
+  const sorted = [...hours].sort((a, b) => a.dayOfWeek - b.dayOfWeek)
+
+  for (const h of sorted) {
+    const last = groups[groups.length - 1]
+    if (last && last.open === h.open && last.close === h.close && last.isOpen === h.isOpen) {
+      last.days.push(h.dayOfWeek)
+    } else {
+      groups.push({ days: [h.dayOfWeek], open: h.open, close: h.close, isOpen: h.isOpen })
+    }
+  }
+
+  const formatDays = (days: number[]) => {
+    if (days.length === 1) return DAY_ABBR[days[0]]
+    return `${DAY_ABBR[days[0]]}–${DAY_ABBR[days[days.length - 1]]}`
+  }
+
+  const todayGroup = groups.find(g => g.days.includes(today))
+
+  return (
+    <div className="px-4 py-2">
+      <div className="flex items-center gap-2 text-[11px] text-white/40">
+        <Clock className="w-3 h-3 text-white/30 flex-shrink-0" />
+        <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+          {groups.map((g, i) => {
+            const isToday = g.days.includes(today)
+            return (
+              <span key={i} className={isToday ? 'text-white/70 font-medium' : ''}>
+                {formatDays(g.days)}{' '}
+                {g.isOpen ? (
+                  <span>{g.open}–{g.close}</span>
+                ) : (
+                  <span className="text-white/25">gesloten</span>
+                )}
+              </span>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export const EventsWidget: React.FC<EventsWidgetProps> = ({
@@ -34,6 +85,7 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
   const [loading, setLoading] = useState<boolean>(useApi)
   const [error, setError] = useState<string | null>(null)
   const [showRestaurantBooking, setShowRestaurantBooking] = useState(false)
+  const [openingHours, setOpeningHours] = useState<OpeningHour[]>([])
 
   const fallbackEvents = propEvents ?? EVENTS_DATA
   const fallbackWijken = propWijken ?? WIJKEN_DATA
@@ -70,6 +122,13 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
   useEffect(() => {
     if (useApi) void loadData(false)
   }, [useApi, loadData])
+
+  // Fetch opening hours
+  useEffect(() => {
+    if (useApi) {
+      fetchOpeningHours(restaurantId).then(setOpeningHours);
+    }
+  }, [useApi, restaurantId])
 
   const activeEvents = useMemo(() => {
     const now = new Date()
@@ -119,6 +178,11 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
             {/* Subtle gradient fade instead of harsh white line */}
             <div className="h-[1px] bg-gradient-to-r from-transparent via-white/8 to-transparent" />
           </div>
+        )}
+
+        {/* Compact opening hours */}
+        {openingHours.length > 0 && (
+          <OpeningHoursBar hours={openingHours} />
         )}
 
         {/* Restaurant Reservation Button (Tapla-style green) */}

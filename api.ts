@@ -160,3 +160,22 @@ export async function cancelBooking(bookingId: string): Promise<{ success: boole
     }
     return response.json();
 }
+
+// Fetch opening hours for widget display
+export interface OpeningHour {
+    dayOfWeek: number
+    open: string
+    close: string
+    isOpen: boolean
+}
+
+export async function fetchOpeningHours(restaurantId: string): Promise<OpeningHour[]> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/opening-hours`);
+        if (!response.ok) return [];
+        const data = await response.json();
+        return data.openingHours ?? [];
+    } catch {
+        return [];
+    }
+}
