@@ -37,6 +37,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [saveMessage, setSaveMessage] = useState('');
 
+  const [saveRestaurantStatus, setSaveRestaurantStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [saveRestaurantMessage, setSaveRestaurantMessage] = useState('');
+
   // Delete confirmation modal state
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'zone' | 'event' | null; id: string | null }>({ type: null, id: null });
 
@@ -60,8 +63,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
   useEffect(() => {
     const loadRestaurantSettings = async () => {
       try {
-        // Fetch tables
-        const tablesRes = await fetch(`${API_BASE_URL}/api/restaurant/${RESTAURANT_ID}/tables`);
+        // Fetch tables and opening hours in parallel
+        const [tablesRes, hoursRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/api/restaurant/${RESTAURANT_ID}/tables`),
+          fetch(`${API_BASE_URL}/api/restaurant/${RESTAURANT_ID}/opening-hours`)
+        ]);
+
         if (tablesRes.ok) {
           const data = await tablesRes.json();
           if (data.tables && data.tables.length > 0) {
@@ -69,8 +76,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
           }
         }
 
-        // Fetch opening hours
-        const hoursRes = await fetch(`${API_BASE_URL}/api/restaurant/${RESTAURANT_ID}/opening-hours`);
         if (hoursRes.ok) {
           const data = await hoursRes.json();
           if (data.openingHours && data.openingHours.length > 0) {
@@ -89,9 +94,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
     loadRestaurantSettings();
   }, []);
 
-  // Save restaurant settings
   const handleSaveRestaurantSettings = async () => {
     setSavingRestaurant(true);
+    setSaveRestaurantStatus('idle');
     try {
       const token = localStorage.getItem('events_token');
       const payload = {
@@ -100,7 +105,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
         openingHours: openingHours,
         settings: { slotDuration, maxPartySize, bufferTime }
       };
-      console.log('DEBUG: Saving restaurant settings. Payload:', payload);
 
       const response = await fetch(`${API_BASE_URL}/api/admin/restaurant-settings`, {
         method: 'POST',
@@ -111,18 +115,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
         body: JSON.stringify(payload)
       });
 
-      console.log('DEBUG: Save response status:', response.status);
       const data = await response.json();
-      console.log('DEBUG: Save response data:', data);
 
       if (!response.ok) {
         throw new Error(data.error || 'Unknown error');
       }
 
-      alert('Restaurant instellingen opgeslagen!');
-    } catch (e) {
+      setSaveRestaurantStatus('success');
+      setSaveRestaurantMessage('Instellingen opgeslagen!');
+      setTimeout(() => setSaveRestaurantStatus('idle'), 3000);
+    } catch (e: any) {
       console.error('Failed to save restaurant settings:', e);
-      alert('Opslaan mislukt');
+      setSaveRestaurantStatus('error');
+      setSaveRestaurantMessage(e.message || 'Opslaan mislukt');
+      setTimeout(() => setSaveRestaurantStatus('idle'), 5000);
     } finally {
       setSavingRestaurant(false);
     }
@@ -427,10 +433,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
           <button
             onClick={handleSaveRestaurantSettings}
             disabled={savingRestaurant}
-            className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50"
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 ${saveRestaurantStatus === 'success' ? 'bg-emerald-600 text-white' :
+                saveRestaurantStatus === 'error' ? 'bg-red-600 text-white' :
+                  'bg-emerald-600 hover:bg-emerald-700 text-white'
+              }`}
           >
-            {savingRestaurant ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Opslaan
+            {savingRestaurant ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Opslaan...</>
+            ) : saveRestaurantStatus === 'success' ? (
+              <><CheckCircle className="w-4 h-4" /> {saveRestaurantMessage}</>
+            ) : saveRestaurantStatus === 'error' ? (
+              <><XCircle className="w-4 h-4" /> {saveRestaurantMessage}</>
+            ) : (
+              <><Save className="w-4 h-4" /> Opslaan</>
+            )}
           </button>
         </div>
 
@@ -664,10 +680,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
           <button
             onClick={handleSaveRestaurantSettings}
             disabled={savingRestaurant}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg flex items-center gap-2 disabled:opacity-60"
+            className={`px-4 py-2 font-bold rounded-lg flex items-center gap-2 disabled:opacity-60 transition-colors ${saveRestaurantStatus === 'success' ? 'bg-emerald-600 text-white' :
+                saveRestaurantStatus === 'error' ? 'bg-red-600 text-white' :
+                  'bg-emerald-600 hover:bg-emerald-700 text-white'
+              }`}
           >
-            {savingRestaurant ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            {savingRestaurant ? 'Opslaan...' : 'Restaurant opslaan'}
+            {savingRestaurant ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Opslaan...</>
+            ) : saveRestaurantStatus === 'success' ? (
+              <><CheckCircle className="w-4 h-4" /> {saveRestaurantMessage}</>
+            ) : saveRestaurantStatus === 'error' ? (
+              <><XCircle className="w-4 h-4" /> {saveRestaurantMessage}</>
+            ) : (
+              <><Save className="w-4 h-4" /> Restaurant opslaan</>
+            )}
           </button>
         </div>
       </div>

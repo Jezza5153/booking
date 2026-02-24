@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
 import dotenv from 'dotenv';
+import { escapeHtml } from './utils.js';
 
 dotenv.config();
 
@@ -20,16 +21,7 @@ console.log(`   - Resend API: ${resend ? '✓ Configured' : '✗ NOT CONFIGURED'
 console.log(`   - Admin Email: ${ADMIN_EMAIL}`);
 console.log(`   - From Email: ${FROM_EMAIL}`);
 
-// HTML escape helper to prevent XSS in emails
-const escapeHtml = (str) => {
-    if (!str) return '';
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-};
+// HTML escape helper imported from utils.js
 
 // ============================================
 // EVENT BOOKING CONFIRMATION (1-6 guests)

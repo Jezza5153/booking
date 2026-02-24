@@ -40,3 +40,5 @@ dist-ssr
 # Secrets
 *.pem
 *.key
+.vercel
+.env*.local

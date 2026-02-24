@@ -1,7 +1,7 @@
 // API Configuration
 // Use environment variable if available, otherwise fallback to production API
 export const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://booking-production-de35.up.railway.app';
-export const RESTAURANT_ID = 'demo-restaurant';
+export const RESTAURANT_ID = import.meta.env.VITE_RESTAURANT_ID || 'demo-restaurant';
 
 // Fetch widget data
 export async function fetchWidgetData(restaurantId: string) {
@@ -95,10 +95,7 @@ export async function saveAdminData(data: SaveAdminDataRequest): Promise<{ succe
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-            ...data,
-            force: true // Always allow intentional admin changes
-        }),
+        body: JSON.stringify(data),
     });
 
     if (!response.ok) {

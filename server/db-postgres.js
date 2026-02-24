@@ -14,12 +14,15 @@ if (!process.env.DATABASE_URL) {
 
 const { Pool } = pg;
 
-// Create PostgreSQL connection pool
+// Create PostgreSQL connection pool with production-safe settings
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: {
-        rejectUnauthorized: false
-    }
+        rejectUnauthorized: process.env.NODE_ENV === 'production'
+    },
+    max: parseInt(process.env.DB_POOL_MAX || '10', 10),
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 5000,
 });
 
 // Test connection

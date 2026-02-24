@@ -3,7 +3,11 @@
     "type": "module",
     "scripts": {
         "start": "node index.js",
-        "seed": "node seed.js"
+        "seed": "node seed.js",
+        "test": "node ../tests/concurrency-test.js && node ../tests/dst-tests.js"
+    },
+    "engines": {
+        "node": ">=20"
     },
     "dependencies": {
         "@sentry/node": "^10.35.0",

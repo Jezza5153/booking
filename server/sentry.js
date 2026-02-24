@@ -33,8 +33,13 @@ export function initSentry(app) {
 export function sentryErrorHandler(app) {
     if (!sentryInitialized) return;
 
-    // The error handler must be before any other error middleware and after all controllers
-    app.use(Sentry.Handlers.errorHandler());
+    // Use modern Sentry Express error handler (Handlers.errorHandler is deprecated in v10+)
+    if (typeof Sentry.setupExpressErrorHandler === 'function') {
+        Sentry.setupExpressErrorHandler(app);
+    } else {
+        // Fallback for older Sentry versions
+        app.use(Sentry.Handlers.errorHandler());
+    }
 }
 
 export function captureException(error, context = {}) {

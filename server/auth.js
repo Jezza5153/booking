@@ -37,15 +37,19 @@ export async function verifyCredentials(username, password) {
             [username]
         );
 
-        console.log('[AUTH] Database query returned', result.rows.length, 'rows');
-        if (result.rows.length > 0) {
-            console.log('[AUTH] Found user:', result.rows[0].username, 'restaurant:', result.rows[0].restaurant_id);
+        if (process.env.NODE_ENV !== 'production') {
+            console.log('[AUTH] Database query returned', result.rows.length, 'rows');
+            if (result.rows.length > 0) {
+                console.log('[AUTH] Found user:', result.rows[0].username, 'restaurant:', result.rows[0].restaurant_id);
+            }
         }
 
         if (result.rows.length > 0) {
             const user = result.rows[0];
             const isValid = await bcrypt.compare(password, user.password_hash);
-            console.log('[AUTH] Password comparison result:', isValid);
+            if (process.env.NODE_ENV !== 'production') {
+                console.log('[AUTH] Password comparison result:', isValid);
+            }
             if (isValid) {
                 // Update last_login
                 await pool.query(
@@ -72,13 +76,13 @@ export async function verifyCredentials(username, password) {
             return { valid: false };
         }
 
-        // Support both hashed and unhashed fallback passwords
+        // P2 FIX #22: Only accept bcrypt-hashed passwords (no plain-text fallback)
         let isValid = false;
         if (FALLBACK_PASSWORD.startsWith('$2')) {
             isValid = await bcrypt.compare(password, FALLBACK_PASSWORD);
         } else {
-            // Plain text comparison (not recommended for production)
-            isValid = password === FALLBACK_PASSWORD;
+            console.warn('[AUTH] FALLBACK PASSWORD IS NOT BCRYPT-HASHED — login rejected. Hash it with: npx bcrypt-cli hash "password"');
+            isValid = false;
         }
 
         if (isValid) {

@@ -2,6 +2,23 @@
 @tailwind components;
 @tailwind utilities;
 
+/* PERF: Fade-in animation (moved from inline JSX <style> to avoid re-injection) */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in-up {
+    animation: fadeInUp 0.4s ease-out both;
+}
+
 /* EVENTS Booking Widget Styles */
 
 /* Custom styles for the booking widget */
