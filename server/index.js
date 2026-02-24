@@ -106,8 +106,8 @@ app.use((req, res, next) => {
 // AUTH ROUTES (Public, Rate Limited)
 // ============================================
 app.use('/api/auth', authRoutes);
-app.use('/api', publicRoutes);
-app.use('/api', adminRoutes);
+app.use('/', publicRoutes);
+app.use('/', adminRoutes);
 
 // ============================================
 // PUBLIC ROUTES (Rate Limited)
