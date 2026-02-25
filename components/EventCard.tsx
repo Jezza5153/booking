@@ -48,12 +48,16 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
     table_type: string
   } | null>(null)
 
+  const wijkById = useMemo(() => {
+    return new Map(wijken.map((wijk) => [wijk.id, wijk]))
+  }, [wijken])
+
   const selectedSlot = useMemo(() => event.slots.find((s) => s.id === selectedSlotId) ?? null, [event.slots, selectedSlotId])
 
   const wijk = useMemo(() => {
     if (!selectedSlot) return null
-    return wijken.find((w) => w.id === selectedSlot.wijkId) ?? null
-  }, [selectedSlot, wijken])
+    return wijkById.get(selectedSlot.wijkId) ?? null
+  }, [selectedSlot, wijkById])
 
   const availability = useMemo(() => {
     if (!selectedSlot || !wijk) return { free2: 0, free4: 0, free6: 0 }
@@ -207,7 +211,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
           {slotCount <= 3 ? (
             <div className="flex flex-wrap gap-3 justify-center">
               {event.slots.map((slot) => {
-                const slotWijk = wijken.find(w => w.id === slot.wijkId)
+                const slotWijk = wijkById.get(slot.wijkId)
                 return (
                   <div key={slot.id} className="min-w-[120px]">
                     <SlotBubble slot={slot} wijk={slotWijk} isSelected={selectedSlotId === slot.id} onClick={() => handleSlotClick(slot.id)} />
@@ -218,7 +222,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
           ) : (
             <div className="grid grid-cols-4 min-[500px]:grid-cols-5 gap-3" role="group" aria-label={`Tijdsloten voor ${event.title}`}>
               {event.slots.map((slot) => {
-                const slotWijk = wijken.find(w => w.id === slot.wijkId)
+                const slotWijk = wijkById.get(slot.wijkId)
                 return <SlotBubble key={slot.id} slot={slot} wijk={slotWijk} isSelected={selectedSlotId === slot.id} onClick={() => handleSlotClick(slot.id)} />
               })}
             </div>

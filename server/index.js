@@ -4,7 +4,7 @@ import cors from 'cors';
 import crypto from 'crypto';
 import helmet from 'helmet';
 import pool from './db-postgres.js';
-import { escapeHtml, sanitizeString, validateRestaurantId, generateUnsubscribeToken } from './utils.js';
+import { escapeHtml, sanitizeString, validateRestaurantId, generateUnsubscribeToken, buildBookingsMap } from './utils.js';
 import { authMiddleware } from './auth.js';
 import authRoutes from './routes/auth.js';
 import publicRoutes from './routes/public.js';
@@ -49,6 +49,7 @@ app.set('trust proxy', 1);
 const DEFAULT_ALLOWED_ORIGINS = [
     'https://events-widget.vercel.app',
     'https://booking-widget-frontendbooking.vercel.app',
+    'https://booking-roan-eta.vercel.app',
     'https://detafelaar.nl',
     'https://www.detafelaar.nl',
     'http://localhost:5173',  // Vite dev server
@@ -72,6 +73,7 @@ const ALLOWED_ORIGINS = Array.from(new Set([
 const ALLOWED_ORIGIN_PATTERNS = [
     /^https:\/\/booking-widget-frontendbooking(?:-[a-z0-9-]+)?\.vercel\.app$/i,
     /^https:\/\/events-widget(?:-[a-z0-9-]+)?\.vercel\.app$/i,
+    /^https:\/\/booking(?:-[a-z0-9-]+)?\.vercel\.app$/i,
 ];
 
 const FRAME_ANCESTORS = Array.from(new Set([
@@ -139,225 +141,7 @@ app.use('/', adminRoutes);
 // NOTE: Idempotency is handled at the DB level via unique constraint on idempotency_key.
 // In-memory cache removed (audit fix #13/#21) — it didn't survive restarts or work across instances.
 
-// ============================================
-// TABLE ALLOCATION: Greedy algorithm for large groups
-// ============================================
-// Finds optimal table combination for guest_count
-// Returns: { tables: [{seats: 6, count: 1}, {seats: 4, count: 1}], totalSeats: 10 } or null if impossible
-function allocateTables(guestCount, available2, available4, available6) {
-    // Greedy: prefer larger tables first to minimize table count
-    const tables = [];
-    let remaining = guestCount;
-
-    // Use 6-tops first
-    const need6 = Math.min(Math.floor(remaining / 6), available6);
-    if (need6 > 0) {
-        tables.push({ seats: 6, count: need6 });
-        remaining -= need6 * 6;
-    }
-
-    // Use 4-tops next
-    const need4 = Math.min(Math.floor(remaining / 4), available4);
-    if (need4 > 0) {
-        tables.push({ seats: 4, count: need4 });
-        remaining -= need4 * 4;
-    }
-
-    // Use 2-tops for remainder
-    const need2 = Math.min(Math.ceil(remaining / 2), available2);
-    if (need2 > 0) {
-        tables.push({ seats: 2, count: need2 });
-        remaining -= need2 * 2;
-    }
-
-    // Check if we can fit everyone (allow slight overflow from last table)
-    if (remaining > 0) {
-        // Not enough tables - try different approach with partial 4-top or 6-top
-        // Reset and try filling with partial larger tables
-        remaining = guestCount;
-        tables.length = 0;
-
-        // Calculate minimum tables needed with overfill allowed
-        let use6 = Math.min(Math.ceil(remaining / 6), available6);
-        if (use6 * 6 >= remaining) {
-            tables.push({ seats: 6, count: use6 });
-            remaining = 0;
-        } else {
-            if (use6 > 0) {
-                tables.push({ seats: 6, count: use6 });
-                remaining -= use6 * 6;
-            }
-            let use4 = Math.min(Math.ceil(remaining / 4), available4);
-            if (use4 * 4 >= remaining) {
-                tables.push({ seats: 4, count: use4 });
-                remaining = 0;
-            } else {
-                if (use4 > 0) {
-                    tables.push({ seats: 4, count: use4 });
-                    remaining -= use4 * 4;
-                }
-                let use2 = Math.min(Math.ceil(remaining / 2), available2);
-                if (use2 * 2 >= remaining) {
-                    tables.push({ seats: 2, count: use2 });
-                    remaining = 0;
-                }
-            }
-        }
-    }
-
-    if (remaining > 0) {
-        return null; // Cannot allocate - not enough tables
-    }
-
-    const totalSeats = tables.reduce((sum, t) => sum + t.seats * t.count, 0);
-    return { tables, totalSeats };
-}
-
-// POST /api/book - Book a table (public, rate limited)
-// Uses atomic capacity update and DB-level idempotency
-// Supports both regular bookings (1-6) and large groups (7+)
-
-// GET /api/calendar/:restaurantId.ics - iCal feed (public, rate limited)
-
-// Health check with DB connectivity verification
-
-// GET /api/events - Public events endpoint for widget
-
-// ============================================
-// PROTECTED ADMIN ROUTES (Auth required)
-// ============================================
-app.use('/api/admin', authMiddleware);
-
-// Example: Get all events for admin
-// P0-7 FIX: Scope to restaurant
-
-// P0-3: Dedicated admin data endpoint with raw ISO dates for editing
-
-// Clear all events and slots (Admin - for fresh start)
-// FIX #19: Requires confirm=true to prevent accidental deletion
-
-// Cancel a booking (Admin only) - marks cancelled, decrements slot counter
-// SECURITY: Tenant-scoped, atomic, race-safe
-// FIX #41: Added missing authMiddleware
-
-// Get all bookings for admin view with filtering, search, and pagination
-// Returns { bookings, total, limit, offset } for proper pagination
-// FIX #31: Added authMiddleware — this endpoint exposes PII (names, emails, phones)
-
-// GET /api/admin/stats - Aggregated stats for dashboard (efficient server-side)
-
-// Reconciliation endpoint - verify slot counters match booking counts
-// GET /api/admin/reconcile?restaurantId=xxx&repair=true
-
-// Save zones and events (Admin) - FULL SYNC with SAFETY RAILS
-
-
-
-// ============================================
-// TABLE SELECTION HELPERS (shared by availability + booking endpoints)
-// ============================================
-
-const BOOKING_DURATION_MINS = 180; // 3-hour booking blocks
-// Slot step is intentionally 30 min (fine-grained granularity), independent of BOOKING_DURATION_MINS
-const SLOT_STEP_MINS = 30;
-
-/** Normalize any time string ("HH:MM:SS" or "HH:MM" or "H:MM") to "HH:MM" */
-function normalizeToHHMM(t) {
-    const s = (t || '00:00').trim();
-    const parts = s.split(':');
-    return parts[0].padStart(2, '0') + ':' + (parts[1] || '00').padStart(2, '0');
-}
-
-function timeToMins(t) {
-    const n = normalizeToHHMM(t);
-    return parseInt(n.slice(0, 2)) * 60 + parseInt(n.slice(3, 5));
-}
-
-function minsToTime(m) {
-    return `${Math.floor(m / 60).toString().padStart(2, '0')}:${(m % 60).toString().padStart(2, '0')}`;
-}
-
-/** Compute booking end time, capped at closing */
-function computeEndTime(startTime, closeTime) {
-    const startMins = timeToMins(startTime);
-    const closeMins = timeToMins(closeTime);
-    return minsToTime(Math.min(startMins + BOOKING_DURATION_MINS, closeMins));
-}
-
-/** Check if two time intervals overlap. Compares as minutes to avoid format bugs. */
-function overlaps(aStart, aEnd, bStart, bEnd) {
-    const as = timeToMins(aStart);
-    const ae = timeToMins(aEnd);
-    const bs = timeToMins(bStart);
-    const be = timeToMins(bEnd);
-    return as < be && ae > bs;
-}
-
-/** Greedy: pick biggest tables until total seats >= guestCount. Returns null if impossible. */
-function pickTablesGreedy(freeTables, guestCount) {
-    let total = 0;
-    const picked = [];
-    for (const t of freeTables) {
-        picked.push(t);
-        total += t.seats;
-        if (total >= guestCount) return picked;
-    }
-    return null; // not enough seats
-}
-
-/**
- * Single source of truth for table selection.
- * Prefer single table → same-zone combo → cross-zone combo.
- * 
- * @param {Object[]} allTables - All active tables, sorted seats DESC
- * @param {Map} bookingsByTableId - Map<tableId, Array<{start_time, end_time}>>
- * @param {string} slotStart - HH:MM
- * @param {string} slotEnd - HH:MM
- * @param {number} guestCount
- * @returns {Object[]|null} Selected tables, or null if unavailable
- */
-function selectTablesForSlot({ allTables, bookingsByTableId, slotStart, slotEnd, guestCount }) {
-    const isFree = (t) => {
-        const intervals = bookingsByTableId.get(t.id) || [];
-        for (const b of intervals) {
-            if (overlaps(b.start_time, b.end_time, slotStart, slotEnd)) return false;
-        }
-        return true;
-    };
-
-    const freeTables = allTables.filter(isFree);
-
-    // 1) Single table fits
-    const single = freeTables.find(t => t.seats >= guestCount);
-    if (single) return [single];
-
-    // 2) Combine within a zone first (less operational fragmentation)
-    const byZone = new Map();
-    for (const t of freeTables) {
-        const z = t.zone || '__NO_ZONE__';
-        if (!byZone.has(z)) byZone.set(z, []);
-        byZone.get(z).push(t);
-    }
-    for (const [, zoneTables] of byZone.entries()) {
-        zoneTables.sort((a, b) => b.seats - a.seats);
-        const picked = pickTablesGreedy(zoneTables, guestCount);
-        if (picked) return picked;
-    }
-
-    // 3) Combine across zones
-    freeTables.sort((a, b) => b.seats - a.seats);
-    return pickTablesGreedy(freeTables, guestCount);
-}
-
-/** Build a Map<tableId, bookingIntervals[]> from a booking query result */
-function buildBookingsMap(bookingsRows) {
-    const map = new Map();
-    for (const b of bookingsRows) {
-        if (!map.has(b.table_id)) map.set(b.table_id, []);
-        map.get(b.table_id).push({ start_time: b.start_time, end_time: b.end_time });
-    }
-    return map;
-}
+// Table helpers consolidated in utils.js (imported by routes/public.js and routes/admin.js)
 
 // ============================================
 // RESTAURANT BOOKING SYSTEM

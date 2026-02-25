@@ -1,11 +1,16 @@
 import { EventData, Wijk } from './types';
 
 // API Configuration
-// Prefer same-origin API in production so Vercel can cache /api/* responses via rewrites.
+// Prefer same-origin API in production so the widget avoids CORS and can use /api rewrites.
 const REMOTE_PROD_API = 'https://booking-production-de35.up.railway.app';
 const runtimeOrigin = typeof window !== 'undefined' ? window.location.origin : '';
-export const API_BASE_URL = import.meta.env.VITE_API_URL
-    || ((!import.meta.env.DEV && runtimeOrigin) ? runtimeOrigin : REMOTE_PROD_API);
+const explicitApiBase = import.meta.env.VITE_API_URL;
+const forceRemoteApi = import.meta.env.VITE_FORCE_REMOTE_API === 'true';
+const isLocalRuntimeOrigin = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(runtimeOrigin);
+const useSameOriginApi = !import.meta.env.DEV && Boolean(runtimeOrigin) && !forceRemoteApi && !isLocalRuntimeOrigin;
+export const API_BASE_URL = useSameOriginApi
+    ? runtimeOrigin
+    : (explicitApiBase || REMOTE_PROD_API);
 export const RESTAURANT_ID = import.meta.env.VITE_RESTAURANT_ID || 'demo-restaurant';
 
 // Fetch opening hours for widget display
@@ -310,9 +315,14 @@ export async function cancelBooking(bookingId: string): Promise<{ success: boole
     return response.json();
 }
 
-export async function fetchOpeningHours(restaurantId: string): Promise<OpeningHour[]> {
+export async function fetchOpeningHours(
+    restaurantId: string,
+    options: { signal?: AbortSignal } = {}
+): Promise<OpeningHour[]> {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/opening-hours`);
+        const response = await fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/opening-hours`, {
+            signal: options.signal,
+        });
         if (!response.ok) return [];
         const data = await response.json();
         return data.openingHours ?? [];

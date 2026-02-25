@@ -12,7 +12,7 @@ async function run() {
         const sql = fs.readFileSync('server/migration-performance-public-endpoints.sql', 'utf8');
         await pool.query(sql);
         console.log("Migration executed successfully!");
-    } catch (err) {
+    } catch(err) {
         console.error("Migration failed:", err);
     } finally {
         await pool.end();

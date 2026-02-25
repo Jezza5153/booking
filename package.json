@@ -7,13 +7,16 @@
     "dev": "vite",
     "dev:server": "node server/index.js",
     "dev:full": "concurrently \"npm run dev\" \"npm run dev:server\"",
-    "build": "vite build",
+    "build": "npm run build:admin && npm run build:widget && cp -R dist-widget/. dist/",
+    "build:admin": "vite build --config vite.admin.config.ts",
+    "build:widget": "vite build --config vite.widget.config.ts",
     "preview": "vite preview",
     "keepalive:ping": "node scripts/ping-backend.mjs"
   },
   "dependencies": {
     "@sentry/react": "^10.35.0",
     "lucide-react": "^0.562.0",
+    "preact": "^10.28.4",
     "react": "^19.2.3",
     "react-dom": "^19.2.3"
   },

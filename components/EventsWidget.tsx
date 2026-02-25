@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react"
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Loader2, RefreshCcw, Calendar, ChevronRight, Clock } from "lucide-react"
 import { EventCard } from "./EventCard"
 import { EventData, Wijk } from "../types"
@@ -58,6 +58,8 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
   const [error, setError] = useState<string | null>(null)
   const [showRestaurantBooking, setShowRestaurantBooking] = useState(false)
   const [openingHours, setOpeningHours] = useState<OpeningHour[]>([])
+  const widgetIncludesOpeningHours = useRef<boolean | null>(null)
+  const eventsScrollerRef = useRef<HTMLDivElement | null>(null)
 
   const fallbackEvents = propEvents ?? EVENTS_DATA
   const fallbackWijken = propWijken ?? WIJKEN_DATA
@@ -73,16 +75,34 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
     }
   }, [])
 
-  // Preload the booking flow chunk shortly after widget render.
+  const [showFooterImage, setShowFooterImage] = useState(false)
+
+  // Keep initial paint light: load decorative footer image only after user scroll intent
+  // (with a long fallback so branding still appears eventually).
   useEffect(() => {
-    const prefetchTimer = window.setTimeout(() => {
-      void loadRestaurantBookingModule()
-    }, 1200)
+    if (showFooterImage) return
+
+    const scroller = eventsScrollerRef.current
+    const onScrollIntent = () => {
+      if (!scroller) return
+      const hasMeaningfulScroll = scroller.scrollTop > 24
+      const nearBottom = (scroller.scrollHeight - (scroller.scrollTop + scroller.clientHeight)) < 140
+      if (hasMeaningfulScroll || nearBottom) {
+        setShowFooterImage(true)
+      }
+    }
+
+    scroller?.addEventListener('scroll', onScrollIntent, { passive: true })
+
+    const fallbackId = window.setTimeout(() => {
+      setShowFooterImage(true)
+    }, 12_000)
 
     return () => {
-      window.clearTimeout(prefetchTimer)
+      scroller?.removeEventListener('scroll', onScrollIntent)
+      window.clearTimeout(fallbackId)
     }
-  }, [])
+  }, [showFooterImage])
 
   const loadData = useCallback(async (options: {
     silentRefresh?: boolean
@@ -98,13 +118,25 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
     setError(null)
 
     try {
+      // Until all environments return openingHours from /api/widget, prefetch fallback in parallel
+      // to avoid a waterfall on first paint.
+      const shouldPrefetchOpeningHours = widgetIncludesOpeningHours.current !== true
+      const openingHoursPromise = shouldPrefetchOpeningHours
+        ? fetchOpeningHours(restaurantId, { signal })
+        : null
+
       const data = await fetchWidgetData(restaurantId, { forceRefresh, signal })
       if (signal?.aborted) return
       applyWidgetData(data)
 
-      // Backward-compatible fallback while older backend versions are still deployed.
-      if (!Array.isArray(data.openingHours)) {
-        const hours = await fetchOpeningHours(restaurantId)
+      if (Array.isArray(data.openingHours)) {
+        widgetIncludesOpeningHours.current = true
+        setOpeningHours(data.openingHours)
+      } else {
+        widgetIncludesOpeningHours.current = false
+        const hours = openingHoursPromise
+          ? await openingHoursPromise
+          : await fetchOpeningHours(restaurantId, { signal })
         if (signal?.aborted) return
         setOpeningHours(hours)
       }
@@ -198,6 +230,8 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
         <div className="px-4 pt-4 pb-2">
           <button
             onClick={() => setShowRestaurantBooking(!showRestaurantBooking)}
+            onMouseEnter={() => { void loadRestaurantBookingModule() }}
+            onFocus={() => { void loadRestaurantBookingModule() }}
             className="group w-full flex items-center justify-between gap-3 p-3 rounded-xl bg-[#b68a64] hover:bg-[#c49b72] transition-all duration-200 shadow-[0_0_20px_rgba(182,138,100,0.15)] hover:shadow-[0_0_30px_rgba(182,138,100,0.25)]"
           >
             <div className="flex items-center gap-3">
@@ -241,7 +275,7 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
           </div>
         </div>
 
-        <div className="overflow-y-auto no-scrollbar">
+        <div ref={eventsScrollerRef} className="overflow-y-auto no-scrollbar">
           {loading ? (
             <div className="px-5 py-8">
               <div className="flex items-center gap-3 text-white/70">
@@ -316,11 +350,18 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
         <div className="flex-1 relative overflow-hidden">
           {/* Background brain image — faded and blended */}
           <div className="absolute inset-0">
-            <img
-              src="/jezzacooks-brain.png"
-              alt=""
-              className="w-full h-full object-cover opacity-[0.15]"
-            />
+            {showFooterImage ? (
+              <img
+                src="/jezzacooks-brain.jpg"
+                alt=""
+                width={726}
+                height={504}
+                loading="lazy"
+                decoding="async"
+                fetchPriority="low"
+                className="w-full h-full object-cover opacity-[0.15]"
+              />
+            ) : null}
             {/* Top fade: blends image into widget content */}
             <div className="absolute inset-0 bg-gradient-to-b from-[#0b0b0b] via-transparent to-transparent" />
           </div>

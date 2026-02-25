@@ -4,7 +4,7 @@ import { authMiddleware } from '../auth.js';
 import { bookingRateLimiter, widgetRateLimiter, calendarRateLimiter } from '../ratelimit.js';
 import { captureException } from '../sentry.js';
 import { sendBookingConfirmation, sendLargeGroupNotification, sendRestaurantBookingConfirmation, sendChefsChoiceNotification } from '../email.js';
-import { escapeHtml, sanitizeString, validateRestaurantId, generateUnsubscribeToken, buildBookingsMap } from '../utils.js';
+import { escapeHtml, sanitizeString, validateRestaurantId, generateUnsubscribeToken, buildBookingsMap, allocateTables, normalizeToHHMM, timeToMins, minsToTime, computeEndTime, overlaps, pickTablesGreedy, selectTablesForSlot, BOOKING_DURATION_MINS, SLOT_STEP_MINS } from '../utils.js';
 import { getCachedValue, invalidatePublicCacheForRestaurant } from '../public-cache.js';
 import multer from 'multer';
 const upload = multer({ storage: multer.memoryStorage() });
@@ -15,143 +15,7 @@ function setPublicCacheHeaders(res, { maxAge = 10, sMaxAge = 30, staleWhileReval
     res.set('Cache-Control', `public, max-age=${maxAge}, s-maxage=${sMaxAge}, stale-while-revalidate=${staleWhileRevalidate}`);
 }
 
-// ============================================
-// TABLE ALLOCATION: Greedy algorithm for large groups
-// ============================================
-function allocateTables(guestCount, available2, available4, available6) {
-    const tables = [];
-    let remaining = guestCount;
-
-    const need6 = Math.min(Math.floor(remaining / 6), available6);
-    if (need6 > 0) {
-        tables.push({ seats: 6, count: need6 });
-        remaining -= need6 * 6;
-    }
-
-    const need4 = Math.min(Math.floor(remaining / 4), available4);
-    if (need4 > 0) {
-        tables.push({ seats: 4, count: need4 });
-        remaining -= need4 * 4;
-    }
-
-    const need2 = Math.min(Math.ceil(remaining / 2), available2);
-    if (need2 > 0) {
-        tables.push({ seats: 2, count: need2 });
-        remaining -= need2 * 2;
-    }
-
-    if (remaining > 0) {
-        remaining = guestCount;
-        tables.length = 0;
-
-        const use6 = Math.min(Math.ceil(remaining / 6), available6);
-        if (use6 * 6 >= remaining) {
-            tables.push({ seats: 6, count: use6 });
-            remaining = 0;
-        } else {
-            if (use6 > 0) {
-                tables.push({ seats: 6, count: use6 });
-                remaining -= use6 * 6;
-            }
-            const use4 = Math.min(Math.ceil(remaining / 4), available4);
-            if (use4 * 4 >= remaining) {
-                tables.push({ seats: 4, count: use4 });
-                remaining = 0;
-            } else {
-                if (use4 > 0) {
-                    tables.push({ seats: 4, count: use4 });
-                    remaining -= use4 * 4;
-                }
-                const use2 = Math.min(Math.ceil(remaining / 2), available2);
-                if (use2 * 2 >= remaining) {
-                    tables.push({ seats: 2, count: use2 });
-                    remaining = 0;
-                }
-            }
-        }
-    }
-
-    if (remaining > 0) return null;
-
-    const totalSeats = tables.reduce((sum, t) => sum + t.seats * t.count, 0);
-    return { tables, totalSeats };
-}
-
-// ============================================
-// TABLE SELECTION HELPERS (shared by availability + booking endpoints)
-// ============================================
-const BOOKING_DURATION_MINS = 180; // 3-hour booking blocks
-const SLOT_STEP_MINS = 30;
-
-function normalizeToHHMM(t) {
-    const s = String(t || '00:00').trim();
-    const parts = s.split(':');
-    return parts[0].padStart(2, '0') + ':' + (parts[1] || '00').padStart(2, '0');
-}
-
-function timeToMins(t) {
-    const n = normalizeToHHMM(t);
-    return parseInt(n.slice(0, 2), 10) * 60 + parseInt(n.slice(3, 5), 10);
-}
-
-function minsToTime(m) {
-    return `${Math.floor(m / 60).toString().padStart(2, '0')}:${(m % 60).toString().padStart(2, '0')}`;
-}
-
-function computeEndTime(startTime, closeTime) {
-    const startMins = timeToMins(startTime);
-    const closeMins = timeToMins(closeTime);
-    return minsToTime(Math.min(startMins + BOOKING_DURATION_MINS, closeMins));
-}
-
-function overlaps(aStart, aEnd, bStart, bEnd) {
-    const as = timeToMins(aStart);
-    const ae = timeToMins(aEnd);
-    const bs = timeToMins(bStart);
-    const be = timeToMins(bEnd);
-    return as < be && ae > bs;
-}
-
-function pickTablesGreedy(freeTables, guestCount) {
-    let total = 0;
-    const picked = [];
-    for (const t of freeTables) {
-        picked.push(t);
-        total += t.seats;
-        if (total >= guestCount) return picked;
-    }
-    return null;
-}
-
-function selectTablesForSlot({ allTables, bookingsByTableId, slotStart, slotEnd, guestCount }) {
-    const isFree = (t) => {
-        const intervals = bookingsByTableId.get(t.id) || [];
-        for (const b of intervals) {
-            if (overlaps(b.start_time, b.end_time, slotStart, slotEnd)) return false;
-        }
-        return true;
-    };
-
-    const freeTables = allTables.filter(isFree);
-    const single = freeTables.find((t) => t.seats >= guestCount);
-    if (single) return [single];
-
-    const byZone = new Map();
-    for (const t of freeTables) {
-        const z = t.zone || '__NO_ZONE__';
-        if (!byZone.has(z)) byZone.set(z, []);
-        byZone.get(z).push(t);
-    }
-
-    for (const [, zoneTables] of byZone.entries()) {
-        zoneTables.sort((a, b) => b.seats - a.seats);
-        const picked = pickTablesGreedy(zoneTables, guestCount);
-        if (picked) return picked;
-    }
-
-    freeTables.sort((a, b) => b.seats - a.seats);
-    return pickTablesGreedy(freeTables, guestCount);
-}
+// Table helpers (allocateTables, selectTablesForSlot, etc.) imported from ../utils.js
 
 // Route: /api/widget/:restaurantId
 router.get('/api/widget/:restaurantId', widgetRateLimiter, async (req, res) => {
@@ -849,8 +713,8 @@ router.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
     console.log(`🔍 Parsed: date=${date}, dayOfWeek=${dayOfWeek} (0=Sun, 5=Fri, 6=Sat)`);
 
     try {
-        // Get opening hours
-        let openingResult = await pool.query(
+        // AUTO-PROVISION: Only for authenticated admin users (runs outside cache)
+        const firstCheck = await pool.query(
             `SELECT open_time, close_time, slot_duration_minutes, is_closed 
              FROM restaurant_openings 
              WHERE restaurant_id = $1 AND (day_of_week = $2 OR specific_date = $3)
@@ -858,8 +722,7 @@ router.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
             [restaurantId, dayOfWeek, date]
         );
 
-        // AUTO-PROVISION: Only for authenticated admin users (prevents data injection)
-        if (openingResult.rowCount === 0 && req.headers.authorization) {
+        if (firstCheck.rowCount === 0 && req.headers.authorization) {
             console.log(`📋 Auto-provisioning opening hours for restaurant: ${restaurantId}`);
 
             // Create default opening hours (Mon-Sun 17:00-22:00)
@@ -909,73 +772,85 @@ router.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
                     );
                 }
             }
-
-            // Re-fetch opening hours after provisioning
-            openingResult = await pool.query(
-                `SELECT open_time, close_time, slot_duration_minutes, is_closed 
-                 FROM restaurant_openings 
-                 WHERE restaurant_id = $1 AND day_of_week = $2
-                 LIMIT 1`,
-                [restaurantId, dayOfWeek]
-            );
         }
 
-        // If still no opening hours (unauthenticated or provisioning failed), return empty
-        if (openingResult.rowCount === 0) {
-            return res.json({ slots: [], message: 'No opening hours configured for this restaurant' });
-        }
+        // Cached availability computation (5s fresh, 30s stale-while-revalidate)
+        const cacheKey = `availability:${restaurantId}:${date}:${guestCount}`;
+        const { value: payload, cacheStatus } = await getCachedValue({
+            key: cacheKey,
+            ttlMs: 5_000,
+            staleMs: 30_000,
+            loader: async () => {
+                // Get opening hours
+                const openingResult = await pool.query(
+                    `SELECT open_time, close_time, slot_duration_minutes, is_closed 
+                     FROM restaurant_openings 
+                     WHERE restaurant_id = $1 AND (day_of_week = $2 OR specific_date = $3)
+                     ORDER BY specific_date DESC NULLS LAST LIMIT 1`,
+                    [restaurantId, dayOfWeek, date]
+                );
 
-        if (openingResult.rows[0].is_closed) {
-            return res.json({ slots: [], message: 'Restaurant is closed' });
-        }
+                if (openingResult.rowCount === 0) {
+                    return { date, guest_count: guestCount, close_time: null, slots: [], message: 'No opening hours configured for this restaurant' };
+                }
 
-        const { open_time, close_time } = openingResult.rows[0];
+                if (openingResult.rows[0].is_closed) {
+                    return { date, guest_count: guestCount, close_time: null, slots: [], message: 'Restaurant is closed' };
+                }
 
-        // Get ALL active tables (sorted seats DESC for greedy combo)
-        const tablesResult = await pool.query(
-            `SELECT id, name, seats, zone FROM restaurant_tables 
-             WHERE restaurant_id = $1 AND is_active = true
-             ORDER BY seats DESC`,
-            [restaurantId]
-        );
-        const allTables = tablesResult.rows;
+                const { open_time, close_time } = openingResult.rows[0];
 
-        // Prefetch all bookings for this day, build lookup map
-        const bookingsResult = await pool.query(
-            `SELECT table_id, to_char(start_time, 'HH24:MI') AS start_time, to_char(end_time, 'HH24:MI') AS end_time
-             FROM restaurant_bookings 
-             WHERE restaurant_id = $1 AND booking_date = $2 AND lower(status) != 'cancelled'`,
-            [restaurantId, date]
-        );
-        const bookingsByTableId = buildBookingsMap(bookingsResult.rows);
+                // Get ALL active tables (sorted seats DESC for greedy combo)
+                const tablesResult = await pool.query(
+                    `SELECT id, name, seats, zone FROM restaurant_tables 
+                     WHERE restaurant_id = $1 AND is_active = true
+                     ORDER BY seats DESC`,
+                    [restaurantId]
+                );
+                const allTables = tablesResult.rows;
 
-        // Generate time slots
-        const slots = [];
-        const openMins = timeToMins(open_time);
-        const closeMins = timeToMins(close_time);
+                // Prefetch all bookings for this day, build lookup map
+                const bookingsResult = await pool.query(
+                    `SELECT table_id, to_char(start_time, 'HH24:MI') AS start_time, to_char(end_time, 'HH24:MI') AS end_time
+                     FROM restaurant_bookings 
+                     WHERE restaurant_id = $1 AND booking_date = $2 AND lower(status) != 'cancelled'`,
+                    [restaurantId, date]
+                );
+                const bookingsByTableId = buildBookingsMap(bookingsResult.rows);
 
-        // FIX #37: Use Amsterdam timezone for "today" check instead of server TZ
-        const nowAmsterdam = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Amsterdam' }));
-        const isToday = bookingDate.toDateString() === nowAmsterdam.toDateString();
-        const currentMins = isToday ? nowAmsterdam.getHours() * 60 + nowAmsterdam.getMinutes() : 0;
+                // Generate time slots
+                const slots = [];
+                const openMins = timeToMins(open_time);
+                const closeMins = timeToMins(close_time);
 
-        for (let m = openMins; m < closeMins; m += SLOT_STEP_MINS) {
-            // Skip past time slots for today
-            if (isToday && m <= currentMins) continue;
+                // FIX #37: Use Amsterdam timezone for "today" check instead of server TZ
+                const nowAmsterdam = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Amsterdam' }));
+                const isToday = bookingDate.toDateString() === nowAmsterdam.toDateString();
+                const currentMins = isToday ? nowAmsterdam.getHours() * 60 + nowAmsterdam.getMinutes() : 0;
 
-            const slotStart = minsToTime(m);
-            const slotEndMins = Math.min(m + BOOKING_DURATION_MINS, closeMins);
-            const slotEnd = minsToTime(slotEndMins);
+                for (let m = openMins; m < closeMins; m += SLOT_STEP_MINS) {
+                    // Skip past time slots for today
+                    if (isToday && m <= currentMins) continue;
 
-            // Use the SAME selection logic as the booking endpoint
-            const picked = selectTablesForSlot({ allTables, bookingsByTableId, slotStart, slotEnd, guestCount });
-            if (picked) {
-                const seatsTotal = picked.reduce((s, t) => s + t.seats, 0);
-                slots.push({ time: slotStart, end_time: slotEnd, available: 1, tables_needed: picked.length, seats_total: seatsTotal });
-            }
-        }
+                    const slotStart = minsToTime(m);
+                    const slotEndMins = Math.min(m + BOOKING_DURATION_MINS, closeMins);
+                    const slotEnd = minsToTime(slotEndMins);
 
-        res.json({ date, guest_count: guestCount, close_time: close_time, slots });
+                    // Use the SAME selection logic as the booking endpoint
+                    const picked = selectTablesForSlot({ allTables, bookingsByTableId, slotStart, slotEnd, guestCount });
+                    if (picked) {
+                        const seatsTotal = picked.reduce((s, t) => s + t.seats, 0);
+                        slots.push({ time: slotStart, end_time: slotEnd, available: 1, tables_needed: picked.length, seats_total: seatsTotal });
+                    }
+                }
+
+                return { date, guest_count: guestCount, close_time: normalizeToHHMM(close_time), slots };
+            },
+        });
+
+        setPublicCacheHeaders(res, { maxAge: 5, sMaxAge: 15, staleWhileRevalidate: 30 });
+        res.set('X-Cache-Status', cacheStatus);
+        res.json(payload);
     } catch (error) {
         console.error('Restaurant availability error:', error);
         res.status(500).json({ error: 'Failed to check availability' });
