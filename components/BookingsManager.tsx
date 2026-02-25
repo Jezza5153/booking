@@ -517,7 +517,18 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                             >
                                 <ChevronLeft className="w-5 h-5 text-gray-600" />
                             </button>
-                            <span className="font-semibold text-gray-900">{formatDate(timelineDate)}</span>
+                            <div className="flex items-center gap-3">
+                                <span className="font-semibold text-gray-900">{formatDate(timelineDate)}</span>
+                                {timelineDate !== new Date().toISOString().split('T')[0] && (
+                                    <button
+                                        onClick={() => setTimelineDate(new Date().toISOString().split('T')[0])}
+                                        className="px-3 py-1.5 bg-amber-500 text-white rounded-full text-xs font-bold hover:bg-amber-600 transition-all shadow-sm animate-pulse flex items-center gap-1.5"
+                                    >
+                                        <Calendar className="w-3.5 h-3.5" />
+                                        VANDAAG
+                                    </button>
+                                )}
+                            </div>
                             <button
                                 onClick={() => navigateDate(1)}
                                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"

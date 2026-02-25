@@ -47,7 +47,10 @@ export const BookingStats: React.FC<BookingStatsProps> = ({ restaurantId, onBack
                     to: end.toISOString().split('T')[0]
                 })
 
-                const response = await fetch(`${API_BASE_URL}/api/admin/stats?${params}`)
+                const token = localStorage.getItem('events_token')
+                const response = await fetch(`${API_BASE_URL}/api/admin/stats?${params}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
                 if (!response.ok) throw new Error('Failed to fetch stats')
 
                 const data = await response.json()
