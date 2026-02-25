@@ -4,9 +4,8 @@ import { authMiddleware } from '../auth.js';
 import { bookingRateLimiter, widgetRateLimiter, calendarRateLimiter } from '../ratelimit.js';
 import { captureException } from '../sentry.js';
 import { sendBookingConfirmation, sendLargeGroupNotification, sendRestaurantBookingConfirmation, sendChefsChoiceNotification } from '../email.js';
-import { escapeHtml, sanitizeString, validateRestaurantId, generateUnsubscribeToken } from '../utils.js';
+import { escapeHtml, sanitizeString, validateRestaurantId, generateUnsubscribeToken, buildBookingsMap } from '../utils.js';
 import { getCachedValue, invalidatePublicCacheForRestaurant } from '../public-cache.js';
-import { buildBookingsMap } from '../index.js';
 import multer from 'multer';
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -152,6 +151,15 @@ function selectTablesForSlot({ allTables, bookingsByTableId, slotStart, slotEnd,
 
     freeTables.sort((a, b) => b.seats - a.seats);
     return pickTablesGreedy(freeTables, guestCount);
+}
+
+function buildBookingsMap(bookingsRows) {
+    const map = new Map();
+    for (const b of bookingsRows) {
+        if (!map.has(b.table_id)) map.set(b.table_id, []);
+        map.get(b.table_id).push({ start_time: b.start_time, end_time: b.end_time });
+    }
+    return map;
 }
 
 // Route: /api/widget/:restaurantId

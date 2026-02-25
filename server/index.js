@@ -349,7 +349,8 @@ function selectTablesForSlot({ allTables, bookingsByTableId, slotStart, slotEnd,
     return pickTablesGreedy(freeTables, guestCount);
 }
 
-export function buildBookingsMap(bookingsRows) {
+/** Build a Map<tableId, bookingIntervals[]> from a booking query result */
+function buildBookingsMap(bookingsRows) {
     const map = new Map();
     for (const b of bookingsRows) {
         if (!map.has(b.table_id)) map.set(b.table_id, []);

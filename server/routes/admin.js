@@ -4,9 +4,8 @@ import { authMiddleware } from '../auth.js';
 import { bookingRateLimiter, widgetRateLimiter, calendarRateLimiter } from '../ratelimit.js';
 import { captureException } from '../sentry.js';
 import { sendBookingConfirmation, sendLargeGroupNotification, sendRestaurantBookingConfirmation, sendChefsChoiceNotification } from '../email.js';
-import { escapeHtml, sanitizeString, validateRestaurantId, generateUnsubscribeToken, parseSlotDateTime } from '../utils.js';
+import { escapeHtml, sanitizeString, validateRestaurantId, generateUnsubscribeToken, parseSlotDateTime, buildBookingsMap } from '../utils.js';
 import { invalidatePublicCacheForRestaurant } from '../public-cache.js';
-import { buildBookingsMap } from '../index.js';
 import multer from 'multer';
 const upload = multer({ storage: multer.memoryStorage() });
 
