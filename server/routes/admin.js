@@ -29,24 +29,24 @@ router.get('/api/admin/events', authMiddleware, async (req, res) => {
 router.get('/api/admin/data', authMiddleware, async (req, res) => {
     const restaurantId = req.query.restaurantId || 'demo-restaurant';
     try {
-        // Get zones (including max_couverts for couvert limit)
-        const zonesResult = await pool.query(
-            `SELECT id, name, 
-                    capacity_2_tops as count2tops, 
-                    capacity_4_tops as count4tops, 
-                    capacity_6_tops as count6tops,
-                    max_couverts as "maxCouverts"
-             FROM zones WHERE restaurant_id = $1`,
-            [restaurantId]
-        );
+        // PERF: Run all queries in parallel instead of sequentially
+        const [zonesResult, eventsResult] = await Promise.all([
+            pool.query(
+                `SELECT id, name, 
+                        capacity_2_tops as count2tops, 
+                        capacity_4_tops as count4tops, 
+                        capacity_6_tops as count6tops,
+                        max_couverts as "maxCouverts"
+                 FROM zones WHERE restaurant_id = $1`,
+                [restaurantId]
+            ),
+            pool.query(
+                `SELECT * FROM events WHERE restaurant_id = $1 AND is_active = true`,
+                [restaurantId]
+            ),
+        ]);
 
-        // Get events with slots (SELECT * handles pre/post migration)
-        const eventsResult = await pool.query(
-            `SELECT * FROM events WHERE restaurant_id = $1 AND is_active = true`,
-            [restaurantId]
-        );
-
-        // P1 FIX #7: Single batched query instead of N+1
+        // Slots query depends on events result, but still faster than 3 sequential queries
         const allSlotsResult = await pool.query(
             `SELECT id, event_id, zone_id as "wijkId", start_datetime, is_highlighted as "isNextAvailable",
                     booked_count_2_tops as booked2tops, booked_count_4_tops as booked4tops, booked_count_6_tops as booked6tops
@@ -91,8 +91,8 @@ router.get('/api/admin/data', authMiddleware, async (req, res) => {
             slots: slotsByEvent.get(event.id) || []
         }));
 
-        // FIX #26: Admin endpoints should not be cached
-        res.set('Cache-Control', 'no-store');
+        // PERF: Allow browser to cache for 10s (private = only this user)
+        res.set('Cache-Control', 'private, max-age=10');
         res.json({ zones: zonesResult.rows, events: eventsWithSlots });
     } catch (error) {
         console.error('Admin data error:', error);
@@ -340,57 +340,53 @@ router.get('/api/admin/stats', authMiddleware, async (req, res) => {
     const to = req.query.to || new Date().toISOString().split('T')[0];
 
     try {
-        // Daily breakdown
-        const dailyResult = await pool.query(
-            `SELECT 
-                booking_date::text as date,
-                COUNT(*) FILTER (WHERE status != 'cancelled') as bookings,
-                COALESCE(SUM(guest_count) FILTER (WHERE status != 'cancelled'), 0) as couverts,
-                COUNT(*) FILTER (WHERE is_walkin = true AND status != 'cancelled') as walkins,
-                COUNT(*) FILTER (WHERE status = 'no_show') as no_shows,
-                COUNT(*) FILTER (WHERE status = 'cancelled') as cancellations,
-                COUNT(*) FILTER (WHERE status = 'arrived') as arrived
-            FROM restaurant_bookings
-            WHERE restaurant_id = $1 AND booking_date BETWEEN $2 AND $3
-            GROUP BY booking_date
-            ORDER BY booking_date`,
-            [restaurantId, from, to]
-        );
-
-        // Peak hours
-        const peakHoursResult = await pool.query(
-            `SELECT 
-                EXTRACT(HOUR FROM start_time::time) as hour,
-                COUNT(*) as count
-            FROM restaurant_bookings
-            WHERE restaurant_id = $1 AND booking_date BETWEEN $2 AND $3 AND status != 'cancelled'
-            GROUP BY EXTRACT(HOUR FROM start_time::time)
-            ORDER BY count DESC`,
-            [restaurantId, from, to]
-        );
-
-        // Average party size
-        const avgResult = await pool.query(
-            `SELECT 
-                ROUND(AVG(guest_count), 1) as avg_party_size,
-                COUNT(DISTINCT booking_date) as active_days
-            FROM restaurant_bookings
-            WHERE restaurant_id = $1 AND booking_date BETWEEN $2 AND $3 AND status != 'cancelled'`,
-            [restaurantId, from, to]
-        );
-
-        // Busiest day of week
-        const busiestDayResult = await pool.query(
-            `SELECT 
-                EXTRACT(DOW FROM booking_date) as day_of_week,
-                COUNT(*) as count
-            FROM restaurant_bookings
-            WHERE restaurant_id = $1 AND booking_date BETWEEN $2 AND $3 AND status != 'cancelled'
-            GROUP BY EXTRACT(DOW FROM booking_date)
-            ORDER BY count DESC
-            LIMIT 1`,
-            [restaurantId, from, to]
-        );
+        // PERF: Run all 4 queries in parallel
+        const [dailyResult, peakHoursResult, avgResult, busiestDayResult] = await Promise.all([
+            pool.query(
+                `SELECT 
+                    booking_date::text as date,
+                    COUNT(*) FILTER (WHERE status != 'cancelled') as bookings,
+                    COALESCE(SUM(guest_count) FILTER (WHERE status != 'cancelled'), 0) as couverts,
+                    COUNT(*) FILTER (WHERE is_walkin = true AND status != 'cancelled') as walkins,
+                    COUNT(*) FILTER (WHERE status = 'no_show') as no_shows,
+                    COUNT(*) FILTER (WHERE status = 'cancelled') as cancellations,
+                    COUNT(*) FILTER (WHERE status = 'arrived') as arrived
+                FROM restaurant_bookings
+                WHERE restaurant_id = $1 AND booking_date BETWEEN $2 AND $3
+                GROUP BY booking_date
+                ORDER BY booking_date`,
+                [restaurantId, from, to]
+            ),
+            pool.query(
+                `SELECT 
+                    EXTRACT(HOUR FROM start_time::time) as hour,
+                    COUNT(*) as count
+                FROM restaurant_bookings
+                WHERE restaurant_id = $1 AND booking_date BETWEEN $2 AND $3 AND status != 'cancelled'
+                GROUP BY EXTRACT(HOUR FROM start_time::time)
+                ORDER BY count DESC`,
+                [restaurantId, from, to]
+            ),
+            pool.query(
+                `SELECT 
+                    ROUND(AVG(guest_count), 1) as avg_party_size,
+                    COUNT(DISTINCT booking_date) as active_days
+                FROM restaurant_bookings
+                WHERE restaurant_id = $1 AND booking_date BETWEEN $2 AND $3 AND status != 'cancelled'`,
+                [restaurantId, from, to]
+            ),
+            pool.query(
+                `SELECT 
+                    EXTRACT(DOW FROM booking_date) as day_of_week,
+                    COUNT(*) as count
+                FROM restaurant_bookings
+                WHERE restaurant_id = $1 AND booking_date BETWEEN $2 AND $3 AND status != 'cancelled'
+                GROUP BY EXTRACT(DOW FROM booking_date)
+                ORDER BY count DESC
+                LIMIT 1`,
+                [restaurantId, from, to]
+            ),
+        ]);
 
         // Totals
         const totals = dailyResult.rows.reduce((acc, row) => ({
@@ -404,6 +400,7 @@ router.get('/api/admin/stats', authMiddleware, async (req, res) => {
 
         const dayNames = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag'];
 
+        res.set('Cache-Control', 'private, max-age=30');
         res.json({
             daily: dailyResult.rows,
             totals,
