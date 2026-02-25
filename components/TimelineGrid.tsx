@@ -202,7 +202,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                 fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/openings`),
                 fetch(`${API_BASE_URL}/api/admin/restaurant-bookings?restaurantId=${restaurantId}&date=${date}`, { headers }),
                 fetch(`${API_BASE_URL}/api/admin/day-notes?restaurantId=${restaurantId}&date=${date}`, { headers }),
-                fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/waitlist?date=${date}`)
+                fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/waitlist?date=${date}`, { headers })
             ])
 
             const tablesData = await tablesRes.json()
