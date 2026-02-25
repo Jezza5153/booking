@@ -1,6 +1,6 @@
+import './env.js';
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import crypto from 'crypto';
 import helmet from 'helmet';
 import pool from './db-postgres.js';
@@ -14,8 +14,6 @@ import { initSentry, sentryErrorHandler, captureException } from './sentry.js';
 import { sendBookingConfirmation, sendLargeGroupNotification, sendRestaurantBookingConfirmation, sendChefsChoiceNotification } from './email.js';
 import { Resend } from 'resend';
 import multer from 'multer';
-
-dotenv.config();
 
 // Email config for newsletter — re-use from email.js where possible
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;

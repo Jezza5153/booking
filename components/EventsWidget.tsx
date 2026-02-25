@@ -5,6 +5,7 @@ import { RestaurantBooking } from "./RestaurantBooking"
 import { EventData, Wijk } from "../types"
 import { WIJKEN_DATA, EVENTS_DATA } from "../data"
 import { fetchWidgetData, fetchOpeningHours, RESTAURANT_ID } from "../api"
+import { parseSlotDateForUi } from "../utils"
 import type { OpeningHour } from "../api"
 
 interface EventsWidgetProps {
@@ -113,7 +114,7 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
   }, [useApi, restaurantId])
 
   const activeEvents = useMemo(() => {
-    const now = new Date()
+    const now = Date.now()
 
     // Filter events and their slots:
     // 1. Only include slots that are in the future
@@ -122,10 +123,8 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
       .map((ev) => {
         // Filter out past slots
         const futureSlots = (ev.slots ?? []).filter((slot) => {
-          if (slot.start_datetime) {
-            return new Date(slot.start_datetime) > now
-          }
-          return true // Keep slots without start_datetime (shouldn't happen)
+          const dt = parseSlotDateForUi(slot)
+          return dt ? dt.getTime() > now : true
         })
         return { ...ev, slots: futureSlots }
       })

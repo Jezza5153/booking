@@ -18,6 +18,7 @@ export interface Slot {
   // The display format "Ma 12 okt" is derived in UI, not stored
   date: string;
   time: string; // HH:MM format, e.g., "19:00"
+  start_datetime?: string; // Canonical ISO from backend (preferred for comparisons/sorting)
   isNextAvailable?: boolean;
   wijkId?: string; // Links to a Wijk/Zone
 

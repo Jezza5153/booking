@@ -1,6 +1,7 @@
 import React from 'react'
 import { Slot, Wijk } from '../types'
 import { Star, AlertCircle } from 'lucide-react'
+import { parseSlotDateForUi } from '../utils'
 
 interface SlotBubbleProps {
   slot: Slot
@@ -24,9 +25,15 @@ export const SlotBubble: React.FC<SlotBubbleProps> = ({ slot, isSelected, onClic
   const isLaatstePlekken = fillRatio >= 0.9 && fillRatio < 1     // 90-99%
   const isFull = totalCapacity > 0 && totalBooked >= totalCapacity // 100%
 
-  // Format date for display (handles both ISO and Dutch formats)
-  const displayDate = date?.match(/^\d{4}-\d{2}-\d{2}/)
-    ? new Date(date).toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' })
+  // Prefer canonical start_datetime, then ISO date, then Dutch display date fallback.
+  const parsedDate = parseSlotDateForUi(slot)
+  const displayDate = parsedDate
+    ? parsedDate.toLocaleDateString('nl-NL', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      timeZone: 'Europe/Amsterdam',
+    })
     : date
 
   const dateParts = displayDate?.split(' ') || []

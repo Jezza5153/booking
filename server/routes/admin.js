@@ -679,7 +679,16 @@ router.post('/api/admin/save', async (req, res) => {
 
             // Upsert each slot
             for (const slot of event.slots || []) {
-                const startDatetime = parseSlotDateTime(slot.date, slot.time);
+                let startDatetime;
+                try {
+                    startDatetime = parseSlotDateTime(slot.date, slot.time);
+                } catch (parseError) {
+                    const err = new Error(
+                        `Invalid slot date/time for slot ${slot.id || 'unknown'}: ${parseError.message}`
+                    );
+                    err.statusCode = 422;
+                    throw err;
+                }
                 // P0 FIX #5: Preserve existing booked counts on update — only set on INSERT
                 await client.query(
                     `INSERT INTO slots (id, event_id, zone_id, start_datetime, is_highlighted, booked_count_2_tops, booked_count_4_tops, booked_count_6_tops)
@@ -706,6 +715,10 @@ router.post('/api/admin/save', async (req, res) => {
                 detail: error.detail || 'Slots or bookings still reference this item. Delete those first.',
                 hint: 'Move or delete related slots/bookings before deleting zones or events.'
             });
+        }
+
+        if (error.statusCode === 422) {
+            return res.status(422).json({ error: error.message });
         }
 
         res.status(500).json({ error: 'Failed to save changes' });

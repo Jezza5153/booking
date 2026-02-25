@@ -1,9 +1,7 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import dotenv from 'dotenv';
+import './env.js';
 import pool from './db-postgres.js';
-
-dotenv.config();
 
 // ============================================
 // SECURITY: JWT Secret - FATAL if missing

@@ -1,7 +1,5 @@
 import pg from 'pg';
-import dotenv from 'dotenv';
-
-dotenv.config();
+import './env.js';
 
 // ============================================
 // SECURITY: DATABASE_URL is required (no SQLite fallback)

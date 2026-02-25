@@ -1,8 +1,6 @@
 import { Resend } from 'resend';
-import dotenv from 'dotenv';
+import './env.js';
 import { escapeHtml } from './utils.js';
-
-dotenv.config();
 
 // Initialize Resend (optional - sends emails only if RESEND_API_KEY is set)
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
