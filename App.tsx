@@ -15,6 +15,17 @@ const TimelineGrid = lazy(() => import('./components/TimelineGrid').then(m => ({
 const BookingStats = lazy(() => import('./components/BookingStats').then(m => ({ default: m.BookingStats })));
 const Newsletter = lazy(() => import('./components/Newsletter').then(m => ({ default: m.Newsletter })));
 
+// PERF: Prefetch map — hover over a tab starts loading its chunk before clicking
+const prefetchMap: Record<string, () => void> = {
+  calendar: () => { void import('./components/CalendarManager'); },
+  admin: () => { void import('./components/AdminDashboard'); },
+  bookings: () => { void import('./components/BookingsManager'); },
+  timeline: () => { void import('./components/TimelineGrid'); },
+  stats: () => { void import('./components/BookingStats'); },
+  newsletter: () => { void import('./components/Newsletter'); },
+  guide: () => { void import('./components/IntegrationGuide'); },
+};
+
 type ViewMode = 'widget' | 'admin' | 'guide' | 'calendar' | 'bookings' | 'timeline' | 'stats' | 'newsletter';
 
 const App: React.FC = () => {
@@ -85,6 +96,12 @@ const App: React.FC = () => {
   useEffect(() => {
     if (isAuthenticated) {
       loadDataFromAPI();
+      // PERF: Eagerly preload service-critical views after login.
+      // On iPad (no hover), this ensures chunks are ready before first tap.
+      void import('./components/BookingsManager');
+      void import('./components/TimelineGrid');
+      void import('./components/BookingStats');
+      void import('./components/AdminDashboard');
     }
   }, [isAuthenticated]);
 
@@ -172,6 +189,8 @@ const App: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setView('calendar')}
+                  onMouseEnter={prefetchMap.calendar}
+                  onTouchStart={prefetchMap.calendar}
                   className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-2 whitespace-nowrap ${view === 'calendar' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
                 >
                   <CalendarIcon className="w-4 h-4" />
@@ -179,6 +198,8 @@ const App: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setView('admin')}
+                  onMouseEnter={prefetchMap.admin}
+                  onTouchStart={prefetchMap.admin}
                   className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-2 whitespace-nowrap ${view === 'admin' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
                 >
                   <Settings className="w-4 h-4" />
@@ -186,6 +207,8 @@ const App: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setView('bookings')}
+                  onMouseEnter={prefetchMap.bookings}
+                  onTouchStart={prefetchMap.bookings}
                   className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-2 whitespace-nowrap ${view === 'bookings' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
                 >
                   <Users className="w-4 h-4" />
@@ -193,6 +216,8 @@ const App: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setView('timeline')}
+                  onMouseEnter={prefetchMap.timeline}
+                  onTouchStart={prefetchMap.timeline}
                   className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-2 whitespace-nowrap ${view === 'timeline' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
                 >
                   <LayoutGrid className="w-4 h-4" />
@@ -200,6 +225,8 @@ const App: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setView('stats')}
+                  onMouseEnter={prefetchMap.stats}
+                  onTouchStart={prefetchMap.stats}
                   className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-2 whitespace-nowrap ${view === 'stats' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
                 >
                   <BarChart3 className="w-4 h-4" />
@@ -207,6 +234,8 @@ const App: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setView('newsletter')}
+                  onMouseEnter={prefetchMap.newsletter}
+                  onTouchStart={prefetchMap.newsletter}
                   className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-2 whitespace-nowrap ${view === 'newsletter' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
                 >
                   <Mail className="w-4 h-4" />
@@ -214,6 +243,8 @@ const App: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setView('guide')}
+                  onMouseEnter={prefetchMap.guide}
+                  onTouchStart={prefetchMap.guide}
                   className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-2 whitespace-nowrap ${view === 'guide' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
                 >
                   <BookOpen className="w-4 h-4" />
