@@ -12,7 +12,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 const router = express.Router();
 
 // Route: /api/admin/events
-router.get('/api/admin/events', async (req, res) => {
+router.get('/api/admin/events', authMiddleware, async (req, res) => {
     const restaurantId = req.query.restaurantId || 'demo-restaurant';
     try {
         const result = await pool.query(
@@ -26,7 +26,7 @@ router.get('/api/admin/events', async (req, res) => {
 });
 
 // Route: /api/admin/data
-router.get('/api/admin/data', async (req, res) => {
+router.get('/api/admin/data', authMiddleware, async (req, res) => {
     const restaurantId = req.query.restaurantId || 'demo-restaurant';
     try {
         // Get zones (including max_couverts for couvert limit)
@@ -334,7 +334,7 @@ router.get('/api/admin/bookings', authMiddleware, async (req, res) => {
 });
 
 // Route: /api/admin/stats
-router.get('/api/admin/stats', async (req, res) => {
+router.get('/api/admin/stats', authMiddleware, async (req, res) => {
     const restaurantId = req.query.restaurantId || 'demo-restaurant';
     const from = req.query.from || new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
     const to = req.query.to || new Date().toISOString().split('T')[0];
@@ -420,7 +420,7 @@ router.get('/api/admin/stats', async (req, res) => {
 });
 
 // Route: /api/admin/reconcile
-router.get('/api/admin/reconcile', async (req, res) => {
+router.get('/api/admin/reconcile', authMiddleware, async (req, res) => {
     const restaurantId = req.query.restaurantId || 'demo-restaurant';
     const shouldRepair = req.query.repair === 'true';
 
@@ -545,7 +545,7 @@ router.get('/api/admin/reconcile', async (req, res) => {
 });
 
 // Route: /api/admin/save
-router.post('/api/admin/save', async (req, res) => {
+router.post('/api/admin/save', authMiddleware, async (req, res) => {
     const { restaurantId, zones, events, force } = req.body;
     const targetRestaurantId = restaurantId || 'demo-restaurant';
 
