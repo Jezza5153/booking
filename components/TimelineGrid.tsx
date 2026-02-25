@@ -37,6 +37,9 @@ interface Booking {
     customer_id?: string
     customer_visits?: number
     visit_count?: string | number
+    group_id?: string
+    is_primary?: boolean
+    table_name?: string
 }
 
 interface Customer {
@@ -608,6 +611,16 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                     <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
                         {/* Left: Date Navigation & View Mode */}
                         <div className="flex items-center gap-4">
+                            {/* TODAY BUTTON - Prominent standalone when not on today */}
+                            {date !== new Date().toISOString().split('T')[0] && (
+                                <button
+                                    onClick={goToToday}
+                                    className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-amber-500/30 hover:bg-amber-600 transition-all active:scale-95 animate-pulse"
+                                >
+                                    <Calendar className="w-4 h-4" />
+                                    VANDAAG
+                                </button>
+                            )}
                             <div className="flex items-center bg-gray-50 rounded-lg p-1 border border-gray-100 shadow-sm relative">
                                 <button
                                     onClick={() => navigateDate(-1)}
@@ -616,25 +629,11 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                     <ChevronLeft className="w-5 h-5" />
                                 </button>
                                 <button
-                                    onClick={goToToday}
-                                    className={`px-3 py-1 text-sm font-semibold transition-colors flex items-center gap-1.5 rounded-md ${date !== new Date().toISOString().split('T')[0]
-                                            ? 'bg-amber-100 text-amber-800 hover:bg-amber-200 animate-pulse'
-                                            : 'text-gray-700 hover:text-gray-900'
-                                        }`}
-                                    title="Ga naar vandaag"
-                                >
-                                    {date !== new Date().toISOString().split('T')[0] && (
-                                        <span className="w-2 h-2 bg-amber-500 rounded-full animate-ping" />
-                                    )}
-                                    <Calendar className="w-3.5 h-3.5" />
-                                    Vandaag
-                                </button>
-                                <button
                                     onClick={() => setShowCalendarPopup(!showCalendarPopup)}
-                                    className="p-1.5 hover:bg-white hover:shadow-sm rounded-md transition-all text-gray-400 hover:text-gray-700"
-                                    title="Open kalender"
+                                    className="px-3 py-1 text-sm font-semibold text-gray-700 hover:text-gray-900 transition-colors flex items-center gap-1"
                                 >
-                                    <ChevronLeft className="w-3 h-3 rotate-[-90deg]" />
+                                    <Calendar className="w-3.5 h-3.5" />
+                                    Kalender
                                 </button>
                                 <button
                                     onClick={() => navigateDate(1)}
@@ -1197,17 +1196,25 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                                     {/* Bookings */}
                                                     {tableBookings.map(booking => {
                                                         const statusConfig = STATUS_COLORS[booking.status as keyof typeof STATUS_COLORS] || STATUS_COLORS.confirmed
+                                                        // Check if this booking is part of a multi-table group
+                                                        const isGrouped = booking.group_id && bookings.filter(b => b.group_id === booking.group_id).length > 1
+                                                        const groupSiblings = isGrouped ? bookings.filter(b => b.group_id === booking.group_id) : []
+                                                        const groupTableCount = groupSiblings.length
+                                                        const totalGroupGuests = isGrouped ? groupSiblings[0]?.guest_count || booking.guest_count : booking.guest_count
                                                         return (
                                                             <div
                                                                 key={booking.id}
                                                                 style={getBookingStyle(booking)}
                                                                 onClick={() => setShowBookingDetail(booking)}
-                                                                className={`absolute top-1 bottom-1 ${statusConfig.bg} ${statusConfig.hover} rounded-md px-2 py-1 cursor-pointer transition-all shadow-sm hover:shadow-md overflow-hidden z-10`}
-                                                                title={`${booking.customer_name} - ${booking.guest_count} pers.`}
+                                                                className={`absolute top-1 bottom-1 ${statusConfig.bg} ${statusConfig.hover} rounded-md px-2 py-1 cursor-pointer transition-all shadow-sm hover:shadow-md overflow-hidden z-10 ${isGrouped ? 'ring-2 ring-white/50 ring-offset-1' : ''}`}
+                                                                title={`${booking.customer_name} - ${totalGroupGuests} pers.${isGrouped ? ` (${groupTableCount} tafels)` : ''}`}
                                                             >
                                                                 <div className="flex items-center gap-1 text-white text-xs font-medium">
                                                                     <StatusIcon status={booking.status} />
-                                                                    <span className="truncate">{booking.guest_count} {booking.customer_name}</span>
+                                                                    <span className="truncate">{totalGroupGuests} {booking.customer_name}</span>
+                                                                    {isGrouped && (
+                                                                        <span className="shrink-0 bg-white/20 px-1 rounded text-[9px]">🔗{groupTableCount}</span>
+                                                                    )}
                                                                     {Number(booking.visit_count) > 0 && <span>⭐</span>}
                                                                 </div>
                                                                 {booking.dietary_notes && (
