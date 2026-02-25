@@ -616,11 +616,25 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                     <ChevronLeft className="w-5 h-5" />
                                 </button>
                                 <button
-                                    onClick={() => setShowCalendarPopup(!showCalendarPopup)}
-                                    className="px-3 py-1 text-sm font-semibold text-gray-700 hover:text-gray-900 transition-colors flex items-center gap-1"
+                                    onClick={goToToday}
+                                    className={`px-3 py-1 text-sm font-semibold transition-colors flex items-center gap-1.5 rounded-md ${date !== new Date().toISOString().split('T')[0]
+                                            ? 'bg-amber-100 text-amber-800 hover:bg-amber-200 animate-pulse'
+                                            : 'text-gray-700 hover:text-gray-900'
+                                        }`}
+                                    title="Ga naar vandaag"
                                 >
+                                    {date !== new Date().toISOString().split('T')[0] && (
+                                        <span className="w-2 h-2 bg-amber-500 rounded-full animate-ping" />
+                                    )}
                                     <Calendar className="w-3.5 h-3.5" />
                                     Vandaag
+                                </button>
+                                <button
+                                    onClick={() => setShowCalendarPopup(!showCalendarPopup)}
+                                    className="p-1.5 hover:bg-white hover:shadow-sm rounded-md transition-all text-gray-400 hover:text-gray-700"
+                                    title="Open kalender"
+                                >
+                                    <ChevronLeft className="w-3 h-3 rotate-[-90deg]" />
                                 </button>
                                 <button
                                     onClick={() => navigateDate(1)}

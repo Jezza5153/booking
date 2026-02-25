@@ -434,8 +434,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
             onClick={handleSaveRestaurantSettings}
             disabled={savingRestaurant}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 ${saveRestaurantStatus === 'success' ? 'bg-emerald-600 text-white' :
-                saveRestaurantStatus === 'error' ? 'bg-red-600 text-white' :
-                  'bg-emerald-600 hover:bg-emerald-700 text-white'
+              saveRestaurantStatus === 'error' ? 'bg-red-600 text-white' :
+                'bg-emerald-600 hover:bg-emerald-700 text-white'
               }`}
           >
             {savingRestaurant ? (
@@ -453,7 +453,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
         {/* Tables Configuration */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold text-gray-700 uppercase">Tafels</h3>
+            <div className="flex items-center gap-3">
+              <h3 className="text-sm font-bold text-gray-700 uppercase">Tafels</h3>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold">
+                <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
+                {restaurantTables.reduce((sum, t) => sum + t.seats, 0)} couverts
+                <span className="text-emerald-500 font-normal">({restaurantTables.length} tafels)</span>
+              </span>
+            </div>
             <button
               onClick={() => {
                 const newTable = {
@@ -681,8 +688,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
             onClick={handleSaveRestaurantSettings}
             disabled={savingRestaurant}
             className={`px-4 py-2 font-bold rounded-lg flex items-center gap-2 disabled:opacity-60 transition-colors ${saveRestaurantStatus === 'success' ? 'bg-emerald-600 text-white' :
-                saveRestaurantStatus === 'error' ? 'bg-red-600 text-white' :
-                  'bg-emerald-600 hover:bg-emerald-700 text-white'
+              saveRestaurantStatus === 'error' ? 'bg-red-600 text-white' :
+                'bg-emerald-600 hover:bg-emerald-700 text-white'
               }`}
           >
             {savingRestaurant ? (
