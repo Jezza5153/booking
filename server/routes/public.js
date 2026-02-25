@@ -154,15 +154,6 @@ function selectTablesForSlot({ allTables, bookingsByTableId, slotStart, slotEnd,
     return pickTablesGreedy(freeTables, guestCount);
 }
 
-function buildBookingsMap(bookingsRows) {
-    const map = new Map();
-    for (const b of bookingsRows) {
-        if (!map.has(b.table_id)) map.set(b.table_id, []);
-        map.get(b.table_id).push({ start_time: b.start_time, end_time: b.end_time });
-    }
-    return map;
-}
-
 // Route: /api/widget/:restaurantId
 router.get('/api/widget/:restaurantId', widgetRateLimiter, async (req, res) => {
     const { restaurantId } = req.params;
