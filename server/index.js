@@ -232,76 +232,7 @@ app.use('/api/admin', authMiddleware);
 
 // Save zones and events (Admin) - FULL SYNC with SAFETY RAILS
 
-// Helper function to parse slot date/time
-// PREFERRED: ISO 8601 format (e.g., "2026-01-20T18:00:00" or "2026-01-20")
-// FALLBACK: Dutch format "Di 20 jan" for backwards compatibility
-// CRITICAL: All times are interpreted as Amsterdam local time
-function parseSlotDateTime(dateStr, timeStr) {
-    try {
-        // PREFERRED: Check if dateStr is already ISO format
-        if (dateStr && dateStr.match(/^\d{4}-\d{2}-\d{2}/)) {
-            // ISO date format: "2026-01-20" or "2026-01-20T18:00:00"
-            if (dateStr.includes('T')) {
-                // Full ISO with time - parse as-is
-                return new Date(dateStr);
-            } else {
-                // ISO date only (YYYY-MM-DD), combine with timeStr
-                // CRITICAL FIX: Create ISO string with explicit Amsterdam timezone
-                // This ensures the time is interpreted correctly regardless of server TZ
-                const time = timeStr || '12:00';
 
-                // P1 FIX #10: Use Intl.DateTimeFormat to determine correct Amsterdam offset
-                // instead of relying on server timezone (which may be UTC on Railway)
-                const [year, month, day] = dateStr.split('-').map(Number);
-                const tempDate = new Date(Date.UTC(year, month - 1, day, 12, 0)); // noon UTC to avoid edge
-                const amsterdamStr = tempDate.toLocaleString('en-US', { timeZone: 'Europe/Amsterdam', timeZoneName: 'shortOffset' });
-                // Extract offset like 'GMT+1' or 'GMT+2' from the formatted string
-                const offsetMatch = amsterdamStr.match(/GMT([+-]\d+)/);
-                const offsetHours = offsetMatch ? parseInt(offsetMatch[1]) : 1;
-                const offset = offsetHours >= 0
-                    ? `+${String(offsetHours).padStart(2, '0')}:00`
-                    : `-${String(Math.abs(offsetHours)).padStart(2, '0')}:00`;
-
-                // Create ISO string with explicit timezone
-                const isoString = `${dateStr}T${time}:00${offset}`;
-                return new Date(isoString);
-            }
-        }
-
-        // FALLBACK: Dutch date format "Di 20 jan" or "Ma 14 okt"
-        const months = {
-            'jan': 0, 'feb': 1, 'mrt': 2, 'apr': 3, 'mei': 4, 'jun': 5,
-            'jul': 6, 'aug': 7, 'sep': 8, 'okt': 9, 'nov': 10, 'dec': 11
-        };
-        const parts = dateStr.split(' ');
-        if (parts.length >= 3) {
-            const day = parseInt(parts[1]);
-            const month = months[parts[2].toLowerCase()] ?? 0;
-            let year = new Date().getFullYear();
-            const [hours, minutes] = (timeStr || '12:00').split(':').map(Number);
-
-            // Create date and check if it's in the past
-            let parsedDate = new Date(year, month, day, hours, minutes);
-            const now = new Date();
-
-            // If the date is more than 1 day in the past, it's probably next year
-            if (parsedDate < now && (now - parsedDate) > 24 * 60 * 60 * 1000) {
-                parsedDate = new Date(year + 1, month, day, hours, minutes);
-            }
-
-            return parsedDate;
-        }
-
-        // Last resort: return current date with the time
-        const [hours, minutes] = (timeStr || '12:00').split(':').map(Number);
-        const now = new Date();
-        now.setHours(hours, minutes, 0, 0);
-        return now;
-    } catch (e) {
-        console.error('Date parsing error:', e.message);
-        return new Date();
-    }
-}
 
 // ============================================
 // TABLE SELECTION HELPERS (shared by availability + booking endpoints)
