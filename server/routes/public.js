@@ -43,8 +43,8 @@ router.get('/api/widget/:restaurantId', widgetRateLimiter, async (req, res) => {
         const cacheKey = `widget:${restaurantId}:v2`;
         const { value: payload, cacheStatus } = await getCachedValue({
             key: cacheKey,
-            ttlMs: 10_000,
-            staleMs: 60_000,
+            ttlMs: 120_000,   // 2 min fresh (event data rarely changes)
+            staleMs: 600_000, // 10 min stale-while-revalidate
             loader: async () => {
                 const [restaurantResult, zonesResult, openingHoursResult, eventSlotRows] = await Promise.all([
                     pool.query(
@@ -130,7 +130,7 @@ router.get('/api/widget/:restaurantId', widgetRateLimiter, async (req, res) => {
             return res.status(404).json({ error: 'Restaurant not found' });
         }
 
-        setPublicCacheHeaders(res, { maxAge: 10, sMaxAge: 30, staleWhileRevalidate: 90 });
+        setPublicCacheHeaders(res, { maxAge: 30, sMaxAge: 120, staleWhileRevalidate: 300 });
         res.set('X-Cache-Status', cacheStatus);
         res.json(payload);
     } catch (error) {
