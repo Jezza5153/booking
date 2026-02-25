@@ -69,6 +69,11 @@ const ALLOWED_ORIGINS = Array.from(new Set([
     ...DEFAULT_ALLOWED_ORIGINS,
 ]));
 
+const ALLOWED_ORIGIN_PATTERNS = [
+    /^https:\/\/booking-widget-frontendbooking(?:-[a-z0-9-]+)?\.vercel\.app$/i,
+    /^https:\/\/events-widget(?:-[a-z0-9-]+)?\.vercel\.app$/i,
+];
+
 const FRAME_ANCESTORS = Array.from(new Set([
     "'self'",
     ...ALLOWED_ORIGINS.filter((origin) => origin.startsWith('http://') || origin.startsWith('https://')),
@@ -78,7 +83,8 @@ app.use(cors({
     origin: function (origin, callback) {
         // Allow requests with no origin (e.g. server-to-server, mobile apps, curl)
         if (!origin) return callback(null, true);
-        if (ALLOWED_ORIGINS.includes(origin) || process.env.NODE_ENV === 'development') {
+        const matchesAllowedPattern = ALLOWED_ORIGIN_PATTERNS.some((pattern) => pattern.test(origin));
+        if (ALLOWED_ORIGINS.includes(origin) || matchesAllowedPattern || process.env.NODE_ENV === 'development') {
             return callback(null, true);
         }
         console.warn(`CORS blocked origin: ${origin}`);
@@ -343,8 +349,7 @@ function selectTablesForSlot({ allTables, bookingsByTableId, slotStart, slotEnd,
     return pickTablesGreedy(freeTables, guestCount);
 }
 
-/** Build a Map<tableId, bookingIntervals[]> from a booking query result */
-function buildBookingsMap(bookingsRows) {
+export function buildBookingsMap(bookingsRows) {
     const map = new Map();
     for (const b of bookingsRows) {
         if (!map.has(b.table_id)) map.set(b.table_id, []);
