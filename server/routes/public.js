@@ -661,7 +661,7 @@ router.get('/api/events', async (req, res) => {
             staleMs: 90_000,
             loader: async () => {
                 const rows = await pool.query(
-                    `SELECT e.id as event_id, e.title, e.description, e.price_per_person, e.is_active, e.created_at,
+                    `SELECT e.id as event_id, e.title, e.description, e.price_per_person, e.is_active,
                             s.id as slot_id, s.zone_id, s.start_datetime, s.is_highlighted,
                             s.booked_count_2_tops, s.booked_count_4_tops, s.booked_count_6_tops, s.current_couverts
                      FROM events e
@@ -682,7 +682,6 @@ router.get('/api/events', async (req, res) => {
                             description: row.description,
                             price_per_person: row.price_per_person,
                             is_active: row.is_active,
-                            created_at: row.created_at,
                             slots: [],
                         });
                     }
