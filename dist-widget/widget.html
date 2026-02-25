@@ -5,6 +5,18 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>EVENTS Widget</title>
+  <!-- Preconnect to API: saves ~100-200ms (DNS+TLS done before JS fires fetch) -->
+  <link rel="preconnect" href="https://booking-production-de35.up.railway.app" crossorigin />
+  <link rel="dns-prefetch" href="https://booking-production-de35.up.railway.app" />
+  <script>
+    // Zero-waterfall: start API fetch BEFORE JS bundle loads.
+    // Widget JS will consume this via window.__WIDGET_PREFETCH.
+    (function () {
+      var rid = new URLSearchParams(location.search).get('restaurantId') || 'demo-restaurant';
+      var api = location.origin + '/api/widget/' + encodeURIComponent(rid);
+      window.__WIDGET_PREFETCH = fetch(api).then(function (r) { return r.json(); }).catch(function () { return null; });
+    })();
+  </script>
   <style>
     body {
       font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -17,7 +29,7 @@
       height: 100%;
     }
   </style>
-  <script type="module" crossorigin src="/assets/widget/widget-CQ5eeIKu.js"></script>
+  <script type="module" crossorigin src="/assets/widget/widget-DoLYKUXd.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/widget/widget-CAx33cla.css">
 </head>
 

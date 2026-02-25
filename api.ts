@@ -109,6 +109,21 @@ export function peekWidgetDataCache(restaurantId: string): WidgetDataResponse | 
 }
 
 async function requestWidgetData(restaurantId: string, signal?: AbortSignal): Promise<WidgetDataResponse> {
+    // Use prefetched data from widget.html <head> if available (zero-waterfall optimization).
+    // widget.html starts the fetch before this JS bundle even loads, saving ~200-800ms.
+    const prefetch = (window as any).__WIDGET_PREFETCH as Promise<WidgetDataResponse | null> | undefined;
+    if (prefetch) {
+        (window as any).__WIDGET_PREFETCH = null; // consume once
+        try {
+            const data = await prefetch;
+            if (data && (data.events || data.zones)) {
+                return data;
+            }
+        } catch {
+            // Prefetch failed — fall through to normal fetch
+        }
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/widget/${restaurantId}`, { signal });
     if (!response.ok) {
         throw new Error('Failed to fetch widget data');
