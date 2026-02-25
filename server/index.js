@@ -46,14 +46,34 @@ initSentry(app);
 app.set('trust proxy', 1);
 
 // SECURITY FIX #32: Restrict CORS — no wildcards in production
-const ALLOWED_ORIGINS = [
-    process.env.FRONTEND_URL || 'https://events-widget.vercel.app',
+const DEFAULT_ALLOWED_ORIGINS = [
+    'https://events-widget.vercel.app',
+    'https://booking-widget-frontendbooking.vercel.app',
     'https://detafelaar.nl',
     'https://www.detafelaar.nl',
     'http://localhost:5173',  // Vite dev server
     'http://localhost:3000',  // Local dev
     'http://localhost:3002',  // Studio Next.js dev
 ];
+
+function parseOriginsFromEnv(value) {
+    return String(value || '')
+        .split(',')
+        .map((origin) => origin.trim())
+        .filter(Boolean);
+}
+
+const ALLOWED_ORIGINS = Array.from(new Set([
+    ...parseOriginsFromEnv(process.env.FRONTEND_URL),
+    ...parseOriginsFromEnv(process.env.CORS_ALLOWED_ORIGINS),
+    ...DEFAULT_ALLOWED_ORIGINS,
+]));
+
+const FRAME_ANCESTORS = Array.from(new Set([
+    "'self'",
+    ...ALLOWED_ORIGINS.filter((origin) => origin.startsWith('http://') || origin.startsWith('https://')),
+]));
+
 app.use(cors({
     origin: function (origin, callback) {
         // Allow requests with no origin (e.g. server-to-server, mobile apps, curl)
@@ -75,12 +95,7 @@ app.use(helmet({
         useDefaults: true,
         directives: {
             // Only allow embedding on known restaurant sites
-            'frame-ancestors': [
-                "'self'",
-                'https://detafelaar.nl',
-                'https://www.detafelaar.nl',
-                process.env.FRONTEND_URL || 'https://events-widget.vercel.app'
-            ],
+            'frame-ancestors': FRAME_ANCESTORS,
             'connect-src': ["'self'"],
         },
     },

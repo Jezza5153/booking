@@ -2,5 +2,22 @@
     "buildCommand": "npm run build",
     "outputDirectory": "dist",
     "framework": "vite",
-    "installCommand": "npm install"
+    "installCommand": "npm install",
+    "rewrites": [
+        {
+            "source": "/api/:path*",
+            "destination": "https://booking-production-de35.up.railway.app/api/:path*"
+        }
+    ],
+    "headers": [
+        {
+            "source": "/widget.html",
+            "headers": [
+                {
+                    "key": "Cache-Control",
+                    "value": "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400"
+                }
+            ]
+        }
+    ]
 }

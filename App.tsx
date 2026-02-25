@@ -17,22 +17,12 @@ const Newsletter = lazy(() => import('./components/Newsletter').then(m => ({ def
 
 type ViewMode = 'widget' | 'admin' | 'guide' | 'calendar' | 'bookings' | 'timeline' | 'stats' | 'newsletter';
 
-// Check if we're in embed mode (public widget only, no login required)
-const isEmbedMode = () => {
-  const params = new URLSearchParams(window.location.search);
-  // Embed mode if: ?embed=true OR in iframe OR ?widget=true
-  const hasEmbedParam = params.get('embed') === 'true' || params.get('widget') === 'true';
-  const isInIframe = window.self !== window.top;
-  return hasEmbedParam || isInIframe;
-};
-
 const App: React.FC = () => {
   const [events, setEvents] = useState<EventData[]>(EVENTS_DATA);
   const [wijken, setWijken] = useState<Wijk[]>(WIJKEN_DATA);
   const [view, setView] = useState<ViewMode>('widget');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-  const [embedMode] = useState(isEmbedMode());
   const [sessionRestaurantId, setSessionRestaurantId] = useState<string | null>(null);
 
   // Get effective restaurantId: session > URL param > default
@@ -93,10 +83,10 @@ const App: React.FC = () => {
 
   // Load data when authenticated
   useEffect(() => {
-    if (isAuthenticated && !embedMode) {
+    if (isAuthenticated) {
       loadDataFromAPI();
     }
-  }, [isAuthenticated, embedMode]);
+  }, [isAuthenticated]);
 
   const handleLoginSuccess = (token: string) => {
     // Read the restaurantId that LoginPage just stored
@@ -143,20 +133,11 @@ const App: React.FC = () => {
     }
   };
 
-  // Show loading while checking auth (skip in embed mode)
-  if (isCheckingAuth && !embedMode) {
+  // Show loading while checking auth
+  if (isCheckingAuth) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-pulse text-gray-400">Loading...</div>
-      </div>
-    );
-  }
-
-  // EMBED MODE: Show only the public widget (no login required)
-  if (embedMode) {
-    return (
-      <div className="h-full bg-transparent">
-        <EventsWidget events={events} wijken={wijken} useApi={true} restaurantId={getRestaurantId()} />
       </div>
     );
   }

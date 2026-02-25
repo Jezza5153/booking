@@ -1,15 +1,167 @@
+import { EventData, Wijk } from './types';
+
 // API Configuration
-// Use environment variable if available, otherwise fallback to production API
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://booking-production-de35.up.railway.app';
+// Prefer same-origin API in production so Vercel can cache /api/* responses via rewrites.
+const REMOTE_PROD_API = 'https://booking-production-de35.up.railway.app';
+const runtimeOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+export const API_BASE_URL = import.meta.env.VITE_API_URL
+    || ((!import.meta.env.DEV && runtimeOrigin) ? runtimeOrigin : REMOTE_PROD_API);
 export const RESTAURANT_ID = import.meta.env.VITE_RESTAURANT_ID || 'demo-restaurant';
 
-// Fetch widget data
-export async function fetchWidgetData(restaurantId: string) {
-    const response = await fetch(`${API_BASE_URL}/api/widget/${restaurantId}`);
+// Fetch opening hours for widget display
+export interface OpeningHour {
+    dayOfWeek: number
+    open: string
+    close: string
+    isOpen: boolean
+}
+
+export interface WidgetDataResponse {
+    restaurant?: {
+        id: string
+        name: string
+        booking_email?: string | null
+        handoff_url_base?: string | null
+    }
+    zones: Wijk[]
+    events: EventData[]
+    openingHours?: OpeningHour[]
+}
+
+interface WidgetFetchOptions {
+    forceRefresh?: boolean
+    signal?: AbortSignal
+}
+
+type WidgetCacheEntry = {
+    data: WidgetDataResponse
+    expiresAt: number
+    staleUntil: number
+};
+
+const WIDGET_CACHE_FRESH_MS = 15_000;
+const WIDGET_CACHE_STALE_MS = 90_000;
+const WIDGET_CACHE_PREFIX = 'events:widget:';
+const widgetCache = new Map<string, WidgetCacheEntry>();
+const widgetInFlight = new Map<string, Promise<WidgetDataResponse>>();
+
+function getWidgetKey(restaurantId: string) {
+    return `${WIDGET_CACHE_PREFIX}${restaurantId}`;
+}
+
+function readWidgetCacheFromSession(key: string): WidgetCacheEntry | null {
+    if (typeof window === 'undefined') return null;
+    try {
+        const raw = window.sessionStorage.getItem(key);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed?.data || typeof parsed.expiresAt !== 'number' || typeof parsed.staleUntil !== 'number') {
+            return null;
+        }
+        return parsed as WidgetCacheEntry;
+    } catch {
+        return null;
+    }
+}
+
+function writeWidgetCacheToSession(key: string, entry: WidgetCacheEntry) {
+    if (typeof window === 'undefined') return;
+    try {
+        window.sessionStorage.setItem(key, JSON.stringify(entry));
+    } catch {
+        // Ignore quota/security errors
+    }
+}
+
+function setWidgetCache(key: string, data: WidgetDataResponse) {
+    const now = Date.now();
+    const entry: WidgetCacheEntry = {
+        data,
+        expiresAt: now + WIDGET_CACHE_FRESH_MS,
+        staleUntil: now + WIDGET_CACHE_FRESH_MS + WIDGET_CACHE_STALE_MS,
+    };
+    widgetCache.set(key, entry);
+    writeWidgetCacheToSession(key, entry);
+}
+
+function getWidgetCacheEntry(key: string): WidgetCacheEntry | null {
+    const inMemory = widgetCache.get(key);
+    if (inMemory) return inMemory;
+    const fromSession = readWidgetCacheFromSession(key);
+    if (fromSession) {
+        widgetCache.set(key, fromSession);
+        return fromSession;
+    }
+    return null;
+}
+
+export function peekWidgetDataCache(restaurantId: string): WidgetDataResponse | null {
+    const key = getWidgetKey(restaurantId);
+    const entry = getWidgetCacheEntry(key);
+    if (!entry) return null;
+    if (entry.staleUntil <= Date.now()) return null;
+    return entry.data;
+}
+
+async function requestWidgetData(restaurantId: string, signal?: AbortSignal): Promise<WidgetDataResponse> {
+    const response = await fetch(`${API_BASE_URL}/api/widget/${restaurantId}`, { signal });
     if (!response.ok) {
         throw new Error('Failed to fetch widget data');
     }
     return response.json();
+}
+
+// Fetch widget data with in-memory + session cache and stale-while-revalidate behavior
+export async function fetchWidgetData(restaurantId: string, options: WidgetFetchOptions = {}): Promise<WidgetDataResponse> {
+    const { forceRefresh = false, signal } = options;
+    const key = getWidgetKey(restaurantId);
+    const now = Date.now();
+    const cached = getWidgetCacheEntry(key);
+
+    if (!forceRefresh && cached) {
+        if (cached.expiresAt > now) {
+            return cached.data;
+        }
+
+        // Serve stale immediately and refresh in the background.
+        if (cached.staleUntil > now) {
+            if (!widgetInFlight.has(key)) {
+                const refreshPromise = requestWidgetData(restaurantId)
+                    .then((data) => {
+                        setWidgetCache(key, data);
+                        return data;
+                    })
+                    .finally(() => {
+                        widgetInFlight.delete(key);
+                    });
+                widgetInFlight.set(key, refreshPromise);
+            }
+            return cached.data;
+        }
+    }
+
+    // Avoid duplicate concurrent fetches unless this specific call is abortable.
+    if (!forceRefresh && !signal) {
+        const inFlight = widgetInFlight.get(key);
+        if (inFlight) return inFlight;
+    }
+
+    const requestPromise = requestWidgetData(restaurantId, signal)
+        .then((data) => {
+            setWidgetCache(key, data);
+            return data;
+        })
+        .finally(() => {
+            if (!signal) {
+                widgetInFlight.delete(key);
+            }
+        });
+
+    if (!signal) {
+        widgetInFlight.set(key, requestPromise);
+    }
+
+    return requestPromise;
 }
 
 // Book a table
@@ -156,14 +308,6 @@ export async function cancelBooking(bookingId: string): Promise<{ success: boole
         throw new Error(error.error || 'Failed to cancel booking');
     }
     return response.json();
-}
-
-// Fetch opening hours for widget display
-export interface OpeningHour {
-    dayOfWeek: number
-    open: string
-    close: string
-    isOpen: boolean
 }
 
 export async function fetchOpeningHours(restaurantId: string): Promise<OpeningHour[]> {

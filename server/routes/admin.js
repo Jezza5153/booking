@@ -5,6 +5,7 @@ import { bookingRateLimiter, widgetRateLimiter, calendarRateLimiter } from '../r
 import { captureException } from '../sentry.js';
 import { sendBookingConfirmation, sendLargeGroupNotification, sendRestaurantBookingConfirmation, sendChefsChoiceNotification } from '../email.js';
 import { escapeHtml, sanitizeString, validateRestaurantId, generateUnsubscribeToken, parseSlotDateTime } from '../utils.js';
+import { invalidatePublicCacheForRestaurant } from '../public-cache.js';
 import multer from 'multer';
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -118,6 +119,7 @@ router.delete('/api/admin/clear', authMiddleware, async (req, res) => {
             [restaurantId]
         );
         await pool.query('DELETE FROM events WHERE restaurant_id = $1', [restaurantId]);
+        invalidatePublicCacheForRestaurant(restaurantId);
         console.log(`✅ All events and slots cleared for ${restaurantId}`);
         res.json({ success: true, message: 'All events and slots cleared' });
     } catch (error) {
@@ -219,6 +221,7 @@ router.post('/api/admin/bookings/:id/cancel', authMiddleware, async (req, res) =
         );
 
         await client.query('COMMIT');
+        invalidatePublicCacheForRestaurant(restaurantId);
         console.log(`[${req.requestId}] Booking ${bookingId} cancelled for restaurant ${restaurantId}`);
 
         return res.status(200).json({ success: true, message: 'Booking cancelled' });
@@ -702,6 +705,7 @@ router.post('/api/admin/save', async (req, res) => {
         }
 
         await client.query('COMMIT');
+        invalidatePublicCacheForRestaurant(targetRestaurantId);
         console.log('✅ Admin save: synced', (events || []).length, 'events');
         res.json({ success: true, message: 'Changes saved successfully' });
     } catch (error) {
@@ -833,6 +837,7 @@ router.put('/api/restaurant/:restaurantId/tables', authMiddleware, async (req, r
         }
 
         await client.query('COMMIT');
+        invalidatePublicCacheForRestaurant(restaurantId);
         res.json({ success: true, count: tables.length });
     } catch (error) {
         await client.query('ROLLBACK');
@@ -965,6 +970,7 @@ router.post('/api/admin/bookings', authMiddleware, async (req, res) => {
             [bookingId, restaurantId, eventId, customerId, tableType, customer_name, customer_email || null, customer_phone || null, guest_count, crypto.randomUUID(), remarks || null]
         );
 
+        invalidatePublicCacheForRestaurant(restaurantId);
         res.json({ success: true, booking_id: bookingId });
     } catch (error) {
         console.error('Admin event booking error:', error);
@@ -1097,6 +1103,7 @@ router.post('/api/admin/restaurant-bookings', authMiddleware, async (req, res) =
         }
 
         await client.query('COMMIT');
+        invalidatePublicCacheForRestaurant(restaurantId);
 
         const tableNames = selectedTables.map(t => t.name).join(' + ');
         res.json({ success: true, booking_id: primaryBookingId, group_id: groupId, table_name: tableNames, tables_used: selectedTables.length });
@@ -1265,6 +1272,7 @@ router.post('/api/admin/restaurant-settings', authMiddleware, async (req, res) =
         // TODO: Save settings (slotDuration, maxPartySize, bufferTime) to a restaurant_settings table
 
         await client.query('COMMIT');
+        invalidatePublicCacheForRestaurant(restaurantId);
         res.json({ success: true, message: 'Restaurant settings saved' });
     } catch (error) {
         await client.query('ROLLBACK');

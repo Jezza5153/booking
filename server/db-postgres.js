@@ -28,4 +28,20 @@ pool.query('SELECT NOW()')
     .then(() => console.log('✅ Connected to Neon PostgreSQL'))
     .catch(err => console.error('❌ Database connection error:', err.message));
 
+// Optional DB keep-alive to reduce first-query latency after idle periods.
+// Set DB_KEEPALIVE_INTERVAL_MS (e.g. 240000 for 4 minutes) to enable.
+const dbKeepAliveMs = parseInt(process.env.DB_KEEPALIVE_INTERVAL_MS || '0', 10);
+if (dbKeepAliveMs >= 30000) {
+    const keepAliveTimer = setInterval(() => {
+        pool.query('SELECT 1').catch((err) => {
+            console.warn('⚠️ DB keep-alive ping failed:', err.message);
+        });
+    }, dbKeepAliveMs);
+
+    if (typeof keepAliveTimer.unref === 'function') {
+        keepAliveTimer.unref();
+    }
+    console.log(`ℹ️ DB keep-alive enabled (${dbKeepAliveMs}ms interval)`);
+}
+
 export default pool;

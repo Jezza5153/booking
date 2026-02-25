@@ -1,12 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react"
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react"
 import { Loader2, RefreshCcw, Calendar, ChevronRight, Clock } from "lucide-react"
 import { EventCard } from "./EventCard"
-import { RestaurantBooking } from "./RestaurantBooking"
 import { EventData, Wijk } from "../types"
 import { WIJKEN_DATA, EVENTS_DATA } from "../data"
-import { fetchWidgetData, fetchOpeningHours, RESTAURANT_ID } from "../api"
+import { fetchWidgetData, fetchOpeningHours, peekWidgetDataCache, RESTAURANT_ID } from "../api"
 import { parseSlotDateForUi } from "../utils"
-import type { OpeningHour } from "../api"
+import type { OpeningHour, WidgetDataResponse } from "../api"
 
 interface EventsWidgetProps {
   events?: EventData[]
@@ -22,7 +21,9 @@ interface EventsWidgetProps {
   restaurantSubtitle?: string
 }
 
-const DAY_ABBR = ['Zo', 'Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za']
+const loadRestaurantBookingModule = () =>
+  import("./RestaurantBooking").then((module) => ({ default: module.RestaurantBooking }))
+const RestaurantBooking = lazy(loadRestaurantBookingModule)
 
 /** Compact — only shows today's hours */
 const OpeningHoursBar: React.FC<{ hours: OpeningHour[] }> = ({ hours }) => {
@@ -64,54 +65,88 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
   const events = useMemo(() => (useApi ? apiEvents ?? [] : fallbackEvents), [useApi, apiEvents, fallbackEvents])
   const wijken = useMemo(() => (useApi ? apiWijken ?? [] : fallbackWijken), [useApi, apiWijken, fallbackWijken])
 
-  // silentRefresh = true means no loading spinner (used after booking)
-  const loadData = useCallback(async (silentRefresh = false) => {
+  const applyWidgetData = useCallback((data: WidgetDataResponse) => {
+    setApiEvents(data.events ?? [])
+    setApiWijken(data.zones ?? [])
+    if (Array.isArray(data.openingHours)) {
+      setOpeningHours(data.openingHours)
+    }
+  }, [])
+
+  // Preload the booking flow chunk shortly after widget render.
+  useEffect(() => {
+    const prefetchTimer = window.setTimeout(() => {
+      void loadRestaurantBookingModule()
+    }, 1200)
+
+    return () => {
+      window.clearTimeout(prefetchTimer)
+    }
+  }, [])
+
+  const loadData = useCallback(async (options: {
+    silentRefresh?: boolean
+    forceRefresh?: boolean
+    signal?: AbortSignal
+  } = {}) => {
     if (!useApi) return
+    const { silentRefresh = false, forceRefresh = false, signal } = options
+
     if (!silentRefresh) {
       setLoading(true)
     }
     setError(null)
 
     try {
-      const data = await fetchWidgetData(restaurantId)
-      setApiEvents(data.events ?? [])
-      setApiWijken(data.zones ?? [])
+      const data = await fetchWidgetData(restaurantId, { forceRefresh, signal })
+      if (signal?.aborted) return
+      applyWidgetData(data)
+
+      // Backward-compatible fallback while older backend versions are still deployed.
+      if (!Array.isArray(data.openingHours)) {
+        const hours = await fetchOpeningHours(restaurantId)
+        if (signal?.aborted) return
+        setOpeningHours(hours)
+      }
     } catch (e: any) {
+      if (signal?.aborted) return
       console.error("Failed to load widget data:", e)
       if (!silentRefresh) {
         setError(e?.message || "We kunnen de beschikbaarheid nu even niet laden.")
+        setApiEvents([])
+        setApiWijken([])
       }
-      setApiEvents([])
-      setApiWijken([])
     } finally {
+      if (signal?.aborted) return
       if (!silentRefresh) {
         setLoading(false)
       }
     }
-  }, [useApi, restaurantId])
+  }, [useApi, restaurantId, applyWidgetData])
 
-  // PERF: Load widget data and opening hours in parallel (saves ~150-300ms)
+  // Use cached data for instant paint, then refresh in background.
   useEffect(() => {
     if (!useApi) return
-    setLoading(true)
-    setError(null)
 
-    Promise.all([
-      fetchWidgetData(restaurantId),
-      fetchOpeningHours(restaurantId)
-    ]).then(([data, hours]) => {
-      setApiEvents(data.events ?? [])
-      setApiWijken(data.zones ?? [])
-      setOpeningHours(hours)
-    }).catch((e: any) => {
-      console.error("Failed to load widget data:", e)
-      setError(e?.message || "We kunnen de beschikbaarheid nu even niet laden.")
-      setApiEvents([])
-      setApiWijken([])
-    }).finally(() => {
+    const cached = peekWidgetDataCache(restaurantId)
+    if (cached) {
+      applyWidgetData(cached)
       setLoading(false)
+    } else {
+      setLoading(true)
+    }
+
+    const controller = new AbortController()
+    void loadData({
+      silentRefresh: Boolean(cached),
+      forceRefresh: Boolean(cached),
+      signal: controller.signal,
     })
-  }, [useApi, restaurantId])
+
+    return () => {
+      controller.abort()
+    }
+  }, [useApi, restaurantId, applyWidgetData, loadData])
 
   const activeEvents = useMemo(() => {
     const now = Date.now()
@@ -133,7 +168,9 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
 
   // Silent refresh after booking - no spinner, no disruption
   const handleBookingComplete = useCallback(() => {
-    if (useApi) void loadData(true)
+    if (useApi) {
+      void loadData({ silentRefresh: true, forceRefresh: true })
+    }
   }, [useApi, loadData])
 
   return (
@@ -178,11 +215,18 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
           {/* Restaurant booking flow */}
           {showRestaurantBooking && (
             <div className="mt-3">
-              <RestaurantBooking
-                restaurantId={restaurantId}
-                onClose={() => setShowRestaurantBooking(false)}
-                onComplete={handleBookingComplete}
-              />
+              <Suspense fallback={
+                <div className="rounded-xl border border-white/10 bg-black/30 p-4 flex items-center gap-2 text-white/70 text-sm">
+                  <Loader2 className="w-4 h-4 animate-spin text-[#c9a227]" />
+                  Reserveringsflow laden...
+                </div>
+              }>
+                <RestaurantBooking
+                  restaurantId={restaurantId}
+                  onClose={() => setShowRestaurantBooking(false)}
+                  onComplete={handleBookingComplete}
+                />
+              </Suspense>
             </div>
           )}
         </div>
@@ -225,7 +269,7 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
                   {error}
                 </div>
                 <button
-                  onClick={loadData}
+                  onClick={() => void loadData({ forceRefresh: true })}
                   className="mt-4 inline-flex items-center gap-2 rounded-xl border border-[#c9a227]/30 bg-[#c9a227]/10 px-4 py-2 text-sm font-semibold text-[#c9a227] hover:bg-[#c9a227]/15 transition"
                 >
                   <RefreshCcw className="w-4 h-4" />
@@ -255,7 +299,7 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
                   </div>
                   {useApi && (
                     <button
-                      onClick={loadData}
+                      onClick={() => void loadData({ forceRefresh: true })}
                       className="mt-6 inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm text-white/75 hover:text-white hover:border-white/20 transition"
                     >
                       <RefreshCcw className="w-4 h-4" />

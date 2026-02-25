@@ -5,10 +5,162 @@ import { bookingRateLimiter, widgetRateLimiter, calendarRateLimiter } from '../r
 import { captureException } from '../sentry.js';
 import { sendBookingConfirmation, sendLargeGroupNotification, sendRestaurantBookingConfirmation, sendChefsChoiceNotification } from '../email.js';
 import { escapeHtml, sanitizeString, validateRestaurantId, generateUnsubscribeToken } from '../utils.js';
+import { getCachedValue, invalidatePublicCacheForRestaurant } from '../public-cache.js';
 import multer from 'multer';
 const upload = multer({ storage: multer.memoryStorage() });
 
 const router = express.Router();
+
+function setPublicCacheHeaders(res, { maxAge = 10, sMaxAge = 30, staleWhileRevalidate = 60 } = {}) {
+    res.set('Cache-Control', `public, max-age=${maxAge}, s-maxage=${sMaxAge}, stale-while-revalidate=${staleWhileRevalidate}`);
+}
+
+// ============================================
+// TABLE ALLOCATION: Greedy algorithm for large groups
+// ============================================
+function allocateTables(guestCount, available2, available4, available6) {
+    const tables = [];
+    let remaining = guestCount;
+
+    const need6 = Math.min(Math.floor(remaining / 6), available6);
+    if (need6 > 0) {
+        tables.push({ seats: 6, count: need6 });
+        remaining -= need6 * 6;
+    }
+
+    const need4 = Math.min(Math.floor(remaining / 4), available4);
+    if (need4 > 0) {
+        tables.push({ seats: 4, count: need4 });
+        remaining -= need4 * 4;
+    }
+
+    const need2 = Math.min(Math.ceil(remaining / 2), available2);
+    if (need2 > 0) {
+        tables.push({ seats: 2, count: need2 });
+        remaining -= need2 * 2;
+    }
+
+    if (remaining > 0) {
+        remaining = guestCount;
+        tables.length = 0;
+
+        const use6 = Math.min(Math.ceil(remaining / 6), available6);
+        if (use6 * 6 >= remaining) {
+            tables.push({ seats: 6, count: use6 });
+            remaining = 0;
+        } else {
+            if (use6 > 0) {
+                tables.push({ seats: 6, count: use6 });
+                remaining -= use6 * 6;
+            }
+            const use4 = Math.min(Math.ceil(remaining / 4), available4);
+            if (use4 * 4 >= remaining) {
+                tables.push({ seats: 4, count: use4 });
+                remaining = 0;
+            } else {
+                if (use4 > 0) {
+                    tables.push({ seats: 4, count: use4 });
+                    remaining -= use4 * 4;
+                }
+                const use2 = Math.min(Math.ceil(remaining / 2), available2);
+                if (use2 * 2 >= remaining) {
+                    tables.push({ seats: 2, count: use2 });
+                    remaining = 0;
+                }
+            }
+        }
+    }
+
+    if (remaining > 0) return null;
+
+    const totalSeats = tables.reduce((sum, t) => sum + t.seats * t.count, 0);
+    return { tables, totalSeats };
+}
+
+// ============================================
+// TABLE SELECTION HELPERS (shared by availability + booking endpoints)
+// ============================================
+const BOOKING_DURATION_MINS = 180; // 3-hour booking blocks
+const SLOT_STEP_MINS = 30;
+
+function normalizeToHHMM(t) {
+    const s = String(t || '00:00').trim();
+    const parts = s.split(':');
+    return parts[0].padStart(2, '0') + ':' + (parts[1] || '00').padStart(2, '0');
+}
+
+function timeToMins(t) {
+    const n = normalizeToHHMM(t);
+    return parseInt(n.slice(0, 2), 10) * 60 + parseInt(n.slice(3, 5), 10);
+}
+
+function minsToTime(m) {
+    return `${Math.floor(m / 60).toString().padStart(2, '0')}:${(m % 60).toString().padStart(2, '0')}`;
+}
+
+function computeEndTime(startTime, closeTime) {
+    const startMins = timeToMins(startTime);
+    const closeMins = timeToMins(closeTime);
+    return minsToTime(Math.min(startMins + BOOKING_DURATION_MINS, closeMins));
+}
+
+function overlaps(aStart, aEnd, bStart, bEnd) {
+    const as = timeToMins(aStart);
+    const ae = timeToMins(aEnd);
+    const bs = timeToMins(bStart);
+    const be = timeToMins(bEnd);
+    return as < be && ae > bs;
+}
+
+function pickTablesGreedy(freeTables, guestCount) {
+    let total = 0;
+    const picked = [];
+    for (const t of freeTables) {
+        picked.push(t);
+        total += t.seats;
+        if (total >= guestCount) return picked;
+    }
+    return null;
+}
+
+function selectTablesForSlot({ allTables, bookingsByTableId, slotStart, slotEnd, guestCount }) {
+    const isFree = (t) => {
+        const intervals = bookingsByTableId.get(t.id) || [];
+        for (const b of intervals) {
+            if (overlaps(b.start_time, b.end_time, slotStart, slotEnd)) return false;
+        }
+        return true;
+    };
+
+    const freeTables = allTables.filter(isFree);
+    const single = freeTables.find((t) => t.seats >= guestCount);
+    if (single) return [single];
+
+    const byZone = new Map();
+    for (const t of freeTables) {
+        const z = t.zone || '__NO_ZONE__';
+        if (!byZone.has(z)) byZone.set(z, []);
+        byZone.get(z).push(t);
+    }
+
+    for (const [, zoneTables] of byZone.entries()) {
+        zoneTables.sort((a, b) => b.seats - a.seats);
+        const picked = pickTablesGreedy(zoneTables, guestCount);
+        if (picked) return picked;
+    }
+
+    freeTables.sort((a, b) => b.seats - a.seats);
+    return pickTablesGreedy(freeTables, guestCount);
+}
+
+function buildBookingsMap(bookingsRows) {
+    const map = new Map();
+    for (const b of bookingsRows) {
+        if (!map.has(b.table_id)) map.set(b.table_id, []);
+        map.get(b.table_id).push({ start_time: b.start_time, end_time: b.end_time });
+    }
+    return map;
+}
 
 // Route: /api/widget/:restaurantId
 router.get('/api/widget/:restaurantId', widgetRateLimiter, async (req, res) => {
@@ -20,91 +172,112 @@ router.get('/api/widget/:restaurantId', widgetRateLimiter, async (req, res) => {
     }
 
     try {
-        // PERF: Parallelize DB queries (restaurant, zones, events run concurrently)
-        const [restaurantResult, zonesResult, eventsResult] = await Promise.all([
-            pool.query(
-                'SELECT id, name, booking_email, handoff_url_base FROM restaurants WHERE id = $1',
-                [restaurantId]
-            ),
-            pool.query(
-                `SELECT id, name, capacity_2_tops as count2tops, capacity_4_tops as count4tops, capacity_6_tops as count6tops
-                 FROM zones WHERE restaurant_id = $1`,
-                [restaurantId]
-            ),
-            pool.query(
-                `SELECT * FROM events WHERE restaurant_id = $1 AND is_active = true`,
-                [restaurantId]
-            )
-        ]);
-
-        if (restaurantResult.rows.length === 0) {
-            return res.status(404).json({ error: 'Restaurant not found' });
-        }
-        const restaurant = restaurantResult.rows[0];
-
-        // FIX #12: Single JOIN query instead of N+1
-        const allSlotsResult = await pool.query(
-            `SELECT s.id, s.event_id, s.zone_id as "wijkId", s.start_datetime, s.is_highlighted,
-                    s.booked_count_2_tops as booked2tops, s.booked_count_4_tops as booked4tops, s.booked_count_6_tops as booked6tops
-             FROM slots s
-             JOIN events e ON e.id = s.event_id
-             WHERE e.restaurant_id = $1 AND e.is_active = true
-             ORDER BY s.start_datetime ASC`,
-            [restaurantId]
-        );
-
-        // Group slots by event_id
-        const slotsByEvent = new Map();
-        for (const slot of allSlotsResult.rows) {
-            if (!slotsByEvent.has(slot.event_id)) slotsByEvent.set(slot.event_id, []);
-            slotsByEvent.get(slot.event_id).push(slot);
-        }
-
-        // Reusable formatters (created once, not per-slot)
         const dateFormatter = new Intl.DateTimeFormat('nl-NL', {
-            weekday: 'short', day: 'numeric', month: 'short',
-            timeZone: 'Europe/Amsterdam'
+            weekday: 'short',
+            day: 'numeric',
+            month: 'short',
+            timeZone: 'Europe/Amsterdam',
         });
         const timeFormatter = new Intl.DateTimeFormat('nl-NL', {
-            hour: '2-digit', minute: '2-digit', hour12: false,
-            timeZone: 'Europe/Amsterdam'
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+            timeZone: 'Europe/Amsterdam',
         });
 
-        const eventsWithSlots = eventsResult.rows.map(event => {
-            const slots = slotsByEvent.get(event.id) || [];
-            const formattedSlots = slots.map(slot => {
-                const dt = new Date(slot.start_datetime);
-                const parts = dateFormatter.formatToParts(dt);
-                const weekday = parts.find(p => p.type === 'weekday')?.value || '';
-                const day = parts.find(p => p.type === 'day')?.value || '';
-                const month = parts.find(p => p.type === 'month')?.value?.replace('.', '') || '';
-                const timeStr = timeFormatter.format(dt);
+        const cacheKey = `widget:${restaurantId}:v2`;
+        const { value: payload, cacheStatus } = await getCachedValue({
+            key: cacheKey,
+            ttlMs: 10_000,
+            staleMs: 60_000,
+            loader: async () => {
+                const [restaurantResult, zonesResult, openingHoursResult, eventSlotRows] = await Promise.all([
+                    pool.query(
+                        'SELECT id, name, booking_email, handoff_url_base FROM restaurants WHERE id = $1',
+                        [restaurantId]
+                    ),
+                    pool.query(
+                        `SELECT id, name, capacity_2_tops as count2tops, capacity_4_tops as count4tops, capacity_6_tops as count6tops
+                         FROM zones WHERE restaurant_id = $1`,
+                        [restaurantId]
+                    ),
+                    pool.query(
+                        `SELECT day_of_week, open_time, close_time, is_closed
+                         FROM restaurant_openings
+                         WHERE restaurant_id = $1 AND specific_date IS NULL
+                         ORDER BY day_of_week`,
+                        [restaurantId]
+                    ),
+                    pool.query(
+                        `SELECT e.id as event_id, e.title, e.description, e.price_per_person,
+                                s.id as slot_id, s.zone_id as "wijkId", s.start_datetime, s.is_highlighted,
+                                s.booked_count_2_tops as booked2tops, s.booked_count_4_tops as booked4tops, s.booked_count_6_tops as booked6tops
+                         FROM events e
+                         JOIN slots s ON s.event_id = e.id
+                         WHERE e.restaurant_id = $1
+                           AND e.is_active = true
+                           AND s.start_datetime >= NOW() - INTERVAL '30 minutes'
+                         ORDER BY s.start_datetime ASC`,
+                        [restaurantId]
+                    ),
+                ]);
+
+                if (restaurantResult.rowCount === 0) {
+                    return null;
+                }
+
+                const eventsById = new Map();
+                for (const row of eventSlotRows.rows) {
+                    if (!eventsById.has(row.event_id)) {
+                        eventsById.set(row.event_id, {
+                            id: row.event_id,
+                            title: row.title,
+                            description: row.description || null,
+                            price_per_person: row.price_per_person ? parseFloat(row.price_per_person) : null,
+                            slots: [],
+                        });
+                    }
+
+                    const dt = new Date(row.start_datetime);
+                    const dateLabel = dateFormatter.format(dt).replace(/\./g, '');
+                    const normalizedDate = dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1);
+
+                    eventsById.get(row.event_id).slots.push({
+                        id: row.slot_id,
+                        date: normalizedDate,
+                        time: timeFormatter.format(dt),
+                        start_datetime: row.start_datetime,
+                        isNextAvailable: row.is_highlighted,
+                        wijkId: row.wijkId,
+                        booked2tops: row.booked2tops,
+                        booked4tops: row.booked4tops,
+                        booked6tops: row.booked6tops,
+                    });
+                }
+
+                const openingHours = openingHoursResult.rows.map((row) => ({
+                    dayOfWeek: row.day_of_week,
+                    open: row.open_time?.substring(0, 5) || '17:00',
+                    close: row.close_time?.substring(0, 5) || '23:00',
+                    isOpen: !row.is_closed,
+                }));
 
                 return {
-                    id: slot.id,
-                    date: `${weekday.charAt(0).toUpperCase() + weekday.slice(1)} ${day} ${month}`,
-                    time: timeStr,
-                    start_datetime: slot.start_datetime,
-                    isNextAvailable: slot.is_highlighted,
-                    wijkId: slot.wijkId,
-                    booked2tops: slot.booked2tops,
-                    booked4tops: slot.booked4tops,
-                    booked6tops: slot.booked6tops
+                    restaurant: restaurantResult.rows[0],
+                    zones: zonesResult.rows,
+                    events: Array.from(eventsById.values()),
+                    openingHours,
                 };
-            });
-
-            return {
-                id: event.id,
-                title: event.title,
-                description: event.description || null,
-                price_per_person: event.price_per_person ? parseFloat(event.price_per_person) : null,
-                slots: formattedSlots
-            };
+            },
         });
 
-        // Set caching header for widget data (short TTL, fresh data)
-        res.set('Cache-Control', 'public, max-age=5, s-maxage=30');
-        res.json({ restaurant, zones: zonesResult.rows, events: eventsWithSlots });
+        if (!payload) {
+            return res.status(404).json({ error: 'Restaurant not found' });
+        }
+
+        setPublicCacheHeaders(res, { maxAge: 10, sMaxAge: 30, staleWhileRevalidate: 90 });
+        res.set('X-Cache-Status', cacheStatus);
+        res.json(payload);
     } catch (error) {
         console.error('Widget data error:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -311,6 +484,7 @@ router.post('/api/book', bookingRateLimiter, async (req, res) => {
         }
 
         await client.query('COMMIT');
+        invalidatePublicCacheForRestaurant(slot.restaurant_id);
 
         console.log(`[${req.requestId}] Booking ${insertedBookingId} created for slot ${slot_id} (large_group: ${isLargeGroup})`);
 
@@ -364,82 +538,98 @@ router.get('/api/calendar/:restaurantId.ics', calendarRateLimiter, async (req, r
     const bookedOnly = req.query.booked_only === 'true';
 
     try {
-        const restaurantResult = await pool.query(
-            'SELECT * FROM restaurants WHERE id = $1',
-            [restaurantId]
-        );
+        const cacheKey = `calendar:${restaurantId}:${bookedOnly ? 'booked' : 'all'}:v2`;
+        const { value: payload, cacheStatus } = await getCachedValue({
+            key: cacheKey,
+            ttlMs: 30_000,
+            staleMs: 240_000,
+            loader: async () => {
+                const [restaurantResult, slotsResult] = await Promise.all([
+                    pool.query('SELECT id, name FROM restaurants WHERE id = $1', [restaurantId]),
+                    pool.query(
+                        `SELECT s.id, s.start_datetime, s.booked_count_2_tops, s.booked_count_4_tops, s.booked_count_6_tops,
+                                e.title as event_title, z.name as zone_name,
+                                z.capacity_2_tops, z.capacity_4_tops, z.capacity_6_tops,
+                                ro.slot_duration_minutes
+                         FROM slots s
+                         JOIN events e ON s.event_id = e.id
+                         JOIN zones z ON s.zone_id = z.id
+                         LEFT JOIN restaurant_openings ro ON ro.restaurant_id = e.restaurant_id
+                           AND ro.day_of_week = EXTRACT(DOW FROM s.start_datetime)::int
+                         WHERE e.restaurant_id = $1
+                           AND e.is_active = true
+                         ORDER BY s.start_datetime ASC`,
+                        [restaurantId]
+                    ),
+                ]);
 
-        if (restaurantResult.rows.length === 0) {
+                if (restaurantResult.rowCount === 0) {
+                    return null;
+                }
+                const restaurant = restaurantResult.rows[0];
+
+                let slots = slotsResult.rows;
+                if (bookedOnly) {
+                    slots = slots.filter((s) =>
+                        s.booked_count_2_tops > 0 || s.booked_count_4_tops > 0 || s.booked_count_6_tops > 0
+                    );
+                }
+
+                const sanitizeICS = (str) => String(str)
+                    .replace(/[\r\n]/g, ' ')
+                    .replace(/[;,\\]/g, '\\$&')
+                    .slice(0, 200);
+
+                const formatICalDate = (d) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+                const nowStamp = formatICalDate(new Date());
+                const icalContent = [
+                    'BEGIN:VCALENDAR',
+                    'VERSION:2.0',
+                    `PRODID:-//EVENTS//${restaurant.name}//EN`,
+                    'CALSCALE:GREGORIAN',
+                    'METHOD:PUBLISH',
+                    `X-WR-CALNAME:${restaurant.name} Bookings`,
+                    'X-WR-TIMEZONE:Europe/Amsterdam',
+                ];
+
+                for (const slot of slots) {
+                    const start = new Date(slot.start_datetime);
+                    const durationMs = (slot.slot_duration_minutes || 120) * 60 * 1000;
+                    const end = new Date(start.getTime() + durationMs);
+                    const totalBooked = slot.booked_count_2_tops + slot.booked_count_4_tops + slot.booked_count_6_tops;
+                    const totalCapacity = slot.capacity_2_tops + slot.capacity_4_tops + slot.capacity_6_tops;
+
+                    icalContent.push('BEGIN:VEVENT');
+                    icalContent.push(`UID:${slot.id}@events.app`);
+                    icalContent.push(`DTSTAMP:${nowStamp}`);
+                    icalContent.push(`DTSTART:${formatICalDate(start)}`);
+                    icalContent.push(`DTEND:${formatICalDate(end)}`);
+                    icalContent.push(`SUMMARY:(${totalBooked}/${totalCapacity}) ${sanitizeICS(slot.event_title)}`);
+                    icalContent.push(`DESCRIPTION:Zone: ${sanitizeICS(slot.zone_name)}\\n2-Tops: ${slot.booked_count_2_tops}\\n4-Tops: ${slot.booked_count_4_tops}\\n6-Tops: ${slot.booked_count_6_tops}`);
+                    icalContent.push(`LOCATION:${sanitizeICS(restaurant.name)} - ${sanitizeICS(slot.zone_name)}`);
+                    icalContent.push('STATUS:CONFIRMED');
+                    icalContent.push('END:VEVENT');
+                }
+
+                icalContent.push('END:VCALENDAR');
+                return {
+                    restaurantId,
+                    body: icalContent.join('\r\n'),
+                };
+            },
+        });
+
+        if (!payload) {
             return res.status(404).send('Restaurant not found');
         }
-        const restaurant = restaurantResult.rows[0];
-
-        const slotsResult = await pool.query(
-            `SELECT s.*, e.title as event_title, z.name as zone_name,
-              z.capacity_2_tops, z.capacity_4_tops, z.capacity_6_tops,
-              ro.slot_duration_minutes
-       FROM slots s
-       JOIN events e ON s.event_id = e.id
-       JOIN zones z ON s.zone_id = z.id
-       LEFT JOIN restaurant_openings ro ON ro.restaurant_id = e.restaurant_id
-         AND ro.day_of_week = EXTRACT(DOW FROM s.start_datetime)::int
-       WHERE e.restaurant_id = $1 AND e.is_active = true
-       ORDER BY s.start_datetime ASC`,
-            [restaurantId]
-        );
-
-        let slots = slotsResult.rows;
-        if (bookedOnly) {
-            slots = slots.filter(s =>
-                s.booked_count_2_tops > 0 || s.booked_count_4_tops > 0 || s.booked_count_6_tops > 0
-            );
-        }
-
-        let icalContent = [
-            'BEGIN:VCALENDAR',
-            'VERSION:2.0',
-            `PRODID:-//EVENTS//${restaurant.name}//EN`,
-            'CALSCALE:GREGORIAN',
-            'METHOD:PUBLISH',
-            `X-WR-CALNAME:${restaurant.name} Bookings`,
-            'X-WR-TIMEZONE:Europe/Amsterdam'
-        ];
-
-        // ICS sanitization helper - prevent injection
-        const sanitizeICS = (str) => String(str)
-            .replace(/[\r\n]/g, ' ')      // No newlines in field values
-            .replace(/[;,\\]/g, '\\$&')   // Escape special chars
-            .slice(0, 200);               // Length limit
-
-        for (const slot of slots) {
-            const start = new Date(slot.start_datetime);
-            // FIX #25: Use slot_duration_minutes from DB instead of hardcoded 2h
-            const durationMs = (slot.slot_duration_minutes || 120) * 60 * 1000;
-            const end = new Date(start.getTime() + durationMs);
-            const formatICalDate = (d) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-            const totalBooked = slot.booked_count_2_tops + slot.booked_count_4_tops + slot.booked_count_6_tops;
-            const totalCapacity = slot.capacity_2_tops + slot.capacity_4_tops + slot.capacity_6_tops;
-
-            icalContent.push('BEGIN:VEVENT');
-            icalContent.push(`UID:${slot.id}@events.app`);
-            icalContent.push(`DTSTAMP:${formatICalDate(new Date())}`);
-            icalContent.push(`DTSTART:${formatICalDate(start)}`);
-            icalContent.push(`DTEND:${formatICalDate(end)}`);
-            icalContent.push(`SUMMARY:(${totalBooked}/${totalCapacity}) ${sanitizeICS(slot.event_title)}`);
-            icalContent.push(`DESCRIPTION:Zone: ${sanitizeICS(slot.zone_name)}\\n2-Tops: ${slot.booked_count_2_tops}\\n4-Tops: ${slot.booked_count_4_tops}\\n6-Tops: ${slot.booked_count_6_tops}`);
-            icalContent.push(`LOCATION:${sanitizeICS(restaurant.name)} - ${sanitizeICS(slot.zone_name)}`);
-            icalContent.push('STATUS:CONFIRMED');
-            icalContent.push('END:VEVENT');
-        }
-
-        icalContent.push('END:VCALENDAR');
 
         res.set({
             'Content-Type': 'text/calendar; charset=utf-8',
-            'Content-Disposition': `attachment; filename="${restaurantId}-bookings.ics"`,
-            'Cache-Control': 'public, max-age=60'
+            'Content-Disposition': `attachment; filename="${payload.restaurantId}-bookings.ics"`,
+            'X-Cache-Status': cacheStatus,
         });
-        res.send(icalContent.join('\r\n'));
+        setPublicCacheHeaders(res, { maxAge: 30, sMaxAge: 120, staleWhileRevalidate: 300 });
+        res.send(payload.body);
     } catch (error) {
         console.error('Calendar error:', error);
         res.status(500).send('Internal server error');
@@ -473,32 +663,63 @@ router.get('/api/health', async (req, res) => {
 router.get('/api/events', async (req, res) => {
     const restaurantId = req.query.restaurantId || 'demo-restaurant';
     try {
-        const eventsResult = await pool.query(
-            `SELECT * FROM events WHERE restaurant_id = $1 AND is_active = true ORDER BY title`,
-            [restaurantId]
-        );
+        const cacheKey = `events:${restaurantId}:v2`;
+        const { value: payload, cacheStatus } = await getCachedValue({
+            key: cacheKey,
+            ttlMs: 15_000,
+            staleMs: 90_000,
+            loader: async () => {
+                const rows = await pool.query(
+                    `SELECT e.id as event_id, e.title, e.description, e.price_per_person, e.is_active, e.created_at,
+                            s.id as slot_id, s.zone_id, s.start_datetime, s.is_highlighted,
+                            s.booked_count_2_tops, s.booked_count_4_tops, s.booked_count_6_tops, s.current_couverts
+                     FROM events e
+                     LEFT JOIN slots s ON s.event_id = e.id
+                     WHERE e.restaurant_id = $1
+                       AND e.is_active = true
+                       AND (s.id IS NULL OR s.start_datetime >= NOW() - INTERVAL '30 minutes')
+                     ORDER BY e.title ASC, s.start_datetime ASC`,
+                    [restaurantId]
+                );
 
-        // P1 FIX #7: Single batched query instead of N+1
-        const allSlotsResult = await pool.query(
-            `SELECT s.* FROM slots s
-             JOIN events e ON s.event_id = e.id
-             WHERE e.restaurant_id = $1 AND e.is_active = true
-             ORDER BY s.start_datetime`,
-            [restaurantId]
-        );
+                const eventsById = new Map();
+                for (const row of rows.rows) {
+                    if (!eventsById.has(row.event_id)) {
+                        eventsById.set(row.event_id, {
+                            id: row.event_id,
+                            title: row.title,
+                            description: row.description,
+                            price_per_person: row.price_per_person,
+                            is_active: row.is_active,
+                            created_at: row.created_at,
+                            slots: [],
+                        });
+                    }
 
-        const slotsByEvent = new Map();
-        for (const slot of allSlotsResult.rows) {
-            if (!slotsByEvent.has(slot.event_id)) slotsByEvent.set(slot.event_id, []);
-            slotsByEvent.get(slot.event_id).push(slot);
-        }
+                    if (row.slot_id) {
+                        eventsById.get(row.event_id).slots.push({
+                            id: row.slot_id,
+                            event_id: row.event_id,
+                            zone_id: row.zone_id,
+                            start_datetime: row.start_datetime,
+                            is_highlighted: row.is_highlighted,
+                            booked_count_2_tops: row.booked_count_2_tops,
+                            booked_count_4_tops: row.booked_count_4_tops,
+                            booked_count_6_tops: row.booked_count_6_tops,
+                            current_couverts: row.current_couverts,
+                        });
+                    }
+                }
 
-        const eventsWithSlots = eventsResult.rows.map(event => ({
-            ...event,
-            slots: slotsByEvent.get(event.id) || []
-        }));
+                return {
+                    events: Array.from(eventsById.values()).filter((event) => event.slots.length > 0),
+                };
+            },
+        });
 
-        res.json({ events: eventsWithSlots });
+        setPublicCacheHeaders(res, { maxAge: 15, sMaxAge: 45, staleWhileRevalidate: 120 });
+        res.set('X-Cache-Status', cacheStatus);
+        res.json(payload);
     } catch (error) {
         console.error('Failed to fetch events:', error);
         res.status(500).json({ error: 'Failed to fetch events' });
@@ -509,15 +730,25 @@ router.get('/api/events', async (req, res) => {
 router.get('/api/restaurant/:restaurantId/tables', async (req, res) => {
     const { restaurantId } = req.params;
     try {
-        const result = await pool.query(
-            `SELECT id, name, seats, zone FROM restaurant_tables 
-             WHERE restaurant_id = $1 AND is_active = true 
-             ORDER BY zone, name`,
-            [restaurantId]
-        );
-        // PERF: Tables rarely change mid-service — cache for 60 seconds
-        res.set('Cache-Control', 'public, max-age=60, s-maxage=60');
-        res.json({ tables: result.rows });
+        const cacheKey = `tables:${restaurantId}:v1`;
+        const { value: payload, cacheStatus } = await getCachedValue({
+            key: cacheKey,
+            ttlMs: 60_000,
+            staleMs: 600_000,
+            loader: async () => {
+                const result = await pool.query(
+                    `SELECT id, name, seats, zone FROM restaurant_tables
+                     WHERE restaurant_id = $1 AND is_active = true
+                     ORDER BY zone, name`,
+                    [restaurantId]
+                );
+                return { tables: result.rows };
+            },
+        });
+
+        setPublicCacheHeaders(res, { maxAge: 60, sMaxAge: 120, staleWhileRevalidate: 600 });
+        res.set('X-Cache-Status', cacheStatus);
+        res.json(payload);
     } catch (error) {
         console.error('Error fetching tables:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -528,25 +759,34 @@ router.get('/api/restaurant/:restaurantId/tables', async (req, res) => {
 router.get('/api/restaurant/:restaurantId/opening-hours', async (req, res) => {
     const { restaurantId } = req.params;
     try {
-        const result = await pool.query(
-            `SELECT day_of_week, open_time, close_time, is_closed 
-             FROM restaurant_openings 
-             WHERE restaurant_id = $1 AND specific_date IS NULL
-             ORDER BY day_of_week`,
-            [restaurantId]
-        );
+        const cacheKey = `opening-hours:${restaurantId}:v1`;
+        const { value: payload, cacheStatus } = await getCachedValue({
+            key: cacheKey,
+            ttlMs: 300_000,
+            staleMs: 1_800_000,
+            loader: async () => {
+                const result = await pool.query(
+                    `SELECT day_of_week, open_time, close_time, is_closed
+                     FROM restaurant_openings
+                     WHERE restaurant_id = $1 AND specific_date IS NULL
+                     ORDER BY day_of_week`,
+                    [restaurantId]
+                );
 
-        // Map to frontend format
-        const openingHours = result.rows.map(row => ({
-            dayOfWeek: row.day_of_week,
-            open: row.open_time?.substring(0, 5) || '17:00',
-            close: row.close_time?.substring(0, 5) || '23:00',
-            isOpen: !row.is_closed
-        }));
+                return {
+                    openingHours: result.rows.map((row) => ({
+                        dayOfWeek: row.day_of_week,
+                        open: row.open_time?.substring(0, 5) || '17:00',
+                        close: row.close_time?.substring(0, 5) || '23:00',
+                        isOpen: !row.is_closed,
+                    })),
+                };
+            },
+        });
 
-        // PERF: Opening hours rarely change — cache for 5 minutes
-        res.set('Cache-Control', 'public, max-age=300, s-maxage=300');
-        res.json({ openingHours });
+        setPublicCacheHeaders(res, { maxAge: 300, sMaxAge: 600, staleWhileRevalidate: 1800 });
+        res.set('X-Cache-Status', cacheStatus);
+        res.json(payload);
     } catch (error) {
         console.error('Error fetching opening hours:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -893,6 +1133,7 @@ router.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
         }
 
         await client.query('COMMIT');
+        invalidatePublicCacheForRestaurant(restaurant_id);
 
         // Build table name string for email/response
         const tableNames = selectedTables.map(t => t.name).join(' + ');
@@ -940,15 +1181,27 @@ router.get('/api/restaurant/:id/openings', async (req, res) => {
     const { id } = req.params;
 
     try {
-        const result = await pool.query(
-            `SELECT day_of_week as day, NOT is_closed as is_open, 
-                    open_time::text as open_time, close_time::text as close_time
-             FROM restaurant_openings 
-             WHERE restaurant_id = $1 
-             ORDER BY day_of_week`,
-            [id]
-        );
-        res.json({ openings: result.rows });
+        const cacheKey = `openings:${id}:v1`;
+        const { value: payload, cacheStatus } = await getCachedValue({
+            key: cacheKey,
+            ttlMs: 300_000,
+            staleMs: 1_800_000,
+            loader: async () => {
+                const result = await pool.query(
+                    `SELECT day_of_week as day, NOT is_closed as is_open,
+                            open_time::text as open_time, close_time::text as close_time
+                     FROM restaurant_openings
+                     WHERE restaurant_id = $1
+                     ORDER BY day_of_week`,
+                    [id]
+                );
+                return { openings: result.rows };
+            },
+        });
+
+        setPublicCacheHeaders(res, { maxAge: 300, sMaxAge: 600, staleWhileRevalidate: 1800 });
+        res.set('X-Cache-Status', cacheStatus);
+        res.json(payload);
     } catch (error) {
         console.error('Get openings error:', error);
         res.json({ openings: [] });

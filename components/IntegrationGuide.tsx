@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { Copy, Check, Code, Layout, Globe, Calendar } from 'lucide-react';
-import { API_BASE_URL, RESTAURANT_ID, getCalendarUrl } from '../api';
+import { RESTAURANT_ID, getCalendarUrl } from '../api';
 
 export const IntegrationGuide: React.FC = () => {
   const [copied, setCopied] = useState<string | null>(null);
 
-  // Dynamic widget URL based on API
-  const widgetUrl = `${API_BASE_URL.replace('localhost', 'YOUR_DOMAIN')}/widget/${RESTAURANT_ID}`;
+  // Dedicated lightweight widget entrypoint for embeds
+  const widgetBaseUrl = (import.meta.env.VITE_WIDGET_BASE_URL || window.location.origin).replace(/\/$/, '');
+  const widgetUrl = `${widgetBaseUrl}/widget.html?restaurantId=${encodeURIComponent(RESTAURANT_ID)}`;
   const calendarUrl = getCalendarUrl(RESTAURANT_ID, false);
 
   const embedCode = `<iframe 
