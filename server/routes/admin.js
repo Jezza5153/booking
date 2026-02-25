@@ -854,16 +854,18 @@ router.get('/api/admin/restaurant-bookings', authMiddleware, async (req, res) =>
     try {
         const result = await pool.query(
             `SELECT rb.id, rb.table_id, rb.start_time::text, rb.end_time::text, 
-                    rb.guest_count, rb.customer_name, rb.status, rt.name as table_name,
-                    rb.remarks, rb.customer_id, rb.group_id,
-                    (SELECT COUNT(DISTINCT past.group_id) 
+                    rb.guest_count, rb.customer_name, rb.customer_email, rb.customer_phone,
+                    rb.status, COALESCE(rt.name, 'Geen tafel') as table_name,
+                    rb.remarks, rb.customer_id, rb.group_id, rb.is_primary,
+                    (SELECT COUNT(DISTINCT past.id) 
                      FROM restaurant_bookings past 
                      WHERE past.customer_id = rb.customer_id 
+                       AND past.customer_id IS NOT NULL
                        AND past.status = 'arrived' 
                        AND past.booking_date < rb.booking_date
                     ) as visit_count
              FROM restaurant_bookings rb
-             JOIN restaurant_tables rt ON rt.id = rb.table_id
+             LEFT JOIN restaurant_tables rt ON rt.id = rb.table_id
              WHERE rb.restaurant_id = $1 AND rb.booking_date = $2 AND rb.status != 'cancelled'
              ORDER BY rb.start_time ASC`,
             [targetRestaurantId, targetDate]
@@ -872,6 +874,48 @@ router.get('/api/admin/restaurant-bookings', authMiddleware, async (req, res) =>
     } catch (error) {
         console.error('Admin restaurant bookings error:', error);
         res.status(500).json({ error: 'Failed to fetch bookings' });
+    }
+});
+
+// Route: /api/admin/customer-history
+// Returns past bookings for a customer by email or customer_id
+router.get('/api/admin/customer-history', authMiddleware, async (req, res) => {
+    const { restaurantId, email, customerId } = req.query;
+    const rid = restaurantId || 'demo-restaurant';
+
+    try {
+        let result;
+        if (customerId) {
+            result = await pool.query(
+                `SELECT rb.booking_date::text, rb.start_time::text, rb.guest_count, 
+                        rb.status, rb.remarks, rb.customer_name,
+                        COALESCE(rt.name, '-') as table_name
+                 FROM restaurant_bookings rb
+                 LEFT JOIN restaurant_tables rt ON rt.id = rb.table_id
+                 WHERE rb.restaurant_id = $1 AND rb.customer_id = $2
+                 ORDER BY rb.booking_date DESC, rb.start_time DESC
+                 LIMIT 10`,
+                [rid, customerId]
+            );
+        } else if (email) {
+            result = await pool.query(
+                `SELECT rb.booking_date::text, rb.start_time::text, rb.guest_count, 
+                        rb.status, rb.remarks, rb.customer_name,
+                        COALESCE(rt.name, '-') as table_name
+                 FROM restaurant_bookings rb
+                 LEFT JOIN restaurant_tables rt ON rt.id = rb.table_id
+                 WHERE rb.restaurant_id = $1 AND lower(rb.customer_email) = lower($2)
+                 ORDER BY rb.booking_date DESC, rb.start_time DESC
+                 LIMIT 10`,
+                [rid, email]
+            );
+        } else {
+            return res.json({ history: [] });
+        }
+        res.json({ history: result.rows });
+    } catch (error) {
+        console.error('Customer history error:', error);
+        res.status(500).json({ error: 'Failed to fetch history' });
     }
 });
 

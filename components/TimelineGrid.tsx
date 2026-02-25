@@ -73,6 +73,71 @@ const STATUS_COLORS = {
     cancelled: { bg: 'bg-gray-400', hover: 'hover:bg-gray-500', text: 'Geannuleerd', icon: X },
     walkin: { bg: 'bg-blue-500', hover: 'hover:bg-blue-600', text: 'Walk-in', icon: Users }
 }
+// Customer History sub-component for booking detail modal
+const CustomerHistory: React.FC<{ email?: string; customerId?: string; currentBookingId: string }> = ({ email, customerId, currentBookingId }) => {
+    const [history, setHistory] = useState<any[]>([])
+    const [loading, setLoading] = useState(true)
+    const [expanded, setExpanded] = useState(false)
+
+    useEffect(() => {
+        const fetchHistory = async () => {
+            try {
+                const token = localStorage.getItem('events_token')
+                const params = new URLSearchParams({ restaurantId: 'demo-restaurant' })
+                if (customerId) params.set('customerId', customerId)
+                else if (email) params.set('email', email)
+                else { setLoading(false); return }
+
+                const res = await fetch(`${API_BASE_URL}/api/admin/customer-history?${params}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+                const data = await res.json()
+                // Filter out the current booking
+                setHistory((data.history || []).filter((h: any) => h.booking_date !== undefined))
+            } catch {
+                setHistory([])
+            }
+            setLoading(false)
+        }
+        fetchHistory()
+    }, [email, customerId, currentBookingId])
+
+    if (loading) return <div className="text-xs text-gray-400 py-1">Geschiedenis laden...</div>
+    if (history.length <= 1) return null // Only current booking, no history
+
+    const statusLabel: Record<string, string> = {
+        confirmed: '✅', arrived: '🟢', no_show: '❌', cancelled: '⛔', walkin: '🚶'
+    }
+
+    return (
+        <div className="border-t pt-2">
+            <button
+                onClick={() => setExpanded(!expanded)}
+                className="w-full flex items-center justify-between text-xs font-medium text-gray-600 hover:text-gray-900"
+            >
+                <span>📋 Eerdere bezoeken ({history.length - 1})</span>
+                <ChevronRight className={`w-3.5 h-3.5 transition-transform ${expanded ? 'rotate-90' : ''}`} />
+            </button>
+            {expanded && (
+                <div className="mt-2 space-y-1.5 max-h-40 overflow-y-auto">
+                    {history.filter((_, i) => i > 0).map((h, i) => (
+                        <div key={i} className="flex items-center gap-2 text-xs bg-gray-50 rounded-lg p-2">
+                            <span className="text-gray-400 w-20 shrink-0">{h.booking_date}</span>
+                            <span className="font-medium">{h.guest_count}p</span>
+                            <span className="text-gray-400">{h.table_name}</span>
+                            <span>{statusLabel[h.status] || h.status}</span>
+                            {h.remarks && (
+                                <span className="text-amber-600 truncate ml-auto" title={h.remarks}>
+                                    📝 {h.remarks}
+                                </span>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    )
+}
 
 export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
     const [date, setDate] = useState(() => new Date().toISOString().split('T')[0])
@@ -1485,111 +1550,138 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
 
             {/* Booking Detail Modal */}
             {
-                showBookingDetail && (
-                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-xl max-w-md w-full p-4 shadow-xl">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="font-semibold text-gray-900">Boeking details</h3>
-                                <button onClick={() => setShowBookingDetail(null)} className="p-1 hover:bg-gray-100 rounded">
-                                    <X className="w-5 h-5" />
-                                </button>
-                            </div>
+                showBookingDetail && (() => {
+                    // Multi-table group info
+                    const isGrouped = showBookingDetail.group_id && bookings.filter(b => b.group_id === showBookingDetail.group_id).length > 1
+                    const groupSiblings = isGrouped ? bookings.filter(b => b.group_id === showBookingDetail.group_id) : []
 
-                            <div className="space-y-3">
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-10 h-10 rounded-full ${STATUS_COLORS[showBookingDetail.status as keyof typeof STATUS_COLORS]?.bg || 'bg-gray-400'} flex items-center justify-center text-white font-bold`}>
-                                        {showBookingDetail.guest_count}
-                                    </div>
-                                    <div>
-                                        <div className="font-medium text-gray-900">{showBookingDetail.customer_name}</div>
-                                        <div className="text-sm text-gray-500">
-                                            {showBookingDetail.start_time} - {showBookingDetail.end_time}
-                                        </div>
-                                    </div>
-                                    {showBookingDetail.customer_visits && showBookingDetail.customer_visits > 1 && (
-                                        <div className="ml-auto bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-xs font-medium">
-                                            🌟 {showBookingDetail.customer_visits}e bezoek
-                                        </div>
-                                    )}
+                    return (
+                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                            <div className="bg-white rounded-xl max-w-md w-full p-4 shadow-xl max-h-[85vh] overflow-y-auto">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="font-semibold text-gray-900">Boeking details</h3>
+                                    <button onClick={() => setShowBookingDetail(null)} className="p-1 hover:bg-gray-100 rounded">
+                                        <X className="w-5 h-5" />
+                                    </button>
                                 </div>
 
-                                {showBookingDetail.customer_phone && (
-                                    <a href={`tel:${showBookingDetail.customer_phone}`} className="flex items-center gap-2 text-sm text-blue-600 hover:underline">
-                                        <Phone className="w-4 h-4" />
-                                        {showBookingDetail.customer_phone}
-                                    </a>
-                                )}
-
-                                {showBookingDetail.customer_email && (
-                                    <a href={`mailto:${showBookingDetail.customer_email}`} className="flex items-center gap-2 text-sm text-blue-600 hover:underline">
-                                        <Mail className="w-4 h-4" />
-                                        {showBookingDetail.customer_email}
-                                    </a>
-                                )}
-
-                                {showBookingDetail.remarks && (
-                                    <div className="p-2 bg-amber-50 rounded-lg text-sm text-amber-800">
-                                        📝 {showBookingDetail.remarks}
+                                <div className="space-y-3">
+                                    {/* Guest info */}
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-10 h-10 rounded-full ${STATUS_COLORS[showBookingDetail.status as keyof typeof STATUS_COLORS]?.bg || 'bg-gray-400'} flex items-center justify-center text-white font-bold`}>
+                                            {showBookingDetail.guest_count}
+                                        </div>
+                                        <div>
+                                            <div className="font-medium text-gray-900">{showBookingDetail.customer_name}</div>
+                                            <div className="text-sm text-gray-500">
+                                                {showBookingDetail.start_time} - {showBookingDetail.end_time}
+                                            </div>
+                                        </div>
+                                        {Number(showBookingDetail.visit_count) > 0 && (
+                                            <div className="ml-auto bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+                                                🌟 {showBookingDetail.visit_count}x eerder
+                                            </div>
+                                        )}
                                     </div>
-                                )}
 
-                                {showBookingDetail.dietary_notes && (
-                                    <div className="p-2 bg-red-50 rounded-lg text-sm text-red-800">
-                                        ⚠️ {showBookingDetail.dietary_notes}
-                                    </div>
-                                )}
+                                    {/* Multi-table indicator */}
+                                    {isGrouped && (
+                                        <div className="p-2 bg-blue-50 rounded-lg text-sm text-blue-800 flex items-center gap-2">
+                                            🔗 Groepsboeking over {groupSiblings.length} tafels: {groupSiblings.map(b => {
+                                                const t = tables.find(tt => tt.id === b.table_id)
+                                                return t?.name || 'Onbekend'
+                                            }).join(' + ')}
+                                        </div>
+                                    )}
 
-                                <div className="border-t pt-3">
-                                    <label className="text-xs text-gray-500 block mb-2">Status wijzigen</label>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <button
-                                            onClick={() => updateBookingStatus(showBookingDetail.id, 'arrived')}
-                                            className="flex items-center justify-center gap-2 px-3 py-2 bg-amber-500 text-white rounded-lg text-sm hover:bg-amber-600"
-                                        >
-                                            <UserCheck className="w-4 h-4" />
-                                            Gearriveerd
-                                        </button>
-                                        <button
-                                            onClick={() => setConfirmDialog({
-                                                message: 'Weet je zeker dat je deze boeking als No-show wilt markeren?',
-                                                action: () => {
-                                                    updateBookingStatus(showBookingDetail.id, 'no_show')
-                                                    setConfirmDialog(null)
-                                                },
-                                                type: 'warning'
-                                            })}
-                                            className="flex items-center justify-center gap-2 px-3 py-2 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600"
-                                        >
-                                            <UserX className="w-4 h-4" />
-                                            No-show
-                                        </button>
-                                        <button
-                                            onClick={() => updateBookingStatus(showBookingDetail.id, 'confirmed')}
-                                            className="flex items-center justify-center gap-2 px-3 py-2 bg-emerald-500 text-white rounded-lg text-sm hover:bg-emerald-600"
-                                        >
-                                            <Check className="w-4 h-4" />
-                                            Bevestigd
-                                        </button>
-                                        <button
-                                            onClick={() => setConfirmDialog({
-                                                message: 'Weet je zeker dat je deze boeking wilt annuleren?',
-                                                action: () => {
-                                                    updateBookingStatus(showBookingDetail.id, 'cancelled')
-                                                    setConfirmDialog(null)
-                                                },
-                                                type: 'danger'
-                                            })}
-                                            className="flex items-center justify-center gap-2 px-3 py-2 bg-gray-500 text-white rounded-lg text-sm hover:bg-gray-600"
-                                        >
-                                            <X className="w-4 h-4" />
-                                            Annuleren
-                                        </button>
+                                    {showBookingDetail.customer_phone && (
+                                        <a href={`tel:${showBookingDetail.customer_phone}`} className="flex items-center gap-2 text-sm text-blue-600 hover:underline">
+                                            <Phone className="w-4 h-4" />
+                                            {showBookingDetail.customer_phone}
+                                        </a>
+                                    )}
+
+                                    {showBookingDetail.customer_email && (
+                                        <a href={`mailto:${showBookingDetail.customer_email}`} className="flex items-center gap-2 text-sm text-blue-600 hover:underline">
+                                            <Mail className="w-4 h-4" />
+                                            {showBookingDetail.customer_email}
+                                        </a>
+                                    )}
+
+                                    {showBookingDetail.remarks && (
+                                        <div className="p-2 bg-amber-50 rounded-lg text-sm text-amber-800">
+                                            📝 {showBookingDetail.remarks}
+                                        </div>
+                                    )}
+
+                                    {showBookingDetail.dietary_notes && (
+                                        <div className="p-2 bg-red-50 rounded-lg text-sm text-red-800">
+                                            ⚠️ {showBookingDetail.dietary_notes}
+                                        </div>
+                                    )}
+
+                                    {/* Customer History - fetched inline */}
+                                    {(showBookingDetail.customer_email || showBookingDetail.customer_id) && (
+                                        <CustomerHistory
+                                            email={showBookingDetail.customer_email}
+                                            customerId={showBookingDetail.customer_id}
+                                            currentBookingId={showBookingDetail.id}
+                                        />
+                                    )}
+
+                                    {/* Status buttons */}
+                                    <div className="border-t pt-3">
+                                        <label className="text-xs text-gray-500 block mb-2">Status wijzigen</label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <button
+                                                onClick={() => updateBookingStatus(showBookingDetail.id, 'arrived')}
+                                                className="flex items-center justify-center gap-2 px-3 py-2 bg-amber-500 text-white rounded-lg text-sm hover:bg-amber-600"
+                                            >
+                                                <UserCheck className="w-4 h-4" />
+                                                Gearriveerd
+                                            </button>
+                                            <button
+                                                onClick={() => setConfirmDialog({
+                                                    message: 'Weet je zeker dat je deze boeking als No-show wilt markeren?',
+                                                    action: () => {
+                                                        updateBookingStatus(showBookingDetail.id, 'no_show')
+                                                        setConfirmDialog(null)
+                                                    },
+                                                    type: 'warning'
+                                                })}
+                                                className="flex items-center justify-center gap-2 px-3 py-2 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600"
+                                            >
+                                                <UserX className="w-4 h-4" />
+                                                No-show
+                                            </button>
+                                            <button
+                                                onClick={() => updateBookingStatus(showBookingDetail.id, 'confirmed')}
+                                                className="flex items-center justify-center gap-2 px-3 py-2 bg-emerald-500 text-white rounded-lg text-sm hover:bg-emerald-600"
+                                            >
+                                                <Check className="w-4 h-4" />
+                                                Bevestigd
+                                            </button>
+                                            <button
+                                                onClick={() => setConfirmDialog({
+                                                    message: 'Weet je zeker dat je deze boeking wilt annuleren?',
+                                                    action: () => {
+                                                        updateBookingStatus(showBookingDetail.id, 'cancelled')
+                                                        setConfirmDialog(null)
+                                                    },
+                                                    type: 'danger'
+                                                })}
+                                                className="flex items-center justify-center gap-2 px-3 py-2 bg-gray-500 text-white rounded-lg text-sm hover:bg-gray-600"
+                                            >
+                                                <X className="w-4 h-4" />
+                                                Annuleren
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                )
+                    )
+                })()
             }
 
             {/* New Booking Modal (Full Widget) */}
@@ -1617,38 +1709,42 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
             }
 
             {/* Toast Notification */}
-            {toast && (
-                <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-in slide-in-from-bottom-4 ${toast.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
-                    }`}>
-                    {toast.type === 'success' ? <Check className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-                    {toast.message}
-                </div>
-            )}
+            {
+                toast && (
+                    <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-in slide-in-from-bottom-4 ${toast.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
+                        }`}>
+                        {toast.type === 'success' ? <Check className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                        {toast.message}
+                    </div>
+                )
+            }
 
             {/* Confirmation Dialog */}
-            {confirmDialog && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-xl max-w-sm w-full p-5 shadow-xl">
-                        <h3 className="font-semibold text-gray-900 mb-3">Bevestigen</h3>
-                        <p className="text-gray-600 mb-5">{confirmDialog.message}</p>
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() => setConfirmDialog(null)}
-                                className="flex-1 px-4 py-2 border rounded-lg text-sm hover:bg-gray-50"
-                            >
-                                Annuleren
-                            </button>
-                            <button
-                                onClick={confirmDialog.action}
-                                className={`flex-1 px-4 py-2 text-white rounded-lg text-sm ${confirmDialog.type === 'danger' ? 'bg-red-500 hover:bg-red-600' : 'bg-amber-500 hover:bg-amber-600'
-                                    }`}
-                            >
-                                Bevestigen
-                            </button>
+            {
+                confirmDialog && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-xl max-w-sm w-full p-5 shadow-xl">
+                            <h3 className="font-semibold text-gray-900 mb-3">Bevestigen</h3>
+                            <p className="text-gray-600 mb-5">{confirmDialog.message}</p>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setConfirmDialog(null)}
+                                    className="flex-1 px-4 py-2 border rounded-lg text-sm hover:bg-gray-50"
+                                >
+                                    Annuleren
+                                </button>
+                                <button
+                                    onClick={confirmDialog.action}
+                                    className={`flex-1 px-4 py-2 text-white rounded-lg text-sm ${confirmDialog.type === 'danger' ? 'bg-red-500 hover:bg-red-600' : 'bg-amber-500 hover:bg-amber-600'
+                                        }`}
+                                >
+                                    Bevestigen
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
         </>
     )
 }
