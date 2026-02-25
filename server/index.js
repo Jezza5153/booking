@@ -279,6 +279,17 @@ runMigrations().then(() => {
         console.log(`📅 Calendar: http://localhost:${PORT}/api/calendar/demo-restaurant.ics`);
         console.log(`🔐 Auth: POST /api/auth/login`);
         console.log(`🛡️  Security: Rate limiting, input validation, SERIALIZABLE transactions enabled`);
+
+        // PERF: Self-ping every 4 min to keep Railway warm (eliminates ~1.7s cold start)
+        if (process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT) {
+            const selfUrl = process.env.RAILWAY_PUBLIC_DOMAIN
+                ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/api/health`
+                : `http://localhost:${PORT}/api/health`;
+            setInterval(() => {
+                fetch(selfUrl).catch(() => { });
+            }, 4 * 60 * 1000); // every 4 minutes
+            console.log(`🏓 Self-ping enabled: ${selfUrl} every 4 min`);
+        }
     });
 
     // P1 FIX #15: Request timeout to prevent hung connections
