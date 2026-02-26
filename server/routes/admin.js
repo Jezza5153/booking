@@ -4,7 +4,7 @@ import { authMiddleware } from '../auth.js';
 import { bookingRateLimiter, widgetRateLimiter, calendarRateLimiter } from '../ratelimit.js';
 import { captureException } from '../sentry.js';
 import { sendBookingConfirmation, sendLargeGroupNotification, sendRestaurantBookingConfirmation, sendChefsChoiceNotification } from '../email.js';
-import { escapeHtml, sanitizeString, validateRestaurantId, generateUnsubscribeToken, parseSlotDateTime, buildBookingsMap } from '../utils.js';
+import { escapeHtml, sanitizeString, validateRestaurantId, generateUnsubscribeToken, parseSlotDateTime, buildBookingsMap, selectTablesForSlot, overlaps } from '../utils.js';
 import { invalidatePublicCacheForRestaurant } from '../public-cache.js';
 import multer from 'multer';
 const upload = multer({ storage: multer.memoryStorage() });
@@ -1462,6 +1462,108 @@ router.post('/api/admin/newsletter/send', authMiddleware, upload.single('attachm
     } catch (error) {
         console.error('Newsletter send error:', error.message);
         res.status(500).json({ error: 'Failed to send newsletter' });
+    }
+});
+
+// ============================================
+// TEMPORARY: Fix oversized Tapla-imported bookings
+// ============================================
+router.post('/fix-oversized-bookings', authMiddleware, async (req, res) => {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const restaurantId = 'demo-restaurant';
+
+        // Find bookings where guest_count > table seats and no group_id
+        const oversized = await client.query(`
+            SELECT rb.id, rb.customer_name, rb.customer_email, rb.customer_phone,
+                   rb.guest_count, rb.booking_date::text, rb.table_id,
+                   to_char(rb.start_time, 'HH24:MI') AS start_time,
+                   to_char(rb.end_time, 'HH24:MI') AS end_time,
+                   rb.status, rb.remarks, rb.customer_id,
+                   rt.name AS table_name, rt.seats
+            FROM restaurant_bookings rb
+            LEFT JOIN restaurant_tables rt ON rt.id = rb.table_id
+            WHERE rb.restaurant_id = $1
+              AND rb.guest_count > COALESCE(rt.seats, 0)
+              AND rb.group_id IS NULL
+              AND lower(rb.status) != 'cancelled'
+            ORDER BY rb.booking_date, rb.start_time
+        `, [restaurantId]);
+
+        const results = [];
+
+        for (const booking of oversized.rows) {
+            // Fetch all tables
+            const allTablesQ = await client.query(
+                `SELECT id, name, seats, zone FROM restaurant_tables WHERE restaurant_id = $1 AND is_active = true ORDER BY seats DESC`,
+                [restaurantId]
+            );
+            const allTables = allTablesQ.rows;
+
+            // Fetch existing bookings for that date (excluding current booking)
+            const bookingsQ = await client.query(
+                `SELECT table_id, to_char(start_time, 'HH24:MI') AS start_time, to_char(end_time, 'HH24:MI') AS end_time
+                 FROM restaurant_bookings
+                 WHERE restaurant_id = $1 AND booking_date = $2
+                 AND lower(status) != 'cancelled' AND id != $3`,
+                [restaurantId, booking.booking_date, booking.id]
+            );
+            const bookingsByTableId = buildBookingsMap(bookingsQ.rows);
+
+            // Select tables for this booking
+            const selectedTables = selectTablesForSlot({
+                allTables,
+                bookingsByTableId,
+                slotStart: booking.start_time,
+                slotEnd: booking.end_time,
+                guestCount: booking.guest_count
+            });
+
+            if (!selectedTables || selectedTables.length <= 1) {
+                results.push({ id: booking.id, name: booking.customer_name, guests: booking.guest_count, status: 'skipped', reason: selectedTables ? 'fits single table' : 'not enough tables' });
+                continue;
+            }
+
+            // Create group_id and update original booking
+            const crypto = await import('crypto');
+            const groupId = crypto.randomUUID();
+
+            // Update original booking: assign to first selected table, set group_id
+            await client.query(
+                `UPDATE restaurant_bookings SET table_id = $1, group_id = $2, is_primary = true WHERE id = $3`,
+                [selectedTables[0].id, groupId, booking.id]
+            );
+
+            // Insert additional table bookings
+            for (let i = 1; i < selectedTables.length; i++) {
+                const tbl = selectedTables[i];
+                const rowId = crypto.randomUUID();
+                await client.query(
+                    `INSERT INTO restaurant_bookings (id, restaurant_id, table_id, customer_id, customer_name, customer_email, customer_phone, guest_count, booking_date, start_time, end_time, status, remarks, group_id, is_primary, created_at)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, false, NOW())`,
+                    [rowId, restaurantId, tbl.id, booking.customer_id, booking.customer_name,
+                        booking.customer_email, booking.customer_phone, booking.guest_count,
+                        booking.booking_date, booking.start_time, booking.end_time,
+                        booking.status, booking.remarks, groupId]
+                );
+            }
+
+            results.push({
+                id: booking.id, name: booking.customer_name, guests: booking.guest_count,
+                status: 'fixed',
+                tables: selectedTables.map(t => `${t.name} (${t.seats}p)`).join(' + ')
+            });
+        }
+
+        await client.query('COMMIT');
+        res.json({ success: true, totalOversized: oversized.rows.length, results });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('Fix oversized error:', err);
+        res.status(500).json({ error: err.message });
+    } finally {
+        client.release();
     }
 });
 
