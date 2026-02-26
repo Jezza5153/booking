@@ -68,26 +68,28 @@ export const AnalyseCharts: React.FC<Props> = ({ stats, comparison, tableUtil, p
             {/* Party size + Lead time + Repeat — side by side */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 {/* Party size distribution */}
-                {partySizes.length > 0 && (
-                    <div className="bg-white rounded-xl border border-gray-200 p-5">
-                        <h2 className="text-sm font-semibold text-gray-900 mb-3">Groepsgrootte</h2>
-                        <div className="space-y-2">
-                            {partySizes.map(ps => {
-                                const total = partySizes.reduce((s, p) => s + p.count, 0)
-                                const pct = total > 0 ? Math.round(ps.count / total * 100) : 0
-                                return (
-                                    <div key={ps.size} className="flex items-center gap-2 text-sm">
-                                        <span className="w-8 text-gray-600 font-medium shrink-0">{ps.size}p</span>
-                                        <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden">
-                                            <div className="h-full bg-blue-500 rounded-full" style={{ width: `${pct}%`, minWidth: ps.count > 0 ? '4px' : '0' }} />
+                {partySizes.length > 0 && (() => {
+                    const total = partySizes.reduce((s, p) => s + p.count, 0)
+                    return (
+                        <div className="bg-white rounded-xl border border-gray-200 p-5">
+                            <h2 className="text-sm font-semibold text-gray-900 mb-3">Groepsgrootte</h2>
+                            <div className="space-y-2">
+                                {partySizes.map(ps => {
+                                    const pct = total > 0 ? Math.round(ps.count / total * 100) : 0
+                                    return (
+                                        <div key={ps.size} className="flex items-center gap-2 text-sm">
+                                            <span className="w-8 text-gray-600 font-medium shrink-0">{ps.size}p</span>
+                                            <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden">
+                                                <div className="h-full bg-blue-500 rounded-full" style={{ width: `${pct}%`, minWidth: ps.count > 0 ? '4px' : '0' }} />
+                                            </div>
+                                            <span className="w-16 text-right text-gray-500 tabular-nums shrink-0">{ps.count} ({pct}%)</span>
                                         </div>
-                                        <span className="w-16 text-right text-gray-500 tabular-nums shrink-0">{ps.count} ({pct}%)</span>
-                                    </div>
-                                )
-                            })}
+                                    )
+                                })}
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )
+                })()}
 
                 {/* Lead time distribution */}
                 {leadTimes.length > 0 && (

@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { X, ArrowUpRight } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import type { DayStats, MetricDetail } from './types'
@@ -15,6 +15,15 @@ interface Props {
 
 export const MetricDrawer: React.FC<Props> = ({ day, metric, totalSeats, onClose, onViewBookings }) => {
     const isOpen = !!(day || metric)
+
+    // Escape key to close
+    useEffect(() => {
+        if (!isOpen) return
+        const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+        document.addEventListener('keydown', handler)
+        return () => document.removeEventListener('keydown', handler)
+    }, [isOpen, onClose])
+
     if (!isOpen) return null
 
     return (

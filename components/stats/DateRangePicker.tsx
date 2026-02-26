@@ -22,8 +22,10 @@ export const DateRangePicker: React.FC<Props> = ({ from, to, onChange }) => {
     // Close on outside click
     useEffect(() => {
         const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+        const keyHandler = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
         document.addEventListener('mousedown', handler)
-        return () => document.removeEventListener('mousedown', handler)
+        document.addEventListener('keydown', keyHandler)
+        return () => { document.removeEventListener('mousedown', handler); document.removeEventListener('keydown', keyHandler) }
     }, [])
 
     const daysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate()

@@ -736,7 +736,6 @@ router.get('/api/admin/stats/pdf', async (req, res) => {
 
     try {
         const baseWhere = `restaurant_id = $1 AND (group_id IS NULL OR is_primary = true)`;
-        const activeWhere = `${baseWhere} AND status != 'cancelled'`;
 
         const [dailyResult, totalsResult, revenueResult] = await Promise.all([
             pool.query(

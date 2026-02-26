@@ -172,11 +172,20 @@ export const BookingStats: React.FC<Props> = ({ restaurantId, onBack }) => {
             setEditingRevenue(null); fetchStats()
         } catch (e) { console.error('Revenue save failed:', e) }
     }
-    const exportCSV = () => {
-        const a = document.createElement('a')
-        a.href = `${API_BASE_URL}/api/admin/stats/export?restaurantId=${restaurantId}&from=${dateRange.from}&to=${dateRange.to}`
-        a.download = `statistieken_${dateRange.from}_${dateRange.to}.csv`
-        a.click()
+    const exportCSV = async () => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/admin/stats/export?restaurantId=${restaurantId}&from=${dateRange.from}&to=${dateRange.to}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            if (!res.ok) throw new Error('Export failed')
+            const blob = await res.blob()
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `statistieken_${dateRange.from}_${dateRange.to}.csv`
+            a.click()
+            URL.revokeObjectURL(url)
+        } catch (e) { console.error('CSV export error:', e) }
     }
     const closeDrawer = () => { setSelectedDay(null); setSelectedMetric(null) }
     const onDayClick = (d: DayStats) => { setSelectedDay(d); setSelectedMetric(null) }
