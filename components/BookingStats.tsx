@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { ArrowLeft, Download, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Download, RefreshCw, ChevronLeft, ChevronRight, FileText } from 'lucide-react'
 import { API_BASE_URL } from '../api'
 import type { DayStats, PrevDayStats, HeatmapCell, TableUtil, Comparison, Summary, ExtraStats, RevenueData, Tab, ChartMetric, DatePreset, MetricDetail, PartySizeBucket, LeadTimeBucket } from './stats/types'
 import { SERVICE_CONFIG } from './stats/types'
@@ -14,6 +14,7 @@ import { DailyTable } from './stats/DailyTable'
 import { HeatmapCard } from './stats/HeatmapCard'
 import { AnalyseCharts } from './stats/AnalyseCharts'
 import { HealthSummary } from './stats/HealthSummary'
+import { DateRangePicker } from './stats/DateRangePicker'
 
 // ── Date Helpers ───────────────────────────────────────────────
 function getPresetRange(p: DatePreset): { from: string; to: string } {
@@ -216,6 +217,10 @@ export const BookingStats: React.FC<Props> = ({ restaurantId, onBack }) => {
                     <button onClick={exportCSV} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200" style={{ minHeight: 44 }}>
                         <Download className="w-4 h-4" /> CSV
                     </button>
+                    <a href={`${API_BASE_URL}/api/admin/stats/pdf?restaurantId=${restaurantId}&from=${dateRange.from}&to=${dateRange.to}&token=${token}`}
+                        target="_blank" rel="noopener" className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200" style={{ minHeight: 44 }}>
+                        <FileText className="w-4 h-4" /> PDF
+                    </a>
                     <button onClick={fetchStats} className="p-2 hover:bg-gray-100 rounded-lg" style={{ minHeight: 44 }}>
                         <RefreshCw className={`w-4 h-4 text-gray-400 ${loading ? 'animate-spin' : ''}`} />
                     </button>
@@ -229,6 +234,7 @@ export const BookingStats: React.FC<Props> = ({ restaurantId, onBack }) => {
                         className={`px-3 py-2 text-sm rounded-lg font-medium transition-colors ${activePreset === key ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
                         style={{ minHeight: 40 }}>{label}</button>
                 ))}
+                <DateRangePicker from={dateRange.from} to={dateRange.to} onChange={setDateRange} />
                 <div className="flex items-center gap-1 ml-auto">
                     <button onClick={() => navigatePeriod(-1)} className="p-2 hover:bg-gray-100 rounded-lg" style={{ minHeight: 44 }}><ChevronLeft className="w-5 h-5 text-gray-500" /></button>
                     <span className="text-sm text-gray-500 font-medium px-2 tabular-nums">{fmtDate(dateRange.from)} — {fmtDate(dateRange.to)}</span>

@@ -718,6 +718,117 @@ router.get('/api/admin/stats/export', authMiddleware, async (req, res) => {
     }
 });
 
+// Route: GET /api/admin/stats/pdf — Print-ready HTML summary (save as PDF from browser)
+router.get('/api/admin/stats/pdf', async (req, res) => {
+    // Auth via query param (since opened via <a> tag)
+    const token = req.query.token;
+    if (!token) return res.status(401).json({ error: 'Missing token' });
+    try {
+        const jwt = require('jsonwebtoken');
+        jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    } catch (e) {
+        return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    const restaurantId = req.query.restaurantId || 'demo-restaurant';
+    const from = req.query.from || new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
+    const to = req.query.to || new Date().toISOString().split('T')[0];
+
+    try {
+        const baseWhere = `restaurant_id = $1 AND (group_id IS NULL OR is_primary = true)`;
+        const activeWhere = `${baseWhere} AND status != 'cancelled'`;
+
+        const [dailyResult, totalsResult, revenueResult] = await Promise.all([
+            pool.query(
+                `SELECT booking_date::text as date,
+                    COUNT(*) FILTER (WHERE status != 'cancelled') as bookings,
+                    COALESCE(SUM(guest_count) FILTER (WHERE status != 'cancelled'), 0) as couverts,
+                    COUNT(*) FILTER (WHERE is_walkin = true AND status != 'cancelled') as walkins,
+                    COUNT(*) FILTER (WHERE status = 'no_show') as no_shows,
+                    COUNT(*) FILTER (WHERE status = 'cancelled') as cancellations
+                FROM restaurant_bookings
+                WHERE ${baseWhere} AND booking_date BETWEEN $2 AND $3
+                GROUP BY booking_date ORDER BY booking_date`,
+                [restaurantId, from, to]
+            ),
+            pool.query(
+                `SELECT COUNT(*) FILTER (WHERE status != 'cancelled') as bookings,
+                    COALESCE(SUM(guest_count) FILTER (WHERE status != 'cancelled'), 0) as couverts,
+                    COUNT(*) FILTER (WHERE is_walkin = true AND status != 'cancelled') as walkins,
+                    COUNT(*) FILTER (WHERE status = 'no_show') as no_shows,
+                    COUNT(*) FILTER (WHERE status = 'cancelled') as cancellations
+                FROM restaurant_bookings
+                WHERE ${baseWhere} AND booking_date BETWEEN $2 AND $3`,
+                [restaurantId, from, to]
+            ),
+            pool.query(
+                `SELECT COALESCE(SUM(revenue), 0) as total FROM daily_revenue WHERE restaurant_id = $1 AND date BETWEEN $2 AND $3`,
+                [restaurantId, from, to]
+            ).catch(() => ({ rows: [{ total: 0 }] }))
+        ]);
+
+        const t = totalsResult.rows[0] || {};
+        const rev = parseFloat(revenueResult.rows[0]?.total) || 0;
+        const bookings = parseInt(t.bookings) || 0;
+        const couverts = parseInt(t.couverts) || 0;
+
+        const dailyRows = dailyResult.rows.map(r => {
+            const d = new Date(r.date);
+            return `<tr>
+                <td>${d.toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' })}</td>
+                <td class="r">${r.bookings}</td><td class="r">${r.couverts}</td>
+                <td class="r">${r.walkins}</td><td class="r">${r.no_shows}</td>
+                <td class="r">${r.cancellations}</td>
+            </tr>`;
+        }).join('');
+
+        const html = `<!DOCTYPE html><html lang="nl"><head><meta charset="utf-8">
+<title>Dashboard Rapport ${from} – ${to}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#111;padding:40px;max-width:800px;margin:0 auto;font-size:14px}
+h1{font-size:22px;margin-bottom:4px}
+.sub{color:#666;font-size:13px;margin-bottom:24px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.kpi{border:1px solid #e5e7eb;border-radius:12px;padding:16px}
+.kpi .label{font-size:12px;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px}
+.kpi .val{font-size:28px;font-weight:700}
+.kpi .sub2{font-size:12px;color:#999;margin-top:2px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:8px;border-bottom:2px solid #e5e7eb;font-size:12px;color:#666;text-transform:uppercase}
+td{padding:6px 8px;border-bottom:1px solid #f3f4f6}
+.r{text-align:right;font-variant-numeric:tabular-nums}
+.total td{font-weight:700;border-top:2px solid #111;border-bottom:none}
+.footer{margin-top:24px;font-size:11px;color:#999;text-align:center}
+@media print{body{padding:20px}}
+</style></head><body>
+<h1>Dashboard Rapport</h1>
+<div class="sub">${new Date(from).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })} – ${new Date(to).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })} · Gegenereerd ${new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+
+<div class="kpis">
+<div class="kpi"><div class="label">Omzet</div><div class="val">€${rev.toLocaleString('nl-NL')}</div><div class="sub2">${couverts > 0 ? `€${(rev / couverts).toFixed(2)}/couvert` : ''}</div></div>
+<div class="kpi"><div class="label">Couverts</div><div class="val">${couverts}</div><div class="sub2">Ø ${dailyResult.rows.length > 0 ? Math.round(couverts / dailyResult.rows.length) : 0}/dag</div></div>
+<div class="kpi"><div class="label">Boekingen</div><div class="val">${bookings}</div></div>
+<div class="kpi"><div class="label">No-shows / Annul.</div><div class="val">${t.no_shows || 0} / ${t.cancellations || 0}</div><div class="sub2">${bookings > 0 ? Math.round((parseInt(t.no_shows) || 0) / bookings * 100) : 0}% / ${bookings > 0 ? Math.round((parseInt(t.cancellations) || 0) / bookings * 100) : 0}%</div></div>
+</div>
+
+<table>
+<thead><tr><th>Datum</th><th class="r">Boek.</th><th class="r">Couv.</th><th class="r">Walk-in</th><th class="r">No-show</th><th class="r">Annul.</th></tr></thead>
+<tbody>${dailyRows}
+<tr class="total"><td>Totaal</td><td class="r">${bookings}</td><td class="r">${couverts}</td><td class="r">${t.walkins || 0}</td><td class="r">${t.no_shows || 0}</td><td class="r">${t.cancellations || 0}</td></tr>
+</tbody></table>
+
+<div class="footer">Tapla Dashboard · ${new Date().getFullYear()}</div>
+</body></html>`;
+
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.send(html);
+    } catch (error) {
+        console.error('PDF export error:', error.message);
+        res.status(500).json({ error: 'Failed to generate report' });
+    }
+});
+
 // Route: /api/admin/reconcile
 router.get('/api/admin/reconcile', authMiddleware, async (req, res) => {
     const restaurantId = req.query.restaurantId || 'demo-restaurant';
