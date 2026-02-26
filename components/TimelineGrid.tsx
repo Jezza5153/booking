@@ -1276,8 +1276,12 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                                             >
                                                                 <div className="flex items-center gap-1 text-white text-xs font-medium">
                                                                     <StatusIcon status={booking.status} />
-                                                                    <span className="truncate">{totalGroupGuests} {booking.customer_name}</span>
-                                                                    {isGrouped && (
+                                                                    {booking.is_primary || !isGrouped ? (
+                                                                        <span className="truncate">{totalGroupGuests}p {booking.customer_name}</span>
+                                                                    ) : (
+                                                                        <span className="truncate">🔗 {booking.customer_name}</span>
+                                                                    )}
+                                                                    {isGrouped && booking.is_primary && (
                                                                         <span className="shrink-0 bg-white/20 px-1 rounded text-[9px]">🔗{groupTableCount}</span>
                                                                     )}
                                                                     {Number(booking.visit_count) > 0 && <span>⭐</span>}

@@ -587,7 +587,7 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                                                 {timeSlots.map((_, i) => (
                                                     <div key={i} className="w-14 shrink-0 border-r border-gray-100" />
                                                 ))}
-                                                {/* Booking blocks would be positioned absolutely here */}
+                                                {/* Booking blocks */}
                                                 {tableBookings.map(booking => {
                                                     const startMins = parseInt(booking.start_time.split(':')[0]) * 60 + parseInt(booking.start_time.split(':')[1])
                                                     const endMins = parseInt(booking.end_time.split(':')[0]) * 60 + parseInt(booking.end_time.split(':')[1])
@@ -595,16 +595,22 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                                                     const slotWidth = 56 // w-14 = 56px
                                                     const left = ((startMins - gridStartMins) / 30) * slotWidth
                                                     const width = ((endMins - startMins) / 30) * slotWidth
+                                                    const isSecondary = booking.group_id && !booking.is_primary
+                                                    const isGroup = !!booking.group_id
 
                                                     return (
                                                         <div
                                                             key={booking.id}
                                                             style={{ left: `${left}px`, width: `${Math.max(width, 50)}px` }}
-                                                            className="absolute top-1 bottom-1 bg-emerald-500 rounded-md px-2 py-1 overflow-hidden"
-                                                            title={`${booking.customer_name} - ${booking.guest_count} pers. ${booking.remarks ? `\n${booking.remarks}` : ''}`}
+                                                            className={`absolute top-1 bottom-1 rounded-md px-2 py-1 overflow-hidden cursor-pointer transition-opacity hover:opacity-90 ${isSecondary
+                                                                ? 'bg-emerald-400 border-2 border-dashed border-emerald-600'
+                                                                : 'bg-emerald-500'
+                                                                }`}
+                                                            title={`${booking.customer_name} - ${booking.guest_count} pers.${isGroup ? ' (groepsboeking)' : ''}${booking.remarks ? `\n${booking.remarks}` : ''}`}
+                                                            onClick={() => setSelectedRestaurantBooking(booking)}
                                                         >
                                                             <div className="text-white text-[10px] font-medium truncate">
-                                                                {booking.guest_count}p {booking.customer_name}
+                                                                {isSecondary ? `🔗 ${booking.customer_name}` : `${booking.guest_count}p ${isGroup ? '🔗 ' : ''}${booking.customer_name}`}
                                                             </div>
                                                         </div>
                                                     )
