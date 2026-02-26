@@ -1,5 +1,5 @@
 import React from 'react'
-import type { HeatmapCell, DayStats } from './types'
+import type { HeatmapCell } from './types'
 
 interface Props {
     heatmap: HeatmapCell[]

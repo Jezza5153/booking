@@ -3,8 +3,6 @@ import { ArrowLeft, Download, RefreshCw, ChevronLeft, ChevronRight, FileText } f
 import { API_BASE_URL } from '../api'
 import type { DayStats, PrevDayStats, HeatmapCell, TableUtil, Comparison, Summary, ExtraStats, RevenueData, Tab, ChartMetric, DatePreset, MetricDetail, PartySizeBucket, LeadTimeBucket } from './stats/types'
 import { SERVICE_CONFIG } from './stats/types'
-
-interface YoyData { bookings: number | null; couverts: number | null; revenue: number | null; has_data: boolean }
 import { fmtCurrency, fmtCurrencyDecimal, fmtPct, fmtDate, fmtChartLabel } from './stats/formatters'
 import { MetricDrawer } from './stats/MetricDrawer'
 import { LoadingSkeleton, ErrorState, EmptyState } from './stats/LoadingStates'
@@ -15,6 +13,9 @@ import { HeatmapCard } from './stats/HeatmapCard'
 import { AnalyseCharts } from './stats/AnalyseCharts'
 import { HealthSummary } from './stats/HealthSummary'
 import { DateRangePicker } from './stats/DateRangePicker'
+import { RevenueQuickEntry } from './stats/RevenueQuickEntry'
+
+interface YoyData { bookings: number | null; couverts: number | null; revenue: number | null; has_data: boolean }
 
 // ── Date Helpers ───────────────────────────────────────────────
 function getPresetRange(p: DatePreset): { from: string; to: string } {
@@ -257,6 +258,7 @@ export const BookingStats: React.FC<Props> = ({ restaurantId, onBack }) => {
                     <>
                         {tab === 'overzicht' && (
                             <div className="p-5 space-y-5">
+                                <RevenueQuickEntry stats={stats} onSave={saveRevenue} />
                                 <HealthSummary summary={summary} comparison={comparison} extraStats={extraStats} revenueData={revenueData} repeatRate={repeatRate} totalSeats={totalSeats} />
                                 <KpiGrid summary={summary} comparison={comparison} extraStats={extraStats} revenueData={revenueData} totalSeats={totalSeats} stats={stats} yoy={yoy}
                                     onSelectMetric={m => { setSelectedMetric(m); setSelectedDay(null) }} />

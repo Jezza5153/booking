@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Line, ComposedChart, ReferenceLine } from 'recharts'
+import { XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Line, ComposedChart, ReferenceLine, Area } from 'recharts'
 import type { ChartMetric, DayStats } from './types'
 import { ACCENT } from './types'
 import { fmtCurrency } from './formatters'

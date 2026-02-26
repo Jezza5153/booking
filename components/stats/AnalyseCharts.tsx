@@ -1,7 +1,7 @@
 import React from 'react'
 import { TrendingDown } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from 'recharts'
-import type { DayStats, Comparison, PartySizeBucket, LeadTimeBucket, TableUtil, HeatmapCell } from './types'
+import type { DayStats, Comparison, PartySizeBucket, LeadTimeBucket, TableUtil } from './types'
 import { ACCENT, LEAD_TIME_LABELS } from './types'
 import { fmtChartLabel } from './formatters'
 
