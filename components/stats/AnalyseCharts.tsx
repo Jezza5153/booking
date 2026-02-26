@@ -106,27 +106,29 @@ export const AnalyseCharts: React.FC<Props> = ({ stats, comparison, tableUtil, p
                 })()}
 
                 {/* Lead time distribution */}
-                {leadTimes.length > 0 && (
-                    <div className="bg-white rounded-xl border border-gray-200 p-5">
-                        <h2 className="text-sm font-semibold text-gray-900 mb-3">Boekingstijd vooruit</h2>
-                        <div className="space-y-2">
-                            {['same_day', '1_day', '2_3_days', '4_7_days', '8_plus'].map(key => {
-                                const lt = leadTimes.find(l => l.bucket === key)
-                                const total = leadTimes.reduce((s, l) => s + l.count, 0)
-                                const pct = total > 0 && lt ? Math.round(lt.count / total * 100) : 0
-                                return (
-                                    <div key={key} className="flex items-center gap-2 text-sm">
-                                        <span className="w-20 text-gray-600 shrink-0 text-xs">{LEAD_TIME_LABELS[key]}</span>
-                                        <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden">
-                                            <div className="h-full bg-blue-400 rounded-full" style={{ width: `${pct}%`, minWidth: lt && lt.count > 0 ? '4px' : '0' }} />
+                {leadTimes.length > 0 && (() => {
+                    const total = leadTimes.reduce((s, l) => s + l.count, 0)
+                    return (
+                        <div className="bg-white rounded-xl border border-gray-200 p-5">
+                            <h2 className="text-sm font-semibold text-gray-900 mb-3">Boekingstijd vooruit</h2>
+                            <div className="space-y-2">
+                                {['same_day', '1_day', '2_3_days', '4_7_days', '8_plus'].map(key => {
+                                    const lt = leadTimes.find(l => l.bucket === key)
+                                    const pct = total > 0 && lt ? Math.round(lt.count / total * 100) : 0
+                                    return (
+                                        <div key={key} className="flex items-center gap-2 text-sm">
+                                            <span className="w-20 text-gray-600 shrink-0 text-xs">{LEAD_TIME_LABELS[key]}</span>
+                                            <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden">
+                                                <div className="h-full bg-blue-400 rounded-full" style={{ width: `${pct}%`, minWidth: lt && lt.count > 0 ? '4px' : '0' }} />
+                                            </div>
+                                            <span className="w-12 text-right text-gray-500 tabular-nums text-xs shrink-0">{lt?.count || 0}</span>
                                         </div>
-                                        <span className="w-12 text-right text-gray-500 tabular-nums text-xs shrink-0">{lt?.count || 0}</span>
-                                    </div>
-                                )
-                            })}
+                                    )
+                                })}
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )
+                })()}
 
                 {/* First-time vs repeat donut */}
                 {repeatData.length > 0 && (
