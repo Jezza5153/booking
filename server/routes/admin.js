@@ -430,12 +430,22 @@ router.get('/api/admin/stats', authMiddleware, async (req, res) => {
                 ORDER BY booking_count DESC`,
                 [restaurantId, from, to]
             ),
-            // 8. REPEAT CUSTOMERS
+            // 8. REPEAT CUSTOMERS (by email, not customer_visits column)
             pool.query(
                 `SELECT 
                     COUNT(*) as total_bookings,
-                    COUNT(*) FILTER (WHERE customer_visits > 1) as repeat_bookings,
-                    COUNT(DISTINCT customer_email) FILTER (WHERE customer_visits > 1) as repeat_customers
+                    COUNT(*) FILTER (WHERE customer_email IN (
+                        SELECT customer_email FROM restaurant_bookings 
+                        WHERE restaurant_id = $1 AND status != 'cancelled' AND customer_email IS NOT NULL AND customer_email != ''
+                        GROUP BY customer_email HAVING COUNT(*) > 1
+                    )) as repeat_bookings,
+                    (SELECT COUNT(DISTINCT customer_email) FROM restaurant_bookings 
+                     WHERE restaurant_id = $1 AND status != 'cancelled' AND customer_email IS NOT NULL AND customer_email != ''
+                     AND customer_email IN (
+                        SELECT customer_email FROM restaurant_bookings 
+                        WHERE restaurant_id = $1 AND status != 'cancelled' AND customer_email IS NOT NULL
+                        GROUP BY customer_email HAVING COUNT(*) > 1
+                     )) as repeat_customers
                 FROM restaurant_bookings
                 WHERE ${activeWhere} AND booking_date BETWEEN $2 AND $3`,
                 [restaurantId, from, to]
@@ -1134,7 +1144,7 @@ router.patch('/api/admin/restaurant-bookings/:id/status', authMiddleware, async 
             await pool.query(
                 `UPDATE customers SET total_visits = total_visits + 1, last_visit = CURRENT_DATE WHERE id = $1`,
                 [result.rows[0].customer_id]
-            );
+            ).catch(() => { }); // silently fail if customers table doesn't exist
         }
 
         res.json({ success: true, booking: result.rows[0] });
