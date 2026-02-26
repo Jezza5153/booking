@@ -274,6 +274,77 @@ async function runMigrations() {
     } catch (e) {
         console.warn('⚠️ Multi-table migration skipped:', e.message);
     }
+
+    // Auto-migration: ensure service-mode columns exist (required for stats + timeline)
+    try {
+        await pool.query('ALTER TABLE restaurant_bookings ADD COLUMN IF NOT EXISTS status TEXT DEFAULT \'confirmed\'');
+        await pool.query('ALTER TABLE restaurant_bookings ADD COLUMN IF NOT EXISTS is_walkin BOOLEAN DEFAULT FALSE');
+        await pool.query('ALTER TABLE restaurant_bookings ADD COLUMN IF NOT EXISTS arrived_at TIMESTAMPTZ');
+        await pool.query('ALTER TABLE restaurant_bookings ADD COLUMN IF NOT EXISTS customer_id TEXT');
+        await pool.query('CREATE INDEX IF NOT EXISTS idx_restaurant_bookings_status ON restaurant_bookings(status)');
+        console.log('✅ Service-mode columns migration applied');
+    } catch (e) {
+        console.warn('⚠️ Service-mode migration skipped:', e.message);
+    }
+
+    // Auto-fix: redistribute oversized bookings (guest_count > table seats) across multiple tables
+    try {
+        const oversized = await pool.query(
+            `SELECT rb.id, rb.restaurant_id, rb.table_id, rb.booking_date::text, 
+                    rb.start_time::text, rb.end_time::text, rb.guest_count,
+                    rb.customer_name, rb.customer_email, rb.customer_phone, rb.remarks,
+                    rb.customer_id, rb.status, rt.seats as table_seats
+             FROM restaurant_bookings rb
+             JOIN restaurant_tables rt ON rt.id = rb.table_id
+             WHERE rb.guest_count > rt.seats AND rb.group_id IS NULL AND rb.status != 'cancelled'`
+        );
+        if (oversized.rowCount > 0) {
+            console.log(`🔧 Found ${oversized.rowCount} oversized bookings to redistribute...`);
+            for (const booking of oversized.rows) {
+                const groupId = crypto.randomUUID();
+                // Find free tables for this slot
+                const freeTables = await pool.query(
+                    `SELECT rt.id, rt.name, rt.seats, rt.zone FROM restaurant_tables rt
+                     WHERE rt.restaurant_id = $1 AND rt.is_active = true
+                       AND rt.id != $2
+                       AND NOT EXISTS (
+                           SELECT 1 FROM restaurant_bookings rb2
+                           WHERE rb2.table_id = rt.id AND rb2.booking_date = $3
+                             AND rb2.status != 'cancelled'
+                             AND rb2.start_time < $5 AND rb2.end_time > $4
+                       )
+                     ORDER BY rt.seats ASC`,
+                    [booking.restaurant_id, booking.table_id, booking.booking_date, booking.start_time, booking.end_time]
+                );
+                // Greedy: pick smallest tables until we have enough seats
+                let needed = booking.guest_count - booking.table_seats;
+                const extraTables = [];
+                for (const t of freeTables.rows) {
+                    if (needed <= 0) break;
+                    extraTables.push(t);
+                    needed -= t.seats;
+                }
+                if (needed <= 0 && extraTables.length > 0) {
+                    // Mark original as primary with group_id
+                    await pool.query('UPDATE restaurant_bookings SET group_id = $1, is_primary = true WHERE id = $2', [groupId, booking.id]);
+                    // Insert secondary bookings for extra tables
+                    for (const t of extraTables) {
+                        await pool.query(
+                            `INSERT INTO restaurant_bookings (id, restaurant_id, table_id, booking_date, start_time, end_time, guest_count, customer_name, customer_email, customer_phone, remarks, customer_id, group_id, is_primary, status)
+                             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NULL, $11, $12, false, $13)`,
+                            [crypto.randomUUID(), booking.restaurant_id, t.id, booking.booking_date, booking.start_time, booking.end_time, booking.guest_count, booking.customer_name, booking.customer_email, booking.customer_phone, booking.customer_id, groupId, booking.status]
+                        );
+                    }
+                    const totalSeats = booking.table_seats + extraTables.reduce((s, t) => s + t.seats, 0);
+                    console.log(`  ✅ Redistributed "${booking.customer_name}" (${booking.guest_count} guests) → ${1 + extraTables.length} tables (${totalSeats} seats)`);
+                } else {
+                    console.warn(`  ⚠️ Cannot redistribute "${booking.customer_name}" (${booking.guest_count} guests) — not enough free tables`);
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('⚠️ Oversized booking fix skipped:', e.message);
+    }
 }
 
 // Start server: run migrations first, then listen
