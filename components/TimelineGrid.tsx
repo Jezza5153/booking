@@ -428,7 +428,8 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                 showToast('Boeking succesvol aangemaakt', 'success')
                 fetchData()
             } else {
-                showToast('Boeking mislukt', 'error')
+                const err = await res.json().catch(() => null)
+                showToast(err?.error || 'Boeking mislukt', 'error')
             }
         } catch (e) {
             console.error('Failed to create booking:', e)
@@ -542,7 +543,8 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                 showToast('Walk-in succesvol geplaatst', 'success')
                 fetchData()
             } else {
-                showToast('Walk-in mislukt', 'error')
+                const err = await res.json().catch(() => null)
+                showToast(err?.error || 'Walk-in mislukt', 'error')
             }
         } catch (e) {
             console.error('Failed to create walk-in:', e)

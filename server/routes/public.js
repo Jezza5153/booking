@@ -909,13 +909,20 @@ router.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
         return res.status(400).json({ error: 'Invalid restaurant ID' });
     }
 
-    if (!date || !time || !guest_count || !customer_name || !customer_email) {
-        return res.status(400).json({ error: 'Missing required fields (including email)' });
+    // Admin (authenticated) requests can skip email — phone bookings, walk-ins, etc.
+    const isAdmin = !!req.headers.authorization;
+
+    if (!date || !time || !guest_count || !customer_name) {
+        return res.status(400).json({ error: 'Vul datum, tijd, aantal gasten en naam in' });
+    }
+
+    if (!isAdmin && !customer_email) {
+        return res.status(400).json({ error: 'E-mailadres is verplicht' });
     }
 
     // FIX #35: Validate email format (same pattern as newsletter subscribe)
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(customer_email.trim())) {
+    if (customer_email && !emailRegex.test(customer_email.trim())) {
         return res.status(400).json({ error: 'Ongeldig e-mailadres' });
     }
 
@@ -1046,28 +1053,30 @@ router.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
         // Build table name string for email/response
         const tableNames = selectedTables.map(t => t.name).join(' + ');
 
-        // 8) Send confirmation email ONCE (is_primary row only)
-        // FIX #39: Use manual date parsing to avoid UTC midnight shift
-        const [fYear, fMonth, fDay] = date.split('-').map(Number);
-        const formattedDate = new Date(fYear, fMonth - 1, fDay).toLocaleDateString('nl-NL', {
-            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
-        });
+        // 8) Send confirmation email ONCE (is_primary row only) — skip if no email (admin phone booking)
+        if (customer_email) {
+            // FIX #39: Use manual date parsing to avoid UTC midnight shift
+            const [fYear, fMonth, fDay] = date.split('-').map(Number);
+            const formattedDate = new Date(fYear, fMonth - 1, fDay).toLocaleDateString('nl-NL', {
+                weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+            });
 
-        const emailData = {
-            customerName: customer_name,
-            customerEmail: customer_email,
-            customerPhone: customer_phone || null,
-            remarks: remarks || null,
-            tableName: tableNames,
-            bookingDate: formattedDate,
-            bookingTime: time,
-            guestCount: guest_count,
-        };
+            const emailData = {
+                customerName: customer_name,
+                customerEmail: customer_email,
+                customerPhone: customer_phone || null,
+                remarks: remarks || null,
+                tableName: tableNames,
+                bookingDate: formattedDate,
+                bookingTime: time,
+                guestCount: guest_count,
+            };
 
-        if (guest_count >= 7) {
-            sendChefsChoiceNotification(emailData).catch(err => console.error('Chef\'s Choice email failed:', err));
-        } else {
-            sendRestaurantBookingConfirmation(emailData).catch(err => console.error('Restaurant email failed:', err));
+            if (guest_count >= 7) {
+                sendChefsChoiceNotification(emailData).catch(err => console.error('Chef\'s Choice email failed:', err));
+            } else {
+                sendRestaurantBookingConfirmation(emailData).catch(err => console.error('Restaurant email failed:', err));
+            }
         }
 
         res.status(201).json({ success: true, booking_id: primaryBookingId, group_id: groupId, table_name: tableNames, tables_used: selectedTables.length, date, time });
