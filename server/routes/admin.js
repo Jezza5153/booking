@@ -354,7 +354,8 @@ router.get('/api/admin/stats', authMiddleware, async (req, res) => {
         // Run ALL queries in parallel for performance
         const [
             dailyResult, peakHoursResult, avgResult, busiestDayResult,
-            prevResult, heatmapResult, tableUtilResult, repeatResult, revenueResult
+            prevResult, prevDailyResult, prevRevenueResult,
+            heatmapResult, tableUtilResult, repeatResult, revenueResult
         ] = await Promise.all([
             // 1. Daily breakdown (current period)
             pool.query(
@@ -400,11 +401,29 @@ router.get('/api/admin/stats', authMiddleware, async (req, res) => {
                     COUNT(*) FILTER (WHERE status != 'cancelled') as bookings,
                     COALESCE(SUM(guest_count) FILTER (WHERE status != 'cancelled'), 0) as couverts,
                     COUNT(*) FILTER (WHERE is_walkin = true AND status != 'cancelled') as walkins,
-                    COUNT(*) FILTER (WHERE status = 'no_show') as no_shows
+                    COUNT(*) FILTER (WHERE status = 'no_show') as no_shows,
+                    COUNT(*) FILTER (WHERE status = 'cancelled') as cancellations
                 FROM restaurant_bookings
                 WHERE ${baseWhere} AND booking_date BETWEEN $2 AND $3`,
                 [restaurantId, prevFrom.toISOString().split('T')[0], prevTo]
             ),
+            // 5b. PREVIOUS PERIOD daily data (for chart overlay)
+            pool.query(
+                `SELECT booking_date::text as date,
+                    COUNT(*) FILTER (WHERE status != 'cancelled') as bookings,
+                    COALESCE(SUM(guest_count) FILTER (WHERE status != 'cancelled'), 0) as couverts
+                FROM restaurant_bookings
+                WHERE ${baseWhere} AND booking_date BETWEEN $2 AND $3
+                GROUP BY booking_date ORDER BY booking_date`,
+                [restaurantId, prevFrom.toISOString().split('T')[0], prevTo]
+            ),
+            // 5c. PREVIOUS PERIOD revenue
+            pool.query(
+                `SELECT COALESCE(SUM(revenue), 0) as total_revenue
+                FROM daily_revenue
+                WHERE restaurant_id = $1 AND date BETWEEN $2 AND $3`,
+                [restaurantId, prevFrom.toISOString().split('T')[0], prevTo]
+            ).catch(() => ({ rows: [{ total_revenue: 0 }] })),
             // 6. HOURLY HEATMAP (day_of_week × hour)
             pool.query(
                 `SELECT 
@@ -460,6 +479,7 @@ router.get('/api/admin/stats', authMiddleware, async (req, res) => {
             ).catch(() => ({ rows: [] })) // table might not exist yet
         ]);
 
+
         // Compute totals
         const totals = dailyResult.rows.reduce((acc, row) => ({
             bookings: acc.bookings + parseInt(row.bookings),
@@ -476,8 +496,10 @@ router.get('/api/admin/stats', authMiddleware, async (req, res) => {
             bookings: parseInt(prev.bookings) || 0,
             couverts: parseInt(prev.couverts) || 0,
             walkins: parseInt(prev.walkins) || 0,
-            no_shows: parseInt(prev.no_shows) || 0
+            no_shows: parseInt(prev.no_shows) || 0,
+            cancellations: parseInt(prev.cancellations) || 0
         };
+        const prevRevenue = parseFloat(prevRevenueResult.rows[0]?.total_revenue) || 0;
 
         // Calculate % change
         const pctChange = (curr, prev) => prev > 0 ? Math.round(((curr - prev) / prev) * 100) : (curr > 0 ? 100 : 0);
@@ -485,7 +507,9 @@ router.get('/api/admin/stats', authMiddleware, async (req, res) => {
             bookings: pctChange(totals.bookings, prevTotals.bookings),
             couverts: pctChange(totals.couverts, prevTotals.couverts),
             walkins: pctChange(totals.walkins, prevTotals.walkins),
-            no_shows: pctChange(totals.no_shows, prevTotals.no_shows)
+            no_shows: pctChange(totals.no_shows, prevTotals.no_shows),
+            cancellations: pctChange(totals.cancellations, prevTotals.cancellations),
+            revenue: pctChange(totalRevenue, prevRevenue)
         };
 
         // Revenue totals
@@ -522,6 +546,11 @@ router.get('/api/admin/stats', authMiddleware, async (req, res) => {
             repeat_rate: repeatRate,
             repeat_customers: parseInt(repeatData.repeat_customers) || 0,
             revenue: { total: totalRevenue, avg_per_couvert: totals.couverts > 0 ? Math.round(totalRevenue / totals.couverts * 100) / 100 : 0 },
+            prev_daily: prevDailyResult.rows.map(r => ({
+                date: r.date,
+                bookings: parseInt(r.bookings) || 0,
+                couverts: parseInt(r.couverts) || 0
+            })),
             period: { from, to }
         });
     } catch (error) {
