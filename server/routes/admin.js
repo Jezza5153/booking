@@ -353,6 +353,7 @@ router.get('/api/admin/stats', authMiddleware, async (req, res) => {
                     COUNT(*) FILTER (WHERE status = 'arrived') as arrived
                 FROM restaurant_bookings
                 WHERE restaurant_id = $1 AND booking_date BETWEEN $2 AND $3
+                  AND (group_id IS NULL OR is_primary = true)
                 GROUP BY booking_date
                 ORDER BY booking_date`,
                 [restaurantId, from, to]
@@ -363,6 +364,7 @@ router.get('/api/admin/stats', authMiddleware, async (req, res) => {
                     COUNT(*) as count
                 FROM restaurant_bookings
                 WHERE restaurant_id = $1 AND booking_date BETWEEN $2 AND $3 AND status != 'cancelled'
+                  AND (group_id IS NULL OR is_primary = true)
                 GROUP BY EXTRACT(HOUR FROM start_time::time)
                 ORDER BY count DESC`,
                 [restaurantId, from, to]
@@ -372,7 +374,8 @@ router.get('/api/admin/stats', authMiddleware, async (req, res) => {
                     ROUND(AVG(guest_count), 1) as avg_party_size,
                     COUNT(DISTINCT booking_date) as active_days
                 FROM restaurant_bookings
-                WHERE restaurant_id = $1 AND booking_date BETWEEN $2 AND $3 AND status != 'cancelled'`,
+                WHERE restaurant_id = $1 AND booking_date BETWEEN $2 AND $3 AND status != 'cancelled'
+                  AND (group_id IS NULL OR is_primary = true)`,
                 [restaurantId, from, to]
             ),
             pool.query(
@@ -381,6 +384,7 @@ router.get('/api/admin/stats', authMiddleware, async (req, res) => {
                     COUNT(*) as count
                 FROM restaurant_bookings
                 WHERE restaurant_id = $1 AND booking_date BETWEEN $2 AND $3 AND status != 'cancelled'
+                  AND (group_id IS NULL OR is_primary = true)
                 GROUP BY EXTRACT(DOW FROM booking_date)
                 ORDER BY count DESC
                 LIMIT 1`,
@@ -867,6 +871,7 @@ router.get('/api/admin/restaurant-bookings', authMiddleware, async (req, res) =>
              FROM restaurant_bookings rb
              LEFT JOIN restaurant_tables rt ON rt.id = rb.table_id
              WHERE rb.restaurant_id = $1 AND rb.booking_date = $2 AND rb.status != 'cancelled'
+               AND (rb.group_id IS NULL OR rb.is_primary = true)
              ORDER BY rb.start_time ASC`,
             [targetRestaurantId, targetDate]
         );
