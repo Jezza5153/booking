@@ -69,7 +69,6 @@ export const ACCENT_LIGHT = '#dbeafe'
 // Service capacity config — should eventually come from restaurant settings
 export const SERVICE_CONFIG = {
     hoursPerDay: 11,     // 11:00 – 22:00
-    seatsPerSeating: 1,  // multiplier: 1 = single seating, 2 = double turn
 }
 
 export const METRIC_DEFINITIONS: Record<string, { label: string; formula: string; includes: string; excludes: string }> = {

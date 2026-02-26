@@ -1,11 +1,26 @@
-import React from 'react'
-import { TrendingDown } from 'lucide-react'
+import React, { useState } from 'react'
+import { TrendingDown, ChevronDown } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from 'recharts'
 import type { DayStats, Comparison, PartySizeBucket, LeadTimeBucket, TableUtil } from './types'
 import { ACCENT, LEAD_TIME_LABELS } from './types'
 import { fmtChartLabel } from './formatters'
 
 const COLORS = ['#2563eb', '#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe']
+
+const Section = ({ title, defaultOpen = true, children }: { title: string; defaultOpen?: boolean; children: React.ReactNode }) => {
+    const [open, setOpen] = useState(defaultOpen)
+    return (
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <button onClick={() => setOpen(o => !o)}
+                className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50 transition-colors"
+                style={{ minHeight: 48 }}>
+                <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+            </button>
+            {open && <div className="px-5 pb-5">{children}</div>}
+        </div>
+    )
+}
 
 interface Props {
     stats: DayStats[]
@@ -43,9 +58,8 @@ export const AnalyseCharts: React.FC<Props> = ({ stats, comparison, tableUtil, p
         <div className="space-y-5">
             {/* Cancellation trend */}
             {hasCancellations && (
-                <div className="bg-white rounded-xl border border-gray-200 p-5">
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-base font-semibold text-gray-900">Annuleringstrend</h2>
+                <Section title="Annuleringstrend">
+                    <div className="flex items-center justify-end mb-3">
                         {comparison.cancellations !== 0 && (
                             <span className={`inline-flex items-center gap-0.5 text-xs font-semibold px-1.5 py-0.5 rounded ${comparison.cancellations < 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
                                 <TrendingDown className="w-3 h-3" />{comparison.cancellations > 0 ? '+' : ''}{comparison.cancellations}%
@@ -62,7 +76,7 @@ export const AnalyseCharts: React.FC<Props> = ({ stats, comparison, tableUtil, p
                             <Bar dataKey="noShows" fill="#ef4444" radius={[3, 3, 0, 0]} name="No-shows" />
                         </BarChart>
                     </ResponsiveContainer>
-                </div>
+                </Section>
             )}
 
             {/* Party size + Lead time + Repeat — side by side */}
@@ -138,9 +152,8 @@ export const AnalyseCharts: React.FC<Props> = ({ stats, comparison, tableUtil, p
                 )}
             </div>
 
-            {/* Table utilization */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-                <h2 className="text-base font-semibold text-gray-900 mb-4">Tafelbezetting</h2>
+            {/* Table utilization — starts collapsed */}
+            <Section title="Tafelbezetting" defaultOpen={false}>
                 <div className="space-y-2 max-h-72 overflow-y-auto">
                     {tableUtil.map(t => {
                         const pct = Math.round((t.booking_count / maxTableCount) * 100)
@@ -155,11 +168,10 @@ export const AnalyseCharts: React.FC<Props> = ({ stats, comparison, tableUtil, p
                         )
                     })}
                 </div>
-            </div>
+            </Section>
 
             {/* Time slot utilization */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-                <h2 className="text-base font-semibold text-gray-900 mb-1">Tijdslotbezetting</h2>
+            <Section title="Tijdslotbezetting">
                 <p className="text-xs text-gray-400 mb-4">Boekingen per uur versus capaciteit ({totalSeats} stoelen × {activeDays} dagen)</p>
                 <ResponsiveContainer width="100%" height={180}>
                     <BarChart data={slotData}>
@@ -170,11 +182,10 @@ export const AnalyseCharts: React.FC<Props> = ({ stats, comparison, tableUtil, p
                         <Bar dataKey="boekingen" fill={ACCENT} radius={[3, 3, 0, 0]} name="Boekingen" />
                     </BarChart>
                 </ResponsiveContainer>
-            </div>
+            </Section>
 
-            {/* Covers bar chart */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-                <h2 className="text-base font-semibold text-gray-900 mb-4">Couverts per dag</h2>
+            {/* Covers bar chart — starts collapsed */}
+            <Section title="Couverts per dag" defaultOpen={false}>
                 <ResponsiveContainer width="100%" height={200}>
                     <BarChart data={stats.map(d => ({ label: fmtChartLabel(d.date), couverts: d.couverts, date: d.date }))}
                         onClick={(e: any) => { if (e?.activePayload?.[0]) { const d = stats.find(s => s.date === e.activePayload[0].payload.date); if (d) onDayClick(d) } }}>
@@ -185,7 +196,7 @@ export const AnalyseCharts: React.FC<Props> = ({ stats, comparison, tableUtil, p
                         <Bar dataKey="couverts" fill={ACCENT} radius={[4, 4, 0, 0]} cursor="pointer" name="Couverts" />
                     </BarChart>
                 </ResponsiveContainer>
-            </div>
+            </Section>
         </div>
     )
 }

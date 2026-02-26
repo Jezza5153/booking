@@ -130,7 +130,7 @@ export const BookingStats: React.FC<Props> = ({ restaurantId, onBack }) => {
         const c = stats.reduce((s, d) => s + d.couverts, 0)
         const rev = stats.reduce((s, d) => s + (d.revenue || 0), 0)
         const ad = stats.filter(d => d.bookings > 0).length
-        const occ = totalSeats > 0 && ad > 0 ? Math.min(100, Math.round((c / (totalSeats * ad * SERVICE_CONFIG.seatsPerSeating)) * 100)) : 0
+        const occ = totalSeats > 0 && ad > 0 ? Math.min(100, Math.round((c / (totalSeats * ad)) * 100)) : 0
         const rps = totalSeats > 0 && ad > 0 ? Math.round(rev / (totalSeats * ad * SERVICE_CONFIG.hoursPerDay) * 100) / 100 : 0
         return {
             bookings: b, couverts: c, revenue: rev, avgPerDay: ad > 0 ? Math.round(c / ad) : 0,
