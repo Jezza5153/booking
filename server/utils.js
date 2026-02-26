@@ -257,8 +257,9 @@ export function selectTablesForSlot({ allTables, bookingsByTableId, slotStart, s
 
     const freeTables = allTables.filter(isFree);
 
-    // 1) Single table fits
-    const single = freeTables.find(t => t.seats >= guestCount);
+    // 1) Single table fits — prefer smallest table that fits (sort ASC)
+    const freeBySeatsAsc = [...freeTables].sort((a, b) => a.seats - b.seats);
+    const single = freeBySeatsAsc.find(t => t.seats >= guestCount);
     if (single) return [single];
 
     // 2) Combine within a zone first (less operational fragmentation)

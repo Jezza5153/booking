@@ -1,0 +1,3879 @@
+[
+  {
+    "PartySize": 2,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "shop.driessen.sebastiaan@gmail.com",
+    "CustomerPhone": "0653771193",
+    "Duration": 4,
+    "ReservationID": "fe236300-4c7a-4e24-b8d5-13ba6c1a9714",
+    "CustomerComments": "",
+    "SK": "fe236300-4c7a-4e24-b8d5-13ba6c1a9714",
+    "ReservationTime": "20:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Sebastiaan Driessen",
+    "ReservationDate": "2026-01-02"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "2ca8bd78-7fbe-4feb-a227-e6e1e5b0009e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "wimenjudy@gmail.com",
+    "CustomerPhone": "0640095635",
+    "Duration": 5,
+    "ReservationID": "0782ce15-166c-46f8-a75a-c84ee4503e8d",
+    "CustomerComments": "",
+    "SK": "0782ce15-166c-46f8-a75a-c84ee4503e8d",
+    "ReservationTime": "19:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Wim Gelder",
+    "ReservationDate": "2026-01-02"
+  },
+  {
+    "PartySize": 6,
+    "TableID": [
+      "7bcedc40-3cc1-48bd-97cb-d3fd2da59863"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "madeleintenbroek@gmail.com",
+    "CustomerPhone": "0630610829",
+    "Duration": 5.5,
+    "ReservationID": "5cf00769-435a-4a57-a0b1-80e8c94db835",
+    "CustomerComments": "",
+    "SK": "5cf00769-435a-4a57-a0b1-80e8c94db835",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "ten Broek",
+    "ReservationDate": "2026-01-02"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "d501610c-17fe-4d5d-a1a2-e7b2169d0f02"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "joris.deroode@outlook.com",
+    "CustomerPhone": "0610858686",
+    "Duration": 6,
+    "ReservationID": "8e1e2459-2138-4c67-8437-6288ee069676",
+    "CustomerComments": "",
+    "SK": "8e1e2459-2138-4c67-8437-6288ee069676",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Joris de Roode",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-01-03"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "2ca8bd78-7fbe-4feb-a227-e6e1e5b0009e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Ihuisintveld@gmail.com",
+    "CustomerPhone": "0683697593",
+    "Duration": 5,
+    "ReservationID": "2870b7a2-5819-4a74-b222-2fce42ec3319",
+    "CustomerComments": "",
+    "SK": "2870b7a2-5819-4a74-b222-2fce42ec3319",
+    "ReservationTime": "19:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Iris Huis in 't Veld",
+    "ReservationDate": "2026-01-03"
+  },
+  {
+    "PartySize": 1,
+    "TableID": [
+      "930bb4cf-181b-4db6-bde4-19945d0427d1"
+    ],
+    "ZoneID": "6fb0c15a-f02f-4226-af61-d9c61a97923d",
+    "CustomerMail": "sabine.molmans@live.nl",
+    "CustomerPhone": "0636496998",
+    "Duration": 6.5,
+    "ReservationID": "da04e39f-5e46-4975-9931-b31f162d0617",
+    "CustomerComments": "",
+    "SK": "da04e39f-5e46-4975-9931-b31f162d0617",
+    "ReservationTime": "17:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Sabine molmans",
+    "ReservationDate": "2026-01-03"
+  },
+  {
+    "PartySize": 4,
+    "TableID": [
+      "645e4071-9f04-46d7-b5ff-1dd34c041c2e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Jgwnijland@gmail.com",
+    "CustomerPhone": "0649077619",
+    "Duration": 5,
+    "ReservationID": "c31052aa-0907-447f-9ad8-180daf24fcb0",
+    "CustomerComments": "We hebben een glutenvrije in ons gezelschap ",
+    "SK": "c31052aa-0907-447f-9ad8-180daf24fcb0",
+    "ReservationTime": "19:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Engelse",
+    "ReservationDate": "2026-01-03"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "0c6ac20f-71d8-4300-9c7d-7bc2fe51e57d"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "hugo.vandonselaar@gmail.com",
+    "CustomerPhone": "0640920247",
+    "Duration": 5,
+    "ReservationID": "018e8bf7-af0b-472a-9632-c7768784e216",
+    "CustomerComments": "Waarschijnlijk zijn we iets eerder.",
+    "SK": "018e8bf7-af0b-472a-9632-c7768784e216",
+    "ReservationTime": "19:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Hugo van Donselaar ",
+    "ReservationDate": "2026-01-03"
+  },
+  {
+    "PartySize": 1,
+    "TableID": [
+      "61e83d97-729f-4c58-9602-26fba334592e"
+    ],
+    "ZoneID": "6fb0c15a-f02f-4226-af61-d9c61a97923d",
+    "CustomerMail": "sabine.molmans@live.nl",
+    "CustomerPhone": "0636496998",
+    "Duration": 6.5,
+    "ReservationID": "d9ae6302-e525-42c5-ab0e-08c4dbf04456",
+    "CustomerComments": "",
+    "SK": "d9ae6302-e525-42c5-ab0e-08c4dbf04456",
+    "ReservationTime": "17:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Sabine Molmans",
+    "ReservationDate": "2026-01-03"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "jansensylvia@hotmail.com",
+    "CustomerPhone": "0637428840",
+    "Duration": 5.5,
+    "ReservationID": "6ae70ac2-86b8-4458-a155-cbe5942ea87e",
+    "CustomerComments": "",
+    "SK": "6ae70ac2-86b8-4458-a155-cbe5942ea87e",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Sylvia Jansen",
+    "ReservationDate": "2026-01-03"
+  },
+  {
+    "PartySize": 4,
+    "TableID": [
+      "e1df1b6b-a394-4e38-9c0d-ccf866ce5f98"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "mckalk@gmail.com",
+    "CustomerPhone": "0614102548",
+    "Duration": 6,
+    "ReservationID": "a61de325-ace0-4631-be0b-11be5d61cfc6",
+    "CustomerComments": "Wij moeten om 20 uur in Flint zijn",
+    "SK": "a61de325-ace0-4631-be0b-11be5d61cfc6",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Maarten Kalk ",
+    "ReservationDate": "2026-01-03"
+  },
+  {
+    "CustomerPhone": "",
+    "PartySize": 2,
+    "TableID": [
+      "5cd4eb5a-e985-4030-92d9-948ff9fce5b7"
+    ],
+    "CustomerMail": "",
+    "ReservationID": "970464f7-1d9d-42b5-976c-e7da4c959266",
+    "Duration": 2,
+    "SK": "970464f7-1d9d-42b5-976c-e7da4c959266",
+    "ReservationTime": "15:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "",
+    "ReservationDate": "2026-01-04"
+  },
+  {
+    "CustomerPhone": "",
+    "PartySize": 2,
+    "TableID": [
+      "4bf50c3a-15c2-4289-80d7-e3ffcca458a4"
+    ],
+    "CustomerMail": "",
+    "ReservationID": "b836adda-5c93-46a9-a86d-4d1360d7ef97",
+    "Duration": 2,
+    "SK": "b836adda-5c93-46a9-a86d-4d1360d7ef97",
+    "ReservationTime": "15:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Baby shower",
+    "ReservationDate": "2026-01-04"
+  },
+  {
+    "CustomerPhone": "",
+    "PartySize": 2,
+    "TableID": [
+      "53e5b179-8cee-4eee-93e5-19033d4d016d"
+    ],
+    "CustomerMail": "",
+    "ReservationID": "bc461a0f-6453-44e8-9c1b-67b14c77ee5f",
+    "Duration": 2,
+    "SK": "bc461a0f-6453-44e8-9c1b-67b14c77ee5f",
+    "ReservationTime": "15:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "",
+    "ReservationDate": "2026-01-04"
+  },
+  {
+    "CustomerPhone": "",
+    "PartySize": 25,
+    "TableID": [
+      "b3f5d15a-35ec-4a3e-9c8e-8e0204f87d10"
+    ],
+    "CustomerMail": "",
+    "ReservationID": "c0fbee72-b7b0-4a6c-b5c4-a44f86569ca4",
+    "Duration": 2,
+    "SK": "c0fbee72-b7b0-4a6c-b5c4-a44f86569ca4",
+    "ReservationTime": "15:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Baby shower ",
+    "ReservationDate": "2026-01-04"
+  },
+  {
+    "PartySize": 1,
+    "TableID": [
+      "c69f0179-afcd-4c91-b1ba-6a7a1f26e99a"
+    ],
+    "ZoneID": "6fb0c15a-f02f-4226-af61-d9c61a97923d",
+    "CustomerMail": "menno.calon@gmail.com",
+    "CustomerPhone": "0612567046",
+    "Duration": 1,
+    "ReservationID": "ec71b9b7-5fe7-4e62-909d-dd09051574ed",
+    "CustomerComments": "",
+    "SK": "ec71b9b7-5fe7-4e62-909d-dd09051574ed",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Menno Calon",
+    "ReservationDate": "2026-01-05"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "2ca8bd78-7fbe-4feb-a227-e6e1e5b0009e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "idrost@outlook.com",
+    "CustomerPhone": "0613538175",
+    "Duration": 5,
+    "ReservationID": "5eceed2d-dad8-4c91-b2b0-ce51b3c43026",
+    "CustomerComments": "",
+    "SK": "5eceed2d-dad8-4c91-b2b0-ce51b3c43026",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Iris Drost",
+    "ReservationDate": "2026-01-07"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "19chey@gmail.com",
+    "CustomerPhone": "0614986906",
+    "Duration": 5,
+    "ReservationID": "7b9f19cb-95ba-4b50-886f-e9518c9ca3b5",
+    "CustomerComments": "We komen graag eten vooraf aan onze voorstelling in Flint, om 20u gaan wij die kant op. ",
+    "SK": "7b9f19cb-95ba-4b50-886f-e9518c9ca3b5",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Cheyenne Trommels ",
+    "ReservationDate": "2026-01-07"
+  },
+  {
+    "PartySize": 4,
+    "TableID": [
+      "645e4071-9f04-46d7-b5ff-1dd34c041c2e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "lhpomp@gmail.com",
+    "CustomerPhone": "0612156567",
+    "Duration": 4.5,
+    "ReservationID": "e42ebab5-0200-44f0-8a74-03ffee4af4c4",
+    "CustomerComments": "We vieren de verjaardag van onze jongste zoon (27), dus als er een tafel aan een kant is, dan graag. ",
+    "SK": "e42ebab5-0200-44f0-8a74-03ffee4af4c4",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Leonie Pomp",
+    "ReservationDate": "2026-01-08"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "f31abfab-973f-4aa5-bbc3-7a61f6ef9f13"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 1.5,
+    "ReservationID": "f8d5e2e2-6d91-4272-bcbc-59765f3a9a73",
+    "SK": "f8d5e2e2-6d91-4272-bcbc-59765f3a9a73",
+    "ReservationTime": "17:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "",
+    "ReservationDate": "2026-01-09"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "2ca8bd78-7fbe-4feb-a227-e6e1e5b0009e"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "0683575952",
+    "Duration": 2,
+    "ReservationID": "c6cdc1ab-6ae1-468e-a5a6-76080e0e930a",
+    "CustomerComments": "flint 19:00 vertrekken heben voorbespreking bij flint",
+    "SK": "c6cdc1ab-6ae1-468e-a5a6-76080e0e930a",
+    "ReservationTime": "17:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "marjet",
+    "ReservationDate": "2026-01-09"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "0c6ac20f-71d8-4300-9c7d-7bc2fe51e57d"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 6,
+    "ReservationID": "cd17b8dd-d895-4788-96eb-4374e34fd85c",
+    "SK": "cd17b8dd-d895-4788-96eb-4374e34fd85c",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Nynke de jong",
+    "ReservationDate": "2026-01-09"
+  },
+  {
+    "PartySize": 3,
+    "TableID": [
+      "645e4071-9f04-46d7-b5ff-1dd34c041c2e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Heleenbrehler@gmail.com",
+    "CustomerPhone": "0641290982",
+    "Duration": 6,
+    "ReservationID": "34114157-1707-46dc-8bb9-0ffc8eb2ed48",
+    "CustomerComments": "Na de maaltijd gaan we naar een voorstelling in de Flint die om 20.15 uur start",
+    "SK": "34114157-1707-46dc-8bb9-0ffc8eb2ed48",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Heleen Brehler",
+    "ReservationDate": "2026-01-09"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "d501610c-17fe-4d5d-a1a2-e7b2169d0f02"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "corina_miltenburg@hotmail.com",
+    "CustomerPhone": "0618853489",
+    "Duration": 6,
+    "ReservationID": "d7baf757-becc-4b2d-8d35-84091ff34267",
+    "CustomerComments": "",
+    "SK": "d7baf757-becc-4b2d-8d35-84091ff34267",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Corina ",
+    "ReservationDate": "2026-01-09"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "53e5b179-8cee-4eee-93e5-19033d4d016d"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "odyle.deroos@xmsnet.nl",
+    "CustomerPhone": "0637298600",
+    "Duration": 6,
+    "ReservationID": "35e3f89e-8957-48ed-89dc-6e3cf1047222",
+    "CustomerComments": "",
+    "SK": "35e3f89e-8957-48ed-89dc-6e3cf1047222",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Odyle de Roos",
+    "ReservationDate": "2026-01-09"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "2ca8bd78-7fbe-4feb-a227-e6e1e5b0009e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Davidzom2005@gmail.com",
+    "CustomerPhone": "0617880160",
+    "Duration": 4.5,
+    "ReservationID": "fac32da5-1c9f-4b02-acb7-cab2b1c920cd",
+    "CustomerComments": "",
+    "SK": "fac32da5-1c9f-4b02-acb7-cab2b1c920cd",
+    "ReservationTime": "19:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "David Zom",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-01-09"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "fannyvos@hotmail.com",
+    "CustomerPhone": "0611537426",
+    "Duration": 6,
+    "ReservationID": "5ab6103e-552b-407e-86eb-053cc3146295",
+    "CustomerComments": "",
+    "SK": "5ab6103e-552b-407e-86eb-053cc3146295",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Fanny Hubner",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-01-09"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "611a99c2-12ee-409f-97da-3ce0bb018ffb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Nancy@yemsoft.nl",
+    "CustomerPhone": "0654381880",
+    "Duration": 6.5,
+    "ReservationID": "f9401218-5585-46e0-8faf-16683dd1e412",
+    "CustomerComments": "",
+    "SK": "f9401218-5585-46e0-8faf-16683dd1e412",
+    "ReservationTime": "17:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Nancy de Vries",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-01-09"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "5cd4eb5a-e985-4030-92d9-948ff9fce5b7"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "paul@sijben.net",
+    "CustomerPhone": "0646272086",
+    "Duration": 5.5,
+    "ReservationID": "5cc5f0f4-12bc-4b5c-92a0-9f00b7524e7d",
+    "CustomerComments": "",
+    "SK": "5cc5f0f4-12bc-4b5c-92a0-9f00b7524e7d",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Paul Sijben",
+    "ReservationDate": "2026-01-09"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "2ca8bd78-7fbe-4feb-a227-e6e1e5b0009e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "susanvanoostveen82@hotmail.com",
+    "CustomerPhone": "0642404425",
+    "Duration": 5.5,
+    "ReservationID": "4ac1e435-543b-4c76-bf27-64bbe2f1bbe3",
+    "CustomerComments": "",
+    "SK": "4ac1e435-543b-4c76-bf27-64bbe2f1bbe3",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Susan van Oostveen",
+    "ReservationDate": "2026-01-10"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Inge.bleumink@hotmail.com",
+    "CustomerPhone": "0647151028",
+    "Duration": 6,
+    "ReservationID": "3c6d2e1b-8dd4-4a10-b9b4-610d0faea0b6",
+    "CustomerComments": "",
+    "SK": "3c6d2e1b-8dd4-4a10-b9b4-610d0faea0b6",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Inge Bleumink",
+    "ReservationDate": "2026-01-10"
+  },
+  {
+    "PartySize": 3,
+    "TableID": [
+      "645e4071-9f04-46d7-b5ff-1dd34c041c2e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "lisanne_theeuwkens@hotmail.com",
+    "CustomerPhone": "0620684800",
+    "Duration": 5,
+    "ReservationID": "1da1b95b-0d70-47b0-bc17-e906e349f549",
+    "CustomerComments": "",
+    "SK": "1da1b95b-0d70-47b0-bc17-e906e349f549",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Lisanne Theeuwkens",
+    "ReservationDate": "2026-01-11"
+  },
+  {
+    "PartySize": 4,
+    "TableID": [
+      "7bcedc40-3cc1-48bd-97cb-d3fd2da59863"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 6,
+    "ReservationID": "07014d6b-e175-4d4e-b9f0-a78b2ca03ebb",
+    "CustomerComments": "2 chef choise kids losse gerechten",
+    "SK": "07014d6b-e175-4d4e-b9f0-a78b2ca03ebb",
+    "ReservationTime": "17:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Martine de pas",
+    "ReservationDate": "2026-01-11"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "2ca8bd78-7fbe-4feb-a227-e6e1e5b0009e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "mathieustreefland@hotmail.com",
+    "CustomerPhone": "0614499646",
+    "Duration": 3.5,
+    "ReservationID": "84c7c4d6-5c2f-4ef3-bf13-c774e87f620f",
+    "CustomerComments": "",
+    "SK": "84c7c4d6-5c2f-4ef3-bf13-c774e87f620f",
+    "ReservationTime": "19:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Mathieu Streefland ",
+    "ReservationDate": "2026-01-14"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Diantevz@live.nl",
+    "CustomerPhone": "0612872067",
+    "Duration": 4,
+    "ReservationID": "04dd3be1-c33e-4799-b6bb-119f6f73ca7b",
+    "CustomerComments": "",
+    "SK": "04dd3be1-c33e-4799-b6bb-119f6f73ca7b",
+    "ReservationTime": "19:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Diante van Zanten",
+    "ReservationDate": "2026-01-14"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "raymondvl@hotmail.com",
+    "CustomerPhone": "0648602787",
+    "Duration": 4,
+    "ReservationID": "32fc0054-980d-40bb-850d-99c61a82e786",
+    "CustomerComments": "",
+    "SK": "32fc0054-980d-40bb-850d-99c61a82e786",
+    "ReservationTime": "19:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Raymond van Langevelde",
+    "ReservationDate": "2026-01-15"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "2ca8bd78-7fbe-4feb-a227-e6e1e5b0009e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "adrienne_evers@hotmail.com",
+    "CustomerPhone": ".",
+    "Duration": 5.5,
+    "ReservationID": "a4d6d192-258a-4947-b043-5eed7a18b095",
+    "CustomerComments": "",
+    "SK": "a4d6d192-258a-4947-b043-5eed7a18b095",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Adrienne Evers",
+    "ReservationDate": "2026-01-16"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "c69f0179-afcd-4c91-b1ba-6a7a1f26e99a"
+    ],
+    "ZoneID": "6fb0c15a-f02f-4226-af61-d9c61a97923d",
+    "CustomerMail": "hans@veranderpower.nl",
+    "CustomerPhone": "0648124383",
+    "Duration": 5,
+    "ReservationID": "f778b31f-764a-4d83-88ae-304a41b1c921",
+    "CustomerComments": "",
+    "SK": "f778b31f-764a-4d83-88ae-304a41b1c921",
+    "ReservationTime": "19:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Hans Rozemuller",
+    "ReservationDate": "2026-01-16"
+  },
+  {
+    "PartySize": 6,
+    "TableID": [
+      "7bcedc40-3cc1-48bd-97cb-d3fd2da59863"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "michielc41@gmail.com",
+    "CustomerPhone": "0681427102",
+    "Duration": 4.5,
+    "ReservationID": "1427a159-8f99-423a-b471-2f1cc9bdf3ab",
+    "CustomerComments": "Het kan ook zijn dat we met 5 personen komen ",
+    "SK": "1427a159-8f99-423a-b471-2f1cc9bdf3ab",
+    "ReservationTime": "19:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Michiel Corts",
+    "ReservationDate": "2026-01-16"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 5,
+    "ReservationID": "b3571f6e-f80f-474f-b8cf-518351bbb172",
+    "SK": "b3571f6e-f80f-474f-b8cf-518351bbb172",
+    "ReservationTime": "19:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Erik van gool",
+    "ReservationDate": "2026-01-16"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "2ca8bd78-7fbe-4feb-a227-e6e1e5b0009e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Margotcooymans@gmail.com",
+    "CustomerPhone": "0628639644",
+    "Duration": 5,
+    "ReservationID": "bc14130d-a516-47e2-ae87-e36a3f732364",
+    "CustomerComments": "",
+    "SK": "bc14130d-a516-47e2-ae87-e36a3f732364",
+    "ReservationTime": "19:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Margot Cooijmans",
+    "ReservationDate": "2026-01-17"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Sharon_van_hoogdalem@hotmail.com",
+    "CustomerPhone": "0627587982",
+    "Duration": 5.5,
+    "ReservationID": "ecfa6118-72e6-4dab-884d-b26696b45875",
+    "CustomerComments": "",
+    "SK": "ecfa6118-72e6-4dab-884d-b26696b45875",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Sharon van Hoogdalem ",
+    "ReservationDate": "2026-01-17"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "c69f0179-afcd-4c91-b1ba-6a7a1f26e99a"
+    ],
+    "ZoneID": "6fb0c15a-f02f-4226-af61-d9c61a97923d",
+    "CustomerMail": "S.drost@online.nl",
+    "CustomerPhone": "0645446042",
+    "Duration": 5,
+    "ReservationID": "5f604e13-cc3a-4985-a7c8-39fe5e0f4cd7",
+    "CustomerComments": "",
+    "SK": "5f604e13-cc3a-4985-a7c8-39fe5e0f4cd7",
+    "ReservationTime": "19:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Sabine Drost",
+    "ReservationDate": "2026-01-17"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "0c6ac20f-71d8-4300-9c7d-7bc2fe51e57d"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Van Eekeren",
+    "CustomerPhone": "0649978749",
+    "Duration": 5.5,
+    "ReservationID": "3cf8d956-6ab1-4262-ac76-b8a18a9b9ef8",
+    "CustomerComments": "Graag een leuk cozy plekje voor 2 personen zodat goede vrienden lekker kunnen bijkletsen ♡ we hebben er zin in!! ",
+    "SK": "3cf8d956-6ab1-4262-ac76-b8a18a9b9ef8",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Lumiere",
+    "ReservationDate": "2026-01-17"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "b1be9f7a-a5e6-4639-97cb-e92c45e339de"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 5.5,
+    "ReservationID": "d55107ce-882b-43f5-80d0-288c2a79c491",
+    "SK": "d55107ce-882b-43f5-80d0-288c2a79c491",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Cramer",
+    "ReservationDate": "2026-01-17"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "d501610c-17fe-4d5d-a1a2-e7b2169d0f02"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "lida boer@gmail.com",
+    "CustomerPhone": "0338888280",
+    "Duration": 7,
+    "ReservationID": "0f9fecb4-0e53-4521-8f6f-97af6e6c39a6",
+    "CustomerComments": "",
+    "SK": "0f9fecb4-0e53-4521-8f6f-97af6e6c39a6",
+    "ReservationTime": "17:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Lida Oosterboer",
+    "ReservationDate": "2026-01-17"
+  },
+  {
+    "PartySize": 3,
+    "TableID": [
+      "a49cc06a-6547-4a61-9127-17b9a59ad8cd"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "randy.benjamins@gmail.com",
+    "CustomerPhone": "0683227633",
+    "Duration": 5.5,
+    "ReservationID": "d6ae7dc7-5dcd-42e9-9b60-855883555331",
+    "CustomerComments": "Ik heb contact gehad ivm catering en zou graag voordat ik terugkom op de offerte de smaak van jullie eten en service ervaren. Groet Randy ",
+    "SK": "d6ae7dc7-5dcd-42e9-9b60-855883555331",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Randy Benjamins",
+    "ReservationDate": "2026-01-17"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "5cd4eb5a-e985-4030-92d9-948ff9fce5b7"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "sjoerdkaljee@gmail.com",
+    "CustomerPhone": "0634351418",
+    "Duration": 6.5,
+    "ReservationID": "90aa8ae1-54d5-47c4-8aba-60494836912d",
+    "CustomerComments": "",
+    "SK": "90aa8ae1-54d5-47c4-8aba-60494836912d",
+    "ReservationTime": "17:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Sjoerd Kaljee",
+    "ReservationDate": "2026-01-17"
+  },
+  {
+    "PartySize": 3,
+    "TableID": [
+      "645e4071-9f04-46d7-b5ff-1dd34c041c2e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "celinezieltjes@outlook.com",
+    "CustomerPhone": "0640601059",
+    "Duration": 5,
+    "ReservationID": "1ba114d9-0c2d-43c1-af10-05167de1abe4",
+    "CustomerComments": "",
+    "SK": "1ba114d9-0c2d-43c1-af10-05167de1abe4",
+    "ReservationTime": "19:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Celine Zieltjes",
+    "ReservationDate": "2026-01-17"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "611a99c2-12ee-409f-97da-3ce0bb018ffb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "simonnitert@gmail.com",
+    "CustomerPhone": "0612788065",
+    "Duration": 5.5,
+    "ReservationID": "226d9278-40a1-4620-842e-1ead3dfcbaab",
+    "CustomerComments": "We zijn heel misschien 5-10 minuutjes later",
+    "SK": "226d9278-40a1-4620-842e-1ead3dfcbaab",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Simon Nitert",
+    "ReservationDate": "2026-01-17"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "c69f0179-afcd-4c91-b1ba-6a7a1f26e99a"
+    ],
+    "ZoneID": "6fb0c15a-f02f-4226-af61-d9c61a97923d",
+    "CustomerMail": "jdijkman@hotmail.nl",
+    "CustomerPhone": "0636025301",
+    "Duration": 6,
+    "ReservationID": "04cc6fed-02f1-493f-94b0-5b0ede66d215",
+    "CustomerComments": "",
+    "SK": "04cc6fed-02f1-493f-94b0-5b0ede66d215",
+    "ReservationTime": "17:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Johanna Dijkman",
+    "ReservationDate": "2026-01-22"
+  },
+  {
+    "PartySize": 6,
+    "TableID": [
+      "7bcedc40-3cc1-48bd-97cb-d3fd2da59863"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "e.brink@amersfoort.nl",
+    "CustomerPhone": "0652535535",
+    "Duration": 5,
+    "ReservationID": "8a87dc2d-56cf-4ce3-aa9e-22f86f97e46f",
+    "CustomerComments": "",
+    "SK": "8a87dc2d-56cf-4ce3-aa9e-22f86f97e46f",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Esther Brink",
+    "ReservationDate": "2026-01-22"
+  },
+  {
+    "PartySize": 4,
+    "TableID": [
+      "645e4071-9f04-46d7-b5ff-1dd34c041c2e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "saravdrie@hotmail.com",
+    "CustomerPhone": "0611731870",
+    "Duration": 4.5,
+    "ReservationID": "ba8987bf-43da-485b-a009-91a168b3a6ed",
+    "CustomerComments": "",
+    "SK": "ba8987bf-43da-485b-a009-91a168b3a6ed",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Sara van Drie",
+    "ReservationDate": "2026-01-22"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "sabine1983@hotmail.com",
+    "CustomerPhone": "0614993535",
+    "Duration": 5,
+    "ReservationID": "3478b459-bf0b-46fd-bceb-637c51a25010",
+    "CustomerComments": "",
+    "SK": "3478b459-bf0b-46fd-bceb-637c51a25010",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Sabine Otjes",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-01-22"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "7bcedc40-3cc1-48bd-97cb-d3fd2da59863"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 4,
+    "ReservationID": "562013a4-0541-435a-b793-85efa6eab539",
+    "SK": "562013a4-0541-435a-b793-85efa6eab539",
+    "ReservationTime": "20:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Erik borrel ",
+    "ReservationDate": "2026-01-23"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "a49cc06a-6547-4a61-9127-17b9a59ad8cd"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 4,
+    "ReservationID": "bc3c7c7d-c6c4-4faf-adab-0864fdc335ad",
+    "SK": "bc3c7c7d-c6c4-4faf-adab-0864fdc335ad",
+    "ReservationTime": "20:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Erik borrel ",
+    "ReservationDate": "2026-01-23"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "loisbolier@gmail.com",
+    "CustomerPhone": "0625442436",
+    "Duration": 6,
+    "ReservationID": "de33fc8c-52cb-4f9d-9e84-7f4b357da739",
+    "CustomerComments": "",
+    "SK": "de33fc8c-52cb-4f9d-9e84-7f4b357da739",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Lois Bolier",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-01-23"
+  },
+  {
+    "PartySize": 3,
+    "TableID": [
+      "604b8220-2566-47d0-901b-aa9e1fd3239f"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "ingeborg.vanderlinden@gmail.com",
+    "CustomerPhone": "0610815252",
+    "Duration": 5.5,
+    "ReservationID": "ecbdbf7f-beff-42c9-8262-3c61418f6732",
+    "CustomerComments": "",
+    "SK": "ecbdbf7f-beff-42c9-8262-3c61418f6732",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Ingeborg van der Linden",
+    "ReservationDate": "2026-01-23"
+  },
+  {
+    "PartySize": 4,
+    "TableID": [
+      "645e4071-9f04-46d7-b5ff-1dd34c041c2e"
+    ],
+    "CustomerMail": "",
+    "Status": "CHECKED_IN",
+    "CustomerPhone": "",
+    "Duration": 6,
+    "ReservationID": "cdefb8f9-1ce4-40a3-a44e-c394bd5ea17b",
+    "SK": "cdefb8f9-1ce4-40a3-a44e-c394bd5ea17b",
+    "ReservationTime": "17:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "",
+    "ReservationDate": "2026-01-23"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "645e4071-9f04-46d7-b5ff-1dd34c041c2e"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 4,
+    "ReservationID": "1c3844ac-bb50-4e11-a2de-c8cf5a315481",
+    "SK": "1c3844ac-bb50-4e11-a2de-c8cf5a315481",
+    "ReservationTime": "20:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Erik borrel ",
+    "ReservationDate": "2026-01-23"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "2ca8bd78-7fbe-4feb-a227-e6e1e5b0009e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "a.j.t.dijken@gmail.com",
+    "CustomerPhone": "0636066355",
+    "Duration": 4,
+    "ReservationID": "35e04cac-0e7e-4bc4-8905-d6569c48b10b",
+    "CustomerComments": "",
+    "SK": "35e04cac-0e7e-4bc4-8905-d6569c48b10b",
+    "ReservationTime": "20:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Tristan Dijken",
+    "ReservationDate": "2026-01-23"
+  },
+  {
+    "PartySize": 6,
+    "TableID": [
+      "b3f5d15a-35ec-4a3e-9c8e-8e0204f87d10"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "nicky_schulz@hotmail.com",
+    "CustomerPhone": "0629061943",
+    "Duration": 7,
+    "ReservationID": "db4ca461-c48b-4607-8a10-1899bc81ea9c",
+    "CustomerComments": "",
+    "SK": "db4ca461-c48b-4607-8a10-1899bc81ea9c",
+    "ReservationTime": "17:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Nicky Chicky en TG",
+    "ReservationDate": "2026-01-23"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "b1be9f7a-a5e6-4639-97cb-e92c45e339de"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 4,
+    "ReservationID": "aef49878-e814-4cdb-b143-1fb0ee6cb6f5",
+    "SK": "aef49878-e814-4cdb-b143-1fb0ee6cb6f5",
+    "ReservationTime": "20:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Erik borrel ",
+    "ReservationDate": "2026-01-23"
+  },
+  {
+    "PartySize": 6,
+    "TableID": [
+      "7bcedc40-3cc1-48bd-97cb-d3fd2da59863"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "bettycarree80@gmail.com",
+    "CustomerPhone": "0645248587",
+    "Duration": 5.5,
+    "ReservationID": "7fa6a550-4d44-4a31-aa5b-926afebd20a5",
+    "CustomerComments": "",
+    "SK": "7fa6a550-4d44-4a31-aa5b-926afebd20a5",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Betty Carree ",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-01-24"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "theaenmaarten@gmail.com",
+    "CustomerPhone": "0615201546",
+    "Duration": 5.5,
+    "ReservationID": "be77e8d5-5e9e-4e88-9842-8313b8128ee1",
+    "CustomerComments": "",
+    "SK": "be77e8d5-5e9e-4e88-9842-8313b8128ee1",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Thea Aantjes",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-01-24"
+  },
+  {
+    "PartySize": 4,
+    "TableID": [
+      "a49cc06a-6547-4a61-9127-17b9a59ad8cd"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "solyhoek@gmail.com",
+    "CustomerPhone": "0614199796",
+    "Duration": 7,
+    "ReservationID": "6faec922-de9d-4b05-905e-ee3fbdb5f287",
+    "CustomerComments": "",
+    "SK": "6faec922-de9d-4b05-905e-ee3fbdb5f287",
+    "ReservationTime": "17:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Saskia Olyhoek",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-01-24"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "d501610c-17fe-4d5d-a1a2-e7b2169d0f02"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Gertjan.degraaf@outlook.com",
+    "CustomerPhone": "0655337440",
+    "Duration": 6,
+    "ReservationID": "8c8092f2-7c10-4d87-9aee-7058e964f0c2",
+    "CustomerComments": "",
+    "SK": "8c8092f2-7c10-4d87-9aee-7058e964f0c2",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Gert-Jan de Graaf",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-01-24"
+  },
+  {
+    "PartySize": 4,
+    "TableID": [
+      "645e4071-9f04-46d7-b5ff-1dd34c041c2e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Chantaldelavieter@gmail.com",
+    "CustomerPhone": "0611042962",
+    "Duration": 6,
+    "ReservationID": "015036f3-5a7c-4388-8380-efe4d043866f",
+    "CustomerComments": "",
+    "SK": "015036f3-5a7c-4388-8380-efe4d043866f",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Chantal de la Vieter",
+    "ReservationDate": "2026-01-24"
+  },
+  {
+    "PartySize": 4,
+    "TableID": [
+      "b1be9f7a-a5e6-4639-97cb-e92c45e339de"
+    ],
+    "CustomerMail": "",
+    "Status": "CHECKED_IN",
+    "CustomerPhone": "",
+    "Duration": 5,
+    "ReservationID": "ca86b0a0-06fc-495b-aabb-504b8a129958",
+    "SK": "ca86b0a0-06fc-495b-aabb-504b8a129958",
+    "ReservationTime": "19:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Sanne Bakker",
+    "ReservationDate": "2026-01-24"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "2ca8bd78-7fbe-4feb-a227-e6e1e5b0009e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "slouwen90@gmail.com",
+    "CustomerPhone": "0629476823",
+    "Duration": 5.5,
+    "ReservationID": "48a3a174-7cee-4d04-969b-ae17f482ef9f",
+    "CustomerComments": "Geen pijnboompitten of pesto. Allergie 1 persoon. ",
+    "SK": "48a3a174-7cee-4d04-969b-ae17f482ef9f",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Familie Louwen",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-01-24"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "2ca8bd78-7fbe-4feb-a227-e6e1e5b0009e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "bartdenhollander@gmail.com",
+    "CustomerPhone": "0641097109",
+    "Duration": 5,
+    "ReservationID": "50ceb801-5d88-46df-9eb1-b56c0693ce93",
+    "CustomerComments": "",
+    "SK": "50ceb801-5d88-46df-9eb1-b56c0693ce93",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Bart den Hollander",
+    "ReservationDate": "2026-01-25"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "c69f0179-afcd-4c91-b1ba-6a7a1f26e99a"
+    ],
+    "ZoneID": "6fb0c15a-f02f-4226-af61-d9c61a97923d",
+    "CustomerMail": "marietta@frizzbee.net",
+    "CustomerPhone": "0618191564",
+    "Duration": 5,
+    "ReservationID": "09de1841-58fa-47eb-b716-291ec71e2d07",
+    "CustomerComments": "",
+    "SK": "09de1841-58fa-47eb-b716-291ec71e2d07",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Mariëtta van der Putte",
+    "ReservationDate": "2026-01-25"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "joliedegroot@gmail.com",
+    "CustomerPhone": "0623792151",
+    "Duration": 5.5,
+    "ReservationID": "9e7ae08d-5e75-42d3-bd45-674f12d9c7eb",
+    "CustomerComments": "",
+    "SK": "9e7ae08d-5e75-42d3-bd45-674f12d9c7eb",
+    "ReservationTime": "17:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Jolie Pegtel",
+    "ReservationDate": "2026-01-25"
+  },
+  {
+    "PartySize": 3,
+    "TableID": [
+      "645e4071-9f04-46d7-b5ff-1dd34c041c2e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "nicky_schulz@hotmail.com",
+    "CustomerPhone": "0629061943",
+    "Duration": 5,
+    "ReservationID": "298d3109-d5aa-4975-8991-1c14db6609fa",
+    "CustomerComments": ":)",
+    "SK": "298d3109-d5aa-4975-8991-1c14db6609fa",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Nicky Schulz",
+    "ReservationDate": "2026-01-28"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "2ca8bd78-7fbe-4feb-a227-e6e1e5b0009e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "m_maatsen@outlook.com",
+    "CustomerPhone": "0622028554",
+    "Duration": 4.5,
+    "ReservationID": "dd2454bb-b383-46f9-a9ec-f00d751f577e",
+    "CustomerComments": "Een leuk plekje ergens achterin 😉",
+    "SK": "dd2454bb-b383-46f9-a9ec-f00d751f577e",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Marvin Maatsen",
+    "ReservationDate": "2026-01-28"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Frederike.noordenbos@gmail.com",
+    "CustomerPhone": "0648406812",
+    "Duration": 6,
+    "ReservationID": "b8d42ed9-7fbf-4d8a-845b-59d3da96669e",
+    "CustomerComments": "",
+    "SK": "b8d42ed9-7fbf-4d8a-845b-59d3da96669e",
+    "ReservationTime": "17:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Frederike Noordenbos",
+    "ReservationDate": "2026-01-28"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Lindegrittersdoublet@gmail.com",
+    "CustomerPhone": "0633687405",
+    "Duration": 5.5,
+    "ReservationID": "9b5d1339-41f4-4758-8afd-c8122b506218",
+    "CustomerComments": "Graag een tafel bij het raam",
+    "SK": "9b5d1339-41f4-4758-8afd-c8122b506218",
+    "ReservationTime": "17:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Linde",
+    "ReservationDate": "2026-01-29"
+  },
+  {
+    "PartySize": 7,
+    "TableID": [
+      "7bcedc40-3cc1-48bd-97cb-d3fd2da59863"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "degeusmargreet@gmail.com",
+    "CustomerPhone": "0620396273",
+    "Duration": 5,
+    "ReservationID": "48873200-d495-405e-b3c9-151fbf1aa8f2",
+    "CustomerComments": "wij zijn met 7. het lukte mij niet om online voor 7 personen te reserveren. Ik hoor graag of dit een probleem is, anders moeten we helaas iets anders gaan zoeken.\ngroet Margreet\n2 vega chefs choice",
+    "SK": "48873200-d495-405e-b3c9-151fbf1aa8f2",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "margreet de geus",
+    "ReservationDate": "2026-01-29"
+  },
+  {
+    "PartySize": 4,
+    "TableID": [
+      "645e4071-9f04-46d7-b5ff-1dd34c041c2e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Rigter",
+    "CustomerPhone": "0613370078",
+    "Duration": 5.5,
+    "ReservationID": "aff207fe-a330-43b5-bb98-edec214eb28c",
+    "CustomerComments": "",
+    "SK": "aff207fe-a330-43b5-bb98-edec214eb28c",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Jiske",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-01-30"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "svenb2004@gmail.com",
+    "CustomerPhone": "0644951968",
+    "Duration": 5,
+    "ReservationID": "ae9d75ba-d5b7-4a53-8e51-193bb07d5fe0",
+    "CustomerComments": "",
+    "SK": "ae9d75ba-d5b7-4a53-8e51-193bb07d5fe0",
+    "ReservationTime": "19:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Sven Bakker",
+    "ReservationDate": "2026-01-30"
+  },
+  {
+    "PartySize": 4,
+    "TableID": [
+      "a49cc06a-6547-4a61-9127-17b9a59ad8cd"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "eric.wiegman@me.com",
+    "CustomerPhone": "0646410092",
+    "Duration": 6,
+    "ReservationID": "49fd2b24-dfe7-46a8-a515-04372bb8d609",
+    "CustomerComments": "",
+    "SK": "49fd2b24-dfe7-46a8-a515-04372bb8d609",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Eric Wiegman",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-01-30"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "2ca8bd78-7fbe-4feb-a227-e6e1e5b0009e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "anja.nierop@gmail.com",
+    "CustomerPhone": "06 24920153 ",
+    "Duration": 6,
+    "ReservationID": "54d87972-517c-482a-b463-4aa66ee5bedf",
+    "CustomerComments": "",
+    "SK": "54d87972-517c-482a-b463-4aa66ee5bedf",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Johanna Nierop-Rond ",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-01-30"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "m.schothuis@gmail.com",
+    "CustomerPhone": "0629112756",
+    "Duration": 5.5,
+    "ReservationID": "2fd4636c-f606-438f-b8de-e014c0a5e47f",
+    "CustomerComments": "",
+    "SK": "2fd4636c-f606-438f-b8de-e014c0a5e47f",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "M. Schothuis",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-01-31"
+  },
+  {
+    "PartySize": 3,
+    "TableID": [
+      "645e4071-9f04-46d7-b5ff-1dd34c041c2e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "monique.v.laar@gmail.com",
+    "CustomerPhone": "0614434378",
+    "Duration": 6,
+    "ReservationID": "c79fee8b-6db8-4588-9a20-36f729f5dc96",
+    "CustomerComments": "Rond 1930/1945 gaan we naar een voorstelling in de flint.",
+    "SK": "c79fee8b-6db8-4588-9a20-36f729f5dc96",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Monique Van den Brink",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-01-31"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "d501610c-17fe-4d5d-a1a2-e7b2169d0f02"
+    ],
+    "CustomerMail": "",
+    "Status": "CHECKED_IN",
+    "CustomerPhone": "0653748678",
+    "Duration": 5.5,
+    "ReservationID": "2873fcdb-e9ee-4226-aa06-25812351319e",
+    "SK": "2873fcdb-e9ee-4226-aa06-25812351319e",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Dirk",
+    "ReservationDate": "2026-01-31"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "2ca8bd78-7fbe-4feb-a227-e6e1e5b0009e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "jetty.koopman@nap-casein.com",
+    "CustomerPhone": "0620970815",
+    "Duration": 6,
+    "ReservationID": "25cec7d1-b8d3-4cf5-8d06-a7e17695cc9f",
+    "CustomerComments": "",
+    "SK": "25cec7d1-b8d3-4cf5-8d06-a7e17695cc9f",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Jetty Koopman",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-01-31"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "0c6ac20f-71d8-4300-9c7d-7bc2fe51e57d"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Sten.hatt@outlook.com",
+    "CustomerPhone": "0654693212",
+    "Duration": 4,
+    "ReservationID": "2d62f9ed-2d86-4ce8-8497-3c17f493f307",
+    "CustomerComments": "",
+    "SK": "2d62f9ed-2d86-4ce8-8497-3c17f493f307",
+    "ReservationTime": "20:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Sten hatt",
+    "Status": "PLANNED",
+    "ReservationDate": "2026-01-31"
+  },
+  {
+    "PartySize": 4,
+    "TableID": [
+      "645e4071-9f04-46d7-b5ff-1dd34c041c2e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "loes.martijn97@gmail.com",
+    "CustomerPhone": "0683227152",
+    "Duration": 6,
+    "ReservationID": "c68be78e-0743-4d16-bf36-befacea71ee7",
+    "CustomerComments": "",
+    "SK": "c68be78e-0743-4d16-bf36-befacea71ee7",
+    "ReservationTime": "17:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Loes Nijkamp",
+    "ReservationDate": "2026-02-01"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "martin@wolswinkel.nl",
+    "CustomerPhone": "0633055852",
+    "Duration": 5,
+    "ReservationID": "60a59f5e-9e51-48d9-b0b9-649194fc08fb",
+    "CustomerComments": "",
+    "SK": "60a59f5e-9e51-48d9-b0b9-649194fc08fb",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Martin Wolswinkel",
+    "ReservationDate": "2026-02-01"
+  },
+  {
+    "PartySize": 1,
+    "TableID": [
+      "e96a7599-63e7-47d9-95ce-ba2942d35543"
+    ],
+    "ZoneID": "6fb0c15a-f02f-4226-af61-d9c61a97923d",
+    "CustomerMail": "af.van.londen@casema.nl",
+    "CustomerPhone": "0627043481",
+    "Duration": 6,
+    "ReservationID": "3c8b7179-9a10-4922-9572-1e7b08d615d9",
+    "CustomerComments": "Aansluitend na Gluren bij Buren ",
+    "SK": "3c8b7179-9a10-4922-9572-1e7b08d615d9",
+    "ReservationTime": "17:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Anneke van Londen",
+    "ReservationDate": "2026-02-01"
+  },
+  {
+    "PartySize": 4,
+    "TableID": [
+      "645e4071-9f04-46d7-b5ff-1dd34c041c2e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "lavg@kpnmail.nl",
+    "CustomerPhone": "06 402 93 851",
+    "Duration": 4.5,
+    "ReservationID": "a11029a5-22ee-490d-83a9-e61cfe625587",
+    "CustomerComments": "",
+    "SK": "a11029a5-22ee-490d-83a9-e61cfe625587",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Leendert van Geldermalsen",
+    "ReservationDate": "2026-02-04"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "2ca8bd78-7fbe-4feb-a227-e6e1e5b0009e"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 4.5,
+    "ReservationID": "fd2daac4-755a-4111-b925-45d4cef987b0",
+    "SK": "fd2daac4-755a-4111-b925-45d4cef987b0",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Wendy",
+    "ReservationDate": "2026-02-05"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "ejwblaak@gmail.com",
+    "CustomerPhone": "0650480227",
+    "Duration": 4.5,
+    "ReservationID": "1aea52f4-461e-4617-bd4c-1061cb0ffe60",
+    "CustomerComments": "",
+    "SK": "1aea52f4-461e-4617-bd4c-1061cb0ffe60",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Liesbeth Blaak",
+    "ReservationDate": "2026-02-05"
+  },
+  {
+    "PartySize": 4,
+    "TableID": [
+      "a49cc06a-6547-4a61-9127-17b9a59ad8cd"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Leon.marije@hotmail.com",
+    "CustomerPhone": "0628176657",
+    "Duration": 6.5,
+    "ReservationID": "d8252c75-55d6-44b5-b323-3b79197fc39c",
+    "CustomerComments": "",
+    "SK": "d8252c75-55d6-44b5-b323-3b79197fc39c",
+    "ReservationTime": "16:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Marije Prins",
+    "ReservationDate": "2026-02-05"
+  },
+  {
+    "PartySize": 35,
+    "TableID": [
+      "645e4071-9f04-46d7-b5ff-1dd34c041c2e"
+    ],
+    "CustomerMail": "andrea.vanpoppel@meerkring.nl",
+    "Status": "PLANNED",
+    "CustomerPhone": "0611316005",
+    "Duration": 8,
+    "ReservationID": "9997fb4e-d0a8-4ae0-aeb6-f465b6a460fa",
+    "CustomerComments": "groep van 35 komt borrelen budget is 800 2uur 35 p 7,5eu per uur rest van t bedrag voor eten. factuur sturen",
+    "SK": "9997fb4e-d0a8-4ae0-aeb6-f465b6a460fa",
+    "ReservationTime": "15:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "van poppel",
+    "ReservationDate": "2026-02-05"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "d501610c-17fe-4d5d-a1a2-e7b2169d0f02"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "jcvantienhoven@gmail.com ",
+    "CustomerPhone": "06-29600834 ",
+    "Duration": 4.5,
+    "ReservationID": "bb5b13e4-996a-4627-97bd-efc3e3f0187e",
+    "CustomerComments": "",
+    "SK": "bb5b13e4-996a-4627-97bd-efc3e3f0187e",
+    "ReservationTime": "19:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Johannes van Tienhoven ",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-02-06"
+  },
+  {
+    "PartySize": 5,
+    "TableID": [
+      "b1be9f7a-a5e6-4639-97cb-e92c45e339de"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "mirjamwetering@kpnmail.nl",
+    "CustomerPhone": "0611092162",
+    "Duration": 5,
+    "ReservationID": "96ab30b4-9542-409c-a341-e95b2844f9eb",
+    "CustomerComments": "",
+    "SK": "96ab30b4-9542-409c-a341-e95b2844f9eb",
+    "ReservationTime": "19:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Mirjam vd Wetering ",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-02-06"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "2ca8bd78-7fbe-4feb-a227-e6e1e5b0009e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Mbosma15@gmail.com",
+    "CustomerPhone": "0642233266",
+    "Duration": 5.5,
+    "ReservationID": "1cf20ab7-5315-4244-89aa-65f78bc0ea6f",
+    "CustomerComments": "We gaan hierna naar de Foute Party in de Flint, dus bij voorbaat excuses voor onze outfits 😉",
+    "SK": "1cf20ab7-5315-4244-89aa-65f78bc0ea6f",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Marianne ",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-02-06"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "amyzijlstra@hotmail.com",
+    "CustomerPhone": "0612197083",
+    "Duration": 4,
+    "ReservationID": "4151f00c-932a-4f15-bcef-5846e9a663ee",
+    "CustomerComments": "",
+    "SK": "4151f00c-932a-4f15-bcef-5846e9a663ee",
+    "ReservationTime": "20:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Amy Zijlstra",
+    "ReservationDate": "2026-02-06"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "611a99c2-12ee-409f-97da-3ce0bb018ffb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "lammers.japko@hotmail.com",
+    "CustomerPhone": "0615236444",
+    "Duration": 4.5,
+    "ReservationID": "6a256c89-273b-450d-8dbe-f2b9cd0cde27",
+    "CustomerComments": "",
+    "SK": "6a256c89-273b-450d-8dbe-f2b9cd0cde27",
+    "ReservationTime": "19:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Japko lammers",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-02-06"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "0c6ac20f-71d8-4300-9c7d-7bc2fe51e57d"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "m.venema@outlook.com",
+    "CustomerPhone": "0653205038",
+    "Duration": 5.5,
+    "ReservationID": "6d55c023-798d-43f1-9c17-272e2cc32b51",
+    "CustomerComments": "",
+    "SK": "6d55c023-798d-43f1-9c17-272e2cc32b51",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Martijn Venema",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-02-06"
+  },
+  {
+    "PartySize": 6,
+    "TableID": [
+      "7bcedc40-3cc1-48bd-97cb-d3fd2da59863"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "rob@smuldersav.nl",
+    "CustomerPhone": "0653181587",
+    "Duration": 5.5,
+    "ReservationID": "a8f19d09-edc4-47b8-8310-09b930951be4",
+    "CustomerComments": "Bedrijf is SmuldersAV",
+    "SK": "a8f19d09-edc4-47b8-8310-09b930951be4",
+    "ReservationTime": "19:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Rob Smulders",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-02-06"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "0c6ac20f-71d8-4300-9c7d-7bc2fe51e57d"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "mail@sandrahuizer.nl",
+    "CustomerPhone": "655111191",
+    "Duration": 8,
+    "ReservationID": "b7b7ea85-d8a7-49e4-b7ff-691a58608000",
+    "CustomerComments": "",
+    "SK": "b7b7ea85-d8a7-49e4-b7ff-691a58608000",
+    "ReservationTime": "16:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Sandra Huizer",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-02-07"
+  },
+  {
+    "PartySize": 6,
+    "TableID": [
+      "b1be9f7a-a5e6-4639-97cb-e92c45e339de"
+    ],
+    "CustomerMail": "",
+    "Status": "CHECKED_IN",
+    "CustomerPhone": "",
+    "Duration": 7,
+    "ReservationID": "61ce1f2f-8ddb-419d-a3d1-4dd62dac02ca",
+    "SK": "61ce1f2f-8ddb-419d-a3d1-4dd62dac02ca",
+    "ReservationTime": "17:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Ma",
+    "ReservationDate": "2026-02-07"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "2ca8bd78-7fbe-4feb-a227-e6e1e5b0009e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "a.krombeen@gmail.com",
+    "CustomerPhone": "0618642404",
+    "Duration": 6,
+    "ReservationID": "aa081e9f-ca10-41aa-9e5b-505c09cef90d",
+    "CustomerComments": "",
+    "SK": "aa081e9f-ca10-41aa-9e5b-505c09cef90d",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Adinda KROMBEEN",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-02-07"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "d501610c-17fe-4d5d-a1a2-e7b2169d0f02"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "jaapeektimmerman3010@gmail.com",
+    "CustomerPhone": "0614199477",
+    "Duration": 5.5,
+    "ReservationID": "eabf3e9c-8555-4bd2-aa99-10074536d800",
+    "CustomerComments": "",
+    "SK": "eabf3e9c-8555-4bd2-aa99-10074536d800",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Jaap Eektimmerman",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-02-07"
+  },
+  {
+    "PartySize": 3,
+    "TableID": [
+      "645e4071-9f04-46d7-b5ff-1dd34c041c2e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Annabelstroomer@gmail.com",
+    "CustomerPhone": "0646878880",
+    "Duration": 6.5,
+    "ReservationID": "bb59d44c-9c0f-4752-8bf5-de51669493e9",
+    "CustomerComments": "Diner voor voorstelling start 20.00 Flint\r\n\r\nHet is voor een verjaardag, feestelijk toetje wordt gewaardeerd :)",
+    "SK": "bb59d44c-9c0f-4752-8bf5-de51669493e9",
+    "ReservationTime": "17:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Annabel Stroomer",
+    "ReservationDate": "2026-02-07"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Julide.lara@hotmail.com",
+    "CustomerPhone": "0627343537",
+    "Duration": 5,
+    "ReservationID": "e64af3a2-a57c-456f-9c3f-c98eb2f3dc49",
+    "CustomerComments": "",
+    "SK": "e64af3a2-a57c-456f-9c3f-c98eb2f3dc49",
+    "ReservationTime": "19:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Julide Kose",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-02-07"
+  },
+  {
+    "PartySize": 4,
+    "TableID": [
+      "604b8220-2566-47d0-901b-aa9e1fd3239f"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "jasonstewart1108@gmail.com",
+    "CustomerPhone": "0642678874",
+    "Duration": 0.5,
+    "ReservationID": "5419fbd6-1b63-4dbd-bfa3-8830d852a9ff",
+    "CustomerComments": "",
+    "SK": "5419fbd6-1b63-4dbd-bfa3-8830d852a9ff",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Jason Stewart",
+    "ReservationDate": "2026-02-09"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "4bf50c3a-15c2-4289-80d7-e3ffcca458a4"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 1,
+    "ReservationID": "167c6c81-f535-4e95-adff-000e61daf28d",
+    "SK": "167c6c81-f535-4e95-adff-000e61daf28d",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Leeg",
+    "ReservationDate": "2026-02-09"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "b3f5d15a-35ec-4a3e-9c8e-8e0204f87d10"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 1,
+    "ReservationID": "31f4a9b7-c4ba-499e-930a-2d4c994903de",
+    "SK": "31f4a9b7-c4ba-499e-930a-2d4c994903de",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Leeg",
+    "ReservationDate": "2026-02-09"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "f5de6328-a78e-4b6d-9be1-776eb56b8152"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 1,
+    "ReservationID": "a322e403-1502-4bcc-8a9e-2b6fc0b60a42",
+    "SK": "a322e403-1502-4bcc-8a9e-2b6fc0b60a42",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Leeg",
+    "ReservationDate": "2026-02-09"
+  },
+  {
+    "PartySize": 5,
+    "TableID": [
+      "a49cc06a-6547-4a61-9127-17b9a59ad8cd"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 1,
+    "ReservationID": "6eb4031f-1991-4400-850e-d8fe161cf7a1",
+    "SK": "6eb4031f-1991-4400-850e-d8fe161cf7a1",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Jeremy ",
+    "ReservationDate": "2026-02-09"
+  },
+  {
+    "PartySize": 3,
+    "TableID": [
+      "4e8898cd-e85a-4770-b44a-8377559e359b"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 1,
+    "ReservationID": "dc0d9232-b7e9-4b29-815e-d0ae45def36c",
+    "SK": "dc0d9232-b7e9-4b29-815e-d0ae45def36c",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Sjors",
+    "ReservationDate": "2026-02-09"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "c69f0179-afcd-4c91-b1ba-6a7a1f26e99a"
+    ],
+    "CustomerMail": "lisetpost@gmail.com",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 1,
+    "ReservationID": "3ded589e-a234-4704-a53d-6e04e000a189",
+    "SK": "3ded589e-a234-4704-a53d-6e04e000a189",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Lisette Post ",
+    "ReservationDate": "2026-02-09"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "35527171-16b6-4831-96a3-88a89755e891"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 1,
+    "ReservationID": "3833e255-74bc-4882-93f0-ce923e5426a4",
+    "SK": "3833e255-74bc-4882-93f0-ce923e5426a4",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Leeg",
+    "ReservationDate": "2026-02-09"
+  },
+  {
+    "PartySize": 3,
+    "TableID": [
+      "645e4071-9f04-46d7-b5ff-1dd34c041c2e"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 1,
+    "ReservationID": "f0a88076-e9a7-4347-8fa6-c4bff1685174",
+    "SK": "f0a88076-e9a7-4347-8fa6-c4bff1685174",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Anna tan drie ringen",
+    "ReservationDate": "2026-02-09"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "4b393359-2a0c-4da8-9a81-80d8f94e37ca"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 1,
+    "ReservationID": "e90f80e1-be01-491e-b5c0-154c3926da75",
+    "SK": "e90f80e1-be01-491e-b5c0-154c3926da75",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Leeg",
+    "ReservationDate": "2026-02-09"
+  },
+  {
+    "PartySize": 6,
+    "TableID": [
+      "d501610c-17fe-4d5d-a1a2-e7b2169d0f02"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 1,
+    "ReservationID": "09f1b629-e545-4e6e-83c9-c9fdd2e67220",
+    "SK": "09f1b629-e545-4e6e-83c9-c9fdd2e67220",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Iris en rowan",
+    "ReservationDate": "2026-02-09"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "6a15c202-7c4d-4c93-b104-168d22f9b250"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 1,
+    "ReservationID": "a763396b-9fd5-4423-a350-5f1be132ff65",
+    "SK": "a763396b-9fd5-4423-a350-5f1be132ff65",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Leeg",
+    "ReservationDate": "2026-02-09"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "cf9b65ff-4c3d-4223-9b56-e3599e1cf52c"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 1,
+    "ReservationID": "b9115d58-45e9-45c0-9549-db7be2eb237b",
+    "SK": "b9115d58-45e9-45c0-9549-db7be2eb237b",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Leeg",
+    "ReservationDate": "2026-02-09"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "a4523709-53da-483e-b006-ab88c81b724c"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 1,
+    "ReservationID": "2420a421-a090-468f-b0cc-7120f0d173cb",
+    "SK": "2420a421-a090-468f-b0cc-7120f0d173cb",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Ja tina en johan",
+    "ReservationDate": "2026-02-09"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "8c899edc-9e6c-4f15-ada9-6368ce37aad9"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 1,
+    "ReservationID": "03122020-74e9-495e-ba88-f9e4cf31a059",
+    "SK": "03122020-74e9-495e-ba88-f9e4cf31a059",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Leeg",
+    "ReservationDate": "2026-02-09"
+  },
+  {
+    "PartySize": 1,
+    "TableID": [
+      "7bcedc40-3cc1-48bd-97cb-d3fd2da59863"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 1,
+    "ReservationID": "aea4ec12-181b-44c2-b11d-a672c76a3deb",
+    "SK": "aea4ec12-181b-44c2-b11d-a672c76a3deb",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Leeg",
+    "ReservationDate": "2026-02-09"
+  },
+  {
+    "PartySize": 4,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 1,
+    "ReservationID": "351efd06-1e7c-4d50-b6f5-fb7fe4848d8a",
+    "SK": "351efd06-1e7c-4d50-b6f5-fb7fe4848d8a",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "pim",
+    "ReservationDate": "2026-02-09"
+  },
+  {
+    "PartySize": 4,
+    "TableID": [
+      "61e83d97-729f-4c58-9602-26fba334592e"
+    ],
+    "CustomerMail": "",
+    "Status": "CHECKED_IN",
+    "CustomerPhone": "",
+    "Duration": 1,
+    "ReservationID": "1c22ae0c-991b-49a2-b759-456896ce4ae9",
+    "SK": "1c22ae0c-991b-49a2-b759-456896ce4ae9",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Simone, maas, lot, nick",
+    "ReservationDate": "2026-02-09"
+  },
+  {
+    "PartySize": 4,
+    "TableID": [
+      "930bb4cf-181b-4db6-bde4-19945d0427d1"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 1,
+    "ReservationID": "361b19fa-ee62-4ade-8a8c-c85348aa5a2b",
+    "SK": "361b19fa-ee62-4ade-8a8c-c85348aa5a2b",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Aleid vd wal",
+    "ReservationDate": "2026-02-09"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "f37d33d4-04b6-4670-85fb-c2c8b9a89c3a"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 1,
+    "ReservationID": "55629a7d-444d-4d3d-8abf-5908ad227c07",
+    "SK": "55629a7d-444d-4d3d-8abf-5908ad227c07",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Leeg",
+    "ReservationDate": "2026-02-09"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "40b41cfc-5b9a-4c74-add0-da3c90e65568"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 1,
+    "ReservationID": "abebc96c-5b63-40d8-9a09-04e4dc69d8fb",
+    "SK": "abebc96c-5b63-40d8-9a09-04e4dc69d8fb",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Leeg",
+    "ReservationDate": "2026-02-09"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "0c6ac20f-71d8-4300-9c7d-7bc2fe51e57d"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 1,
+    "ReservationID": "5933b25f-1ac8-4423-85fa-d452a0f0880d",
+    "SK": "5933b25f-1ac8-4423-85fa-d452a0f0880d",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Peter en richard",
+    "ReservationDate": "2026-02-09"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "2ca8bd78-7fbe-4feb-a227-e6e1e5b0009e"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 1,
+    "ReservationID": "074c5327-7ca0-4e81-b380-e8343c95a16b",
+    "SK": "074c5327-7ca0-4e81-b380-e8343c95a16b",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "dayenne en peet",
+    "ReservationDate": "2026-02-09"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "0d30b95a-c4dd-4b81-bb17-d17d45cc593d"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 1,
+    "ReservationID": "6296c842-080f-4d65-870a-d1a203659f6c",
+    "SK": "6296c842-080f-4d65-870a-d1a203659f6c",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Leeg",
+    "ReservationDate": "2026-02-09"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "e96a7599-63e7-47d9-95ce-ba2942d35543"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 1,
+    "ReservationID": "184edb8a-3b69-4069-ac80-a5da68ef4626",
+    "SK": "184edb8a-3b69-4069-ac80-a5da68ef4626",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Janjaap en anja",
+    "ReservationDate": "2026-02-09"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "ef433901-170f-4419-9c49-d4452a419992"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 1,
+    "ReservationID": "481433e0-0ec5-43d5-9e2f-2d1d546d13d6",
+    "SK": "481433e0-0ec5-43d5-9e2f-2d1d546d13d6",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Leeg",
+    "ReservationDate": "2026-02-09"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "2ca8bd78-7fbe-4feb-a227-e6e1e5b0009e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "kengbersen@hotmail.com",
+    "CustomerPhone": "0641279565",
+    "Duration": 4.5,
+    "ReservationID": "439f7d32-8f01-4966-a8a5-4d939b9ed0ca",
+    "CustomerComments": "",
+    "SK": "439f7d32-8f01-4966-a8a5-4d939b9ed0ca",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Kim Engbersen",
+    "ReservationDate": "2026-02-11"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "annemaaike.en.jeroen@gmail.com",
+    "CustomerPhone": "0652159397",
+    "Duration": 4.5,
+    "ReservationID": "b2da981f-320d-4bec-8778-ac0b62368ce4",
+    "CustomerComments": "Glutenvrij sporen geen probleem kijkende naar de kaart staat er voldoende op. ",
+    "SK": "b2da981f-320d-4bec-8778-ac0b62368ce4",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Annemaaike Daniel",
+    "ReservationDate": "2026-02-11"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "2ca8bd78-7fbe-4feb-a227-e6e1e5b0009e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "thijsvanderlinden@gmail.com",
+    "CustomerPhone": "0642048900",
+    "Duration": 4,
+    "ReservationID": "8790ce17-1663-4c8e-a4fd-12b73a24fefc",
+    "CustomerComments": "",
+    "SK": "8790ce17-1663-4c8e-a4fd-12b73a24fefc",
+    "ReservationTime": "19:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Thijs van der Linden",
+    "ReservationDate": "2026-02-12"
+  },
+  {
+    "PartySize": 4,
+    "TableID": [
+      "645e4071-9f04-46d7-b5ff-1dd34c041c2e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "simone.neerscholten@gmail.com",
+    "CustomerPhone": "0620323028",
+    "Duration": 5,
+    "ReservationID": "131df54e-a50b-47cf-ac3d-fbc806c83571",
+    "CustomerComments": "",
+    "SK": "131df54e-a50b-47cf-ac3d-fbc806c83571",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Simone Neerscholten ",
+    "ReservationDate": "2026-02-12"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "bvandeegrinten@ziggo.nl",
+    "CustomerPhone": "(06) 24 53 11 74",
+    "Duration": 4,
+    "ReservationID": "02b381c9-a779-4268-811e-2d93e813d1ba",
+    "CustomerComments": "",
+    "SK": "02b381c9-a779-4268-811e-2d93e813d1ba",
+    "ReservationTime": "19:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Bas",
+    "ReservationDate": "2026-02-12"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "611a99c2-12ee-409f-97da-3ce0bb018ffb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "sjvaneijden@hotmail.com",
+    "CustomerPhone": "0657916704",
+    "Duration": 4.5,
+    "ReservationID": "58e68087-8620-4887-aecf-5f06e2ba6caf",
+    "CustomerComments": "",
+    "SK": "58e68087-8620-4887-aecf-5f06e2ba6caf",
+    "ReservationTime": "19:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Stefan van Eijden",
+    "ReservationDate": "2026-02-13"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "d501610c-17fe-4d5d-a1a2-e7b2169d0f02"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "arendneuteboom@gmail.com",
+    "CustomerPhone": "0613215575",
+    "Duration": 5.5,
+    "ReservationID": "e2073705-b722-413d-a24c-54f16b54329d",
+    "CustomerComments": "",
+    "SK": "e2073705-b722-413d-a24c-54f16b54329d",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Arend Neuteboom",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-02-13"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "a49cc06a-6547-4a61-9127-17b9a59ad8cd"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 4,
+    "ReservationID": "c54952fd-5b5f-4dbd-80d9-83d01c931cfd",
+    "SK": "c54952fd-5b5f-4dbd-80d9-83d01c931cfd",
+    "ReservationTime": "20:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "breeze",
+    "ReservationDate": "2026-02-13"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "b3f5d15a-35ec-4a3e-9c8e-8e0204f87d10"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 4,
+    "ReservationID": "fad0e31a-880d-429e-8bec-f739e6f8c629",
+    "SK": "fad0e31a-880d-429e-8bec-f739e6f8c629",
+    "ReservationTime": "20:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "breeze",
+    "ReservationDate": "2026-02-13"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "e1df1b6b-a394-4e38-9c0d-ccf866ce5f98"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 4,
+    "ReservationID": "e1a80d2e-e4ee-4f36-9809-aab6ae902e84",
+    "SK": "e1a80d2e-e4ee-4f36-9809-aab6ae902e84",
+    "ReservationTime": "20:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "breeze",
+    "ReservationDate": "2026-02-13"
+  },
+  {
+    "PartySize": 4,
+    "TableID": [
+      "645e4071-9f04-46d7-b5ff-1dd34c041c2e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Mariekelammers78@hotmail.com",
+    "CustomerPhone": "06 2061 3194 ",
+    "Duration": 6.5,
+    "ReservationID": "58145c16-bea8-4f56-8fcb-8d9c7b24387b",
+    "CustomerComments": "",
+    "SK": "58145c16-bea8-4f56-8fcb-8d9c7b24387b",
+    "ReservationTime": "17:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Marieke Lammers",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-02-13"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "laurensdejonge07@gmail.com",
+    "CustomerPhone": "0610621886",
+    "Duration": 5,
+    "ReservationID": "4ba32578-1d28-4143-8380-bf4ad169101c",
+    "CustomerComments": "",
+    "SK": "4ba32578-1d28-4143-8380-bf4ad169101c",
+    "ReservationTime": "19:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Laurens de Jonge",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-02-13"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "0c6ac20f-71d8-4300-9c7d-7bc2fe51e57d"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "marianne_grim@hotmail.com",
+    "CustomerPhone": "0653512287",
+    "Duration": 5.5,
+    "ReservationID": "f7d15459-d5ff-422c-ac81-10e3259dc771",
+    "CustomerComments": "",
+    "SK": "f7d15459-d5ff-422c-ac81-10e3259dc771",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Marianne",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-02-13"
+  },
+  {
+    "PartySize": 5,
+    "TableID": [
+      "b1be9f7a-a5e6-4639-97cb-e92c45e339de"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "hooftster@gmail.com",
+    "CustomerPhone": "0636074597",
+    "Duration": 6,
+    "ReservationID": "6686b2ad-09e0-404c-a280-f885030bc616",
+    "CustomerComments": "Eén persoon zit in een rolstoel. Is er een rolstoeltoegankelijke tafel beschikbaar?\nrond 8 uur vertrekken",
+    "SK": "6686b2ad-09e0-404c-a280-f885030bc616",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Hélène Hooft",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-02-13"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "7bcedc40-3cc1-48bd-97cb-d3fd2da59863"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 4,
+    "ReservationID": "2fe68acb-e85d-4d23-8636-ed0e6a356bb4",
+    "SK": "2fe68acb-e85d-4d23-8636-ed0e6a356bb4",
+    "ReservationTime": "20:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "breeze",
+    "ReservationDate": "2026-02-13"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "5cd4eb5a-e985-4030-92d9-948ff9fce5b7"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "janvisser2000@gmail.com",
+    "CustomerPhone": "0648788977",
+    "Duration": 5.5,
+    "ReservationID": "3e4dc2bb-3a5a-4a8f-9f37-a3b6e4195379",
+    "CustomerComments": "We willen betalen met diner cadeau als dit niet mogelijk is dan hoor ik het graag nog even van te voren. Dank ",
+    "SK": "3e4dc2bb-3a5a-4a8f-9f37-a3b6e4195379",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Jan Visser",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-02-13"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "2ca8bd78-7fbe-4feb-a227-e6e1e5b0009e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "corettedejong@gmail.com",
+    "CustomerPhone": "0633767777",
+    "Duration": 6.5,
+    "ReservationID": "c1131bd1-5368-4030-b3e0-ba6a85048991",
+    "CustomerComments": "",
+    "SK": "c1131bd1-5368-4030-b3e0-ba6a85048991",
+    "ReservationTime": "17:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Corette van Valkenhoef",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-02-13"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "0c6ac20f-71d8-4300-9c7d-7bc2fe51e57d"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "stefanpernot01@gmail.com",
+    "CustomerPhone": "0641673448",
+    "Duration": 6,
+    "ReservationID": "7459eba0-e2f1-4f1a-a55c-ac34e4d35939",
+    "CustomerComments": "",
+    "SK": "7459eba0-e2f1-4f1a-a55c-ac34e4d35939",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Stefan Pernot",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-02-14"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Mnr.ay@hotmail.com",
+    "CustomerPhone": "0610934398",
+    "Duration": 4,
+    "ReservationID": "f3f255c8-474f-4557-9eea-4f2f7f76c4b7",
+    "CustomerComments": "",
+    "SK": "f3f255c8-474f-4557-9eea-4f2f7f76c4b7",
+    "ReservationTime": "20:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Mel ",
+    "ReservationDate": "2026-02-14"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "611a99c2-12ee-409f-97da-3ce0bb018ffb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Judithmooij@gmail.com",
+    "CustomerPhone": "0655130758",
+    "Duration": 7,
+    "ReservationID": "0a567429-5666-46a3-a799-6ae50e6aee44",
+    "CustomerComments": "",
+    "SK": "0a567429-5666-46a3-a799-6ae50e6aee44",
+    "ReservationTime": "17:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Judith de Laat",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-02-14"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "4bf50c3a-15c2-4289-80d7-e3ffcca458a4"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Bamrbos@gmail.com",
+    "CustomerPhone": "0620471919",
+    "Duration": 5.5,
+    "ReservationID": "acada1b2-9046-43be-aa0e-b44816508cf4",
+    "CustomerComments": "",
+    "SK": "acada1b2-9046-43be-aa0e-b44816508cf4",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Bos",
+    "ReservationDate": "2026-02-14"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "ef433901-170f-4419-9c49-d4452a419992"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 6,
+    "ReservationID": "1a4ccdd3-8ed9-4047-87d5-5b3a65dd2046",
+    "SK": "1a4ccdd3-8ed9-4047-87d5-5b3a65dd2046",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "vol",
+    "ReservationDate": "2026-02-14"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "645e4071-9f04-46d7-b5ff-1dd34c041c2e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "gerardarends@proton.me",
+    "CustomerPhone": "0613841335",
+    "Duration": 6,
+    "ReservationID": "b5d7f1d2-c4a7-409d-82f9-402b406b99c8",
+    "CustomerComments": "",
+    "SK": "b5d7f1d2-c4a7-409d-82f9-402b406b99c8",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Gerard Arends ",
+    "ReservationDate": "2026-02-14"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "d501610c-17fe-4d5d-a1a2-e7b2169d0f02"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Matthijs of orde sake.nl",
+    "CustomerPhone": "0638091191",
+    "Duration": 5.5,
+    "ReservationID": "006cafca-ef01-43b6-8441-fdfe61486bb0",
+    "CustomerComments": "Als jullie iets speciaals doen voor Valentijn zou dat leuk zijn :-)",
+    "SK": "006cafca-ef01-43b6-8441-fdfe61486bb0",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Matthijs Vos",
+    "ReservationDate": "2026-02-14"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "604b8220-2566-47d0-901b-aa9e1fd3239f"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "pieterwilligenburg@hotmail.com",
+    "CustomerPhone": "0651009401",
+    "Duration": 5,
+    "ReservationID": "fd89ce9f-1ccb-497e-89d9-bd03fc84be1c",
+    "CustomerComments": "",
+    "SK": "fd89ce9f-1ccb-497e-89d9-bd03fc84be1c",
+    "ReservationTime": "19:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Pieter Willigenburg ",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-02-14"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "5cd4eb5a-e985-4030-92d9-948ff9fce5b7"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "tjeerdvanrhijn@gmail.com",
+    "CustomerPhone": "0625072883",
+    "Duration": 5.5,
+    "ReservationID": "aa6cb828-abb3-4a17-af56-3c322f373876",
+    "CustomerComments": "",
+    "SK": "aa6cb828-abb3-4a17-af56-3c322f373876",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Tjeerd van Rhijn",
+    "ReservationDate": "2026-02-14"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "a49cc06a-6547-4a61-9127-17b9a59ad8cd"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "erik-ooms@hotmail.com",
+    "CustomerPhone": "0623730376",
+    "Duration": 6,
+    "ReservationID": "0cf4203b-e942-403d-bc22-308d012e9d62",
+    "CustomerComments": "",
+    "SK": "0cf4203b-e942-403d-bc22-308d012e9d62",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Erik Ooms",
+    "ReservationDate": "2026-02-14"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "b3f5d15a-35ec-4a3e-9c8e-8e0204f87d10"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "ingridmans70@gmail.com",
+    "CustomerPhone": "0625265282",
+    "Duration": 5,
+    "ReservationID": "424290b4-1894-467b-b80e-82fbc5c6c021",
+    "CustomerComments": "",
+    "SK": "424290b4-1894-467b-b80e-82fbc5c6c021",
+    "ReservationTime": "19:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Ingrid Mans",
+    "ReservationDate": "2026-02-14"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "7d783742-c26f-40dd-8d07-50879f5919dc"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "dicksperling@casema.nl",
+    "CustomerPhone": "0685779707",
+    "Duration": 5.5,
+    "ReservationID": "fd892a8f-0288-4ae6-9477-260b546e047c",
+    "CustomerComments": "",
+    "SK": "fd892a8f-0288-4ae6-9477-260b546e047c",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Dick Sperling",
+    "ReservationDate": "2026-02-14"
+  },
+  {
+    "PartySize": 4,
+    "TableID": [
+      "e1df1b6b-a394-4e38-9c0d-ccf866ce5f98"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "miriam-reinders@hotmail.com",
+    "CustomerPhone": "0630724384",
+    "Duration": 3,
+    "ReservationID": "7c605819-9458-40ba-8d33-058a1db8149c",
+    "CustomerComments": "",
+    "SK": "7c605819-9458-40ba-8d33-058a1db8149c",
+    "ReservationTime": "17:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Miriam Nijmeijer",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-02-14"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "f31abfab-973f-4aa5-bbc3-7a61f6ef9f13"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "martinappeldoorn01@gmail.com",
+    "CustomerPhone": "0620654571",
+    "Duration": 6,
+    "ReservationID": "fca31756-fc23-42ed-a8dd-f7a785b21e46",
+    "CustomerComments": "",
+    "SK": "fca31756-fc23-42ed-a8dd-f7a785b21e46",
+    "ReservationTime": "17:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Martin Appeldoorn",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-02-14"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Susanne_appels@hotmail.com",
+    "CustomerPhone": "0628784200",
+    "Duration": 3,
+    "ReservationID": "27b0829c-42bf-47a0-b667-82e41871fa14",
+    "CustomerComments": "",
+    "SK": "27b0829c-42bf-47a0-b667-82e41871fa14",
+    "ReservationTime": "17:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Susanne Appels",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-02-14"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "53e5b179-8cee-4eee-93e5-19033d4d016d"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "wimenjudy@gmail.com",
+    "CustomerPhone": "0640095635",
+    "Duration": 5,
+    "ReservationID": "3c65f48f-18ba-4bff-9088-d535b6779e39",
+    "CustomerComments": "",
+    "SK": "3c65f48f-18ba-4bff-9088-d535b6779e39",
+    "ReservationTime": "19:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Wim Gelder",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-02-14"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "2ca8bd78-7fbe-4feb-a227-e6e1e5b0009e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Geertjanssen100@gmail.com",
+    "CustomerPhone": "0613109214",
+    "Duration": 5,
+    "ReservationID": "28d3f6f5-d751-470f-beed-b33b55a8ab50",
+    "CustomerComments": "",
+    "SK": "28d3f6f5-d751-470f-beed-b33b55a8ab50",
+    "ReservationTime": "19:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Geert Janssen",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-02-14"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "b1be9f7a-a5e6-4639-97cb-e92c45e339de"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Mitchmcalley@gmail.com",
+    "CustomerPhone": "0613072245",
+    "Duration": 6,
+    "ReservationID": "197264bc-a57d-4de2-bfcf-39928761c0df",
+    "CustomerComments": "Tot straks 👋🏻",
+    "SK": "197264bc-a57d-4de2-bfcf-39928761c0df",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Mitch Tersteeg",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-02-14"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "c69f0179-afcd-4c91-b1ba-6a7a1f26e99a"
+    ],
+    "CustomerMail": "",
+    "Status": "CHECKED_IN",
+    "CustomerPhone": "",
+    "Duration": 6.5,
+    "ReservationID": "2f371c7a-2844-4b2e-a95f-1e827af6d7ef",
+    "SK": "2f371c7a-2844-4b2e-a95f-1e827af6d7ef",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Van asselt",
+    "ReservationDate": "2026-02-14"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "7bcedc40-3cc1-48bd-97cb-d3fd2da59863"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "menno.bas1999@gmail.com",
+    "CustomerPhone": "0640940721",
+    "Duration": 5,
+    "ReservationID": "85305ec5-47e4-42e0-ac50-400f0584a6cb",
+    "CustomerComments": "",
+    "SK": "85305ec5-47e4-42e0-ac50-400f0584a6cb",
+    "ReservationTime": "19:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Menno Bas",
+    "Status": "CHECKED_IN",
+    "ReservationDate": "2026-02-14"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "rik_ter_stege@hotmail.com",
+    "CustomerPhone": "0631075182",
+    "Duration": 5.5,
+    "ReservationID": "ec050b74-77ce-4c54-84bd-bba2289c52ed",
+    "CustomerComments": "",
+    "SK": "ec050b74-77ce-4c54-84bd-bba2289c52ed",
+    "ReservationTime": "17:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "ter Stege",
+    "ReservationDate": "2026-02-15"
+  },
+  {
+    "PartySize": 4,
+    "TableID": [
+      "645e4071-9f04-46d7-b5ff-1dd34c041c2e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "esther.isarin@gmail.com",
+    "CustomerPhone": "0641684647",
+    "Duration": 5.5,
+    "ReservationID": "77f2d123-b213-4111-9d43-240dc27ca533",
+    "CustomerComments": "",
+    "SK": "77f2d123-b213-4111-9d43-240dc27ca533",
+    "ReservationTime": "17:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Esther Roelofs-Isarin",
+    "ReservationDate": "2026-02-15"
+  },
+  {
+    "PartySize": 3,
+    "TableID": [
+      "645e4071-9f04-46d7-b5ff-1dd34c041c2e"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 5,
+    "ReservationID": "ed559a44-0da7-40e9-8d79-9ddc4eecaafa",
+    "SK": "ed559a44-0da7-40e9-8d79-9ddc4eecaafa",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Nicky and the gang",
+    "ReservationDate": "2026-02-18"
+  },
+  {
+    "PartySize": 3,
+    "TableID": [
+      "a49cc06a-6547-4a61-9127-17b9a59ad8cd"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "marcmenger@gmail.com",
+    "CustomerPhone": "0622209731",
+    "Duration": 4.5,
+    "ReservationID": "20b955ad-67c1-48b5-9338-d76a613a76d7",
+    "CustomerComments": "",
+    "SK": "20b955ad-67c1-48b5-9338-d76a613a76d7",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Marc Menger",
+    "ReservationDate": "2026-02-19"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "d501610c-17fe-4d5d-a1a2-e7b2169d0f02"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "robert.borssen@live.com",
+    "CustomerPhone": "0628253356",
+    "Duration": 5,
+    "ReservationID": "460c9a56-ffa1-4c07-bd68-be427b71179c",
+    "CustomerComments": "wij moeten rond 1930 richting de Flint gaan",
+    "SK": "460c9a56-ffa1-4c07-bd68-be427b71179c",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "TH Borssen",
+    "ReservationDate": "2026-02-19"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Lunaeline@hotmail.com",
+    "CustomerPhone": "0636347489",
+    "Duration": 5.5,
+    "ReservationID": "189904bd-28f9-43a1-ba8a-9a6ab29fa9b8",
+    "CustomerComments": "We hebben een Dinercadeau bon om een deel te betalen.",
+    "SK": "189904bd-28f9-43a1-ba8a-9a6ab29fa9b8",
+    "ReservationTime": "17:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Eline Kuenen ",
+    "ReservationDate": "2026-02-19"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "0c6ac20f-71d8-4300-9c7d-7bc2fe51e57d"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "brandsebertil@proton.me",
+    "CustomerPhone": "0621824567",
+    "Duration": 4.5,
+    "ReservationID": "3b7fb9c5-2b35-40ac-b845-827c38e526c8",
+    "CustomerComments": "",
+    "SK": "3b7fb9c5-2b35-40ac-b845-827c38e526c8",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Bertil Brandse",
+    "ReservationDate": "2026-02-19"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "2ca8bd78-7fbe-4feb-a227-e6e1e5b0009e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Welmoed.vollers@gmail.com",
+    "CustomerPhone": "0644379995",
+    "Duration": 5,
+    "ReservationID": "cebe63ca-24eb-408e-83d1-18548d36f4a4",
+    "CustomerComments": "",
+    "SK": "cebe63ca-24eb-408e-83d1-18548d36f4a4",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Welmoed vollers",
+    "ReservationDate": "2026-02-19"
+  },
+  {
+    "PartySize": 3,
+    "TableID": [
+      "645e4071-9f04-46d7-b5ff-1dd34c041c2e"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 5.5,
+    "ReservationID": "984a86ab-c792-4d98-9bae-5d21360addae",
+    "SK": "984a86ab-c792-4d98-9bae-5d21360addae",
+    "ReservationTime": "17:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Tim verbeek",
+    "ReservationDate": "2026-02-19"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "0c6ac20f-71d8-4300-9c7d-7bc2fe51e57d"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "mike.glaser@kpnmail.nl",
+    "CustomerPhone": "06-12627626",
+    "Duration": 5.5,
+    "ReservationID": "d5b1ff31-1a3b-413d-8af4-4c52776e2b56",
+    "CustomerComments": "",
+    "SK": "d5b1ff31-1a3b-413d-8af4-4c52776e2b56",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Mike Gl;aser",
+    "ReservationDate": "2026-02-20"
+  },
+  {
+    "PartySize": 4,
+    "TableID": [
+      "645e4071-9f04-46d7-b5ff-1dd34c041c2e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "nnabarro@yahoo.com",
+    "CustomerPhone": "0681106113",
+    "Duration": 6,
+    "ReservationID": "04b69de1-f958-4af7-8c14-c91ee53d8111",
+    "CustomerComments": "We kijken naar uit om te kunnen bij jullie eten \ndit is mijn moeder !",
+    "SK": "04b69de1-f958-4af7-8c14-c91ee53d8111",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Nathalie Nabarro ",
+    "ReservationDate": "2026-02-20"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "611a99c2-12ee-409f-97da-3ce0bb018ffb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "celestevaneeden@mac.com",
+    "CustomerPhone": "0681617297",
+    "Duration": 6.5,
+    "ReservationID": "8f2822fb-cd98-4bf5-8b1b-ac95d065fde0",
+    "CustomerComments": "",
+    "SK": "8f2822fb-cd98-4bf5-8b1b-ac95d065fde0",
+    "ReservationTime": "17:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Celeste van Eeden",
+    "ReservationDate": "2026-02-20"
+  },
+  {
+    "PartySize": 4,
+    "TableID": [
+      "a49cc06a-6547-4a61-9127-17b9a59ad8cd"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "j.landsheer@ziggo.nl",
+    "CustomerPhone": "0627044411",
+    "Duration": 6,
+    "ReservationID": "25f73352-24e3-4af0-afe7-049a40e42c07",
+    "CustomerComments": "",
+    "SK": "25f73352-24e3-4af0-afe7-049a40e42c07",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Jan Landsheer",
+    "ReservationDate": "2026-02-20"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "2ca8bd78-7fbe-4feb-a227-e6e1e5b0009e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Sanneponger@hotmail.com",
+    "CustomerPhone": "0642805844",
+    "Duration": 5,
+    "ReservationID": "77e4f03d-f7bd-40cf-91c3-2ac76ff1e121",
+    "CustomerComments": "1x geen gluten",
+    "SK": "77e4f03d-f7bd-40cf-91c3-2ac76ff1e121",
+    "ReservationTime": "19:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Sanne Lacor",
+    "ReservationDate": "2026-02-20"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "peg.lorio@gmail.com",
+    "CustomerPhone": "06 30575577 ",
+    "Duration": 5.5,
+    "ReservationID": "175f327a-44b8-47b8-a093-41bef4ac10c9",
+    "CustomerComments": "",
+    "SK": "175f327a-44b8-47b8-a093-41bef4ac10c9",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Peggy Lorio",
+    "ReservationDate": "2026-02-20"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "d501610c-17fe-4d5d-a1a2-e7b2169d0f02"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "thijsberendse@hotmail.com",
+    "CustomerPhone": "0646396745",
+    "Duration": 4,
+    "ReservationID": "e6ace32a-298b-4943-982e-a54ce4e55f31",
+    "CustomerComments": "",
+    "SK": "e6ace32a-298b-4943-982e-a54ce4e55f31",
+    "ReservationTime": "20:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Thijs Berendse",
+    "ReservationDate": "2026-02-20"
+  },
+  {
+    "PartySize": 6,
+    "TableID": [
+      "7bcedc40-3cc1-48bd-97cb-d3fd2da59863"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Kzwart1@gmail.com",
+    "CustomerPhone": "0640862823",
+    "Duration": 6.5,
+    "ReservationID": "fa856113-74c2-4487-9451-ded27c1a5957",
+    "CustomerComments": "(Mogelijk komt er nog een 3-jarige en een baby mee, ik bel jullie graag van de week om dat te laten weten)",
+    "SK": "fa856113-74c2-4487-9451-ded27c1a5957",
+    "ReservationTime": "17:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Koen Zwart",
+    "ReservationDate": "2026-02-21"
+  },
+  {
+    "PartySize": 4,
+    "TableID": [
+      "645e4071-9f04-46d7-b5ff-1dd34c041c2e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "nelemans.bas@gmail.com",
+    "CustomerPhone": "0618698942",
+    "Duration": 6.5,
+    "ReservationID": "4dce6dc1-78d1-48f4-982b-638cefc0d762",
+    "CustomerComments": "",
+    "SK": "4dce6dc1-78d1-48f4-982b-638cefc0d762",
+    "ReservationTime": "17:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Bas Nelemans",
+    "ReservationDate": "2026-02-21"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Freekspierings@hotmail.com",
+    "CustomerPhone": "0653286991",
+    "Duration": 7,
+    "ReservationID": "cf22bc79-cbde-483f-99d1-b66d2510b525",
+    "CustomerComments": "",
+    "SK": "cf22bc79-cbde-483f-99d1-b66d2510b525",
+    "ReservationTime": "17:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Liv Spierings",
+    "ReservationDate": "2026-02-21"
+  },
+  {
+    "PartySize": 3,
+    "TableID": [
+      "a49cc06a-6547-4a61-9127-17b9a59ad8cd"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Leenderthartveld@gmail.com",
+    "CustomerPhone": "0638271256",
+    "Duration": 4.5,
+    "ReservationID": "525bfa01-5448-4755-bbc9-67a0890905a3",
+    "CustomerComments": "",
+    "SK": "525bfa01-5448-4755-bbc9-67a0890905a3",
+    "ReservationTime": "19:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Leendert hartveld",
+    "ReservationDate": "2026-02-21"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "b1be9f7a-a5e6-4639-97cb-e92c45e339de"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 4,
+    "ReservationID": "ce5e3a99-0d06-400c-9780-cf44ed6ac3d7",
+    "SK": "ce5e3a99-0d06-400c-9780-cf44ed6ac3d7",
+    "ReservationTime": "20:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Jan",
+    "ReservationDate": "2026-02-21"
+  },
+  {
+    "PartySize": 8,
+    "TableID": [
+      "645e4071-9f04-46d7-b5ff-1dd34c041c2e",
+      "a49cc06a-6547-4a61-9127-17b9a59ad8cd"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 5,
+    "ReservationID": "148d2b12-7987-404b-966b-c4e9cd9b0272",
+    "SK": "148d2b12-7987-404b-966b-c4e9cd9b0272",
+    "ReservationTime": "10:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Luzac vergadering ",
+    "ReservationDate": "2026-02-25"
+  },
+  {
+    "PartySize": 8,
+    "TableID": [
+      "645e4071-9f04-46d7-b5ff-1dd34c041c2e"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 6,
+    "ReservationID": "5011f956-1806-40cb-8855-81e8c33a1591",
+    "SK": "5011f956-1806-40cb-8855-81e8c33a1591",
+    "ReservationTime": "17:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Luzac in de middag!",
+    "ReservationDate": "2026-02-25"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "d501610c-17fe-4d5d-a1a2-e7b2169d0f02"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 4.5,
+    "ReservationID": "3b05c3ea-1a1f-48ed-8d8b-adf8e9b34f63",
+    "SK": "3b05c3ea-1a1f-48ed-8d8b-adf8e9b34f63",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "kjozelf",
+    "ReservationDate": "2026-02-25"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "2ca8bd78-7fbe-4feb-a227-e6e1e5b0009e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "dorigoorhuis@live.nl",
+    "CustomerPhone": "0646396433",
+    "Duration": 4,
+    "ReservationID": "d5d92785-77aa-4d1b-8516-21898f0176f4",
+    "CustomerComments": "",
+    "SK": "d5d92785-77aa-4d1b-8516-21898f0176f4",
+    "ReservationTime": "19:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Dori Goorhuis",
+    "ReservationDate": "2026-02-25"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "mariekewateler@gmail.com",
+    "CustomerPhone": "0651841583",
+    "Duration": 5,
+    "ReservationID": "fcd456bb-6c6d-416b-88aa-4afb1badf8f1",
+    "CustomerComments": "We gaan naar het theater en de voorstelling begint om 20.15 uur",
+    "SK": "fcd456bb-6c6d-416b-88aa-4afb1badf8f1",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "marieke wateler",
+    "ReservationDate": "2026-02-25"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "2ca8bd78-7fbe-4feb-a227-e6e1e5b0009e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "sabine_sportman@hotmail.com",
+    "CustomerPhone": "0641748746",
+    "Duration": 5,
+    "ReservationID": "45a59bdf-9d3a-40b5-96a6-1ca82d7fd508",
+    "CustomerComments": "",
+    "SK": "45a59bdf-9d3a-40b5-96a6-1ca82d7fd508",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Sabine Sportman",
+    "ReservationDate": "2026-02-26"
+  },
+  {
+    "PartySize": 19,
+    "TableID": [
+      "7bcedc40-3cc1-48bd-97cb-d3fd2da59863",
+      "b1be9f7a-a5e6-4639-97cb-e92c45e339de",
+      "a49cc06a-6547-4a61-9127-17b9a59ad8cd",
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 4.5,
+    "ReservationID": "fd1fa4ef-1737-4175-a59d-829d8fd006fa",
+    "SK": "fd1fa4ef-1737-4175-a59d-829d8fd006fa",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "fleur taxaties for value",
+    "ReservationDate": "2026-02-26"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "tessjulia.t@gmail.com",
+    "CustomerPhone": "0620771683",
+    "Duration": 5,
+    "ReservationID": "5275ad8e-a1e4-45e5-b539-164e1e599879",
+    "CustomerComments": "",
+    "SK": "5275ad8e-a1e4-45e5-b539-164e1e599879",
+    "ReservationTime": "19:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Timmerman",
+    "ReservationDate": "2026-02-27"
+  },
+  {
+    "PartySize": 4,
+    "TableID": [
+      "645e4071-9f04-46d7-b5ff-1dd34c041c2e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Doriengregor@gmail.com",
+    "CustomerPhone": "06-46038356",
+    "Duration": 5.5,
+    "ReservationID": "5c90882d-1af6-44f6-b202-b682aeb32a66",
+    "CustomerComments": "",
+    "SK": "5c90882d-1af6-44f6-b202-b682aeb32a66",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Dorien Groen",
+    "ReservationDate": "2026-02-28"
+  },
+  {
+    "PartySize": 3,
+    "TableID": [
+      "a49cc06a-6547-4a61-9127-17b9a59ad8cd"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "R.bakker1958@casema.nl",
+    "CustomerPhone": "0654968507",
+    "Duration": 5,
+    "ReservationID": "1989c00c-7754-44ae-933e-2ab582378df5",
+    "CustomerComments": "",
+    "SK": "1989c00c-7754-44ae-933e-2ab582378df5",
+    "ReservationTime": "19:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Ronald Bakker",
+    "ReservationDate": "2026-02-28"
+  },
+  {
+    "PartySize": 4,
+    "TableID": [
+      "645e4071-9f04-46d7-b5ff-1dd34c041c2e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "aafketideman@coa.nl",
+    "CustomerPhone": "0611428403",
+    "Duration": 5,
+    "ReservationID": "611e2a83-90aa-4a91-a6e5-83c1e34ee495",
+    "CustomerComments": "",
+    "SK": "611e2a83-90aa-4a91-a6e5-83c1e34ee495",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Aafke Tideman",
+    "ReservationDate": "2026-03-04"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 5.5,
+    "ReservationID": "4c8ef1fb-9a4e-4045-95b6-f4cbf76e3be2",
+    "SK": "4c8ef1fb-9a4e-4045-95b6-f4cbf76e3be2",
+    "ReservationTime": "17:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Aat",
+    "ReservationDate": "2026-03-04"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Maaikehilderink@gmail.com",
+    "CustomerPhone": "0614818157",
+    "Duration": 3.5,
+    "ReservationID": "f4feb397-5a4e-425a-8d28-ba970d8aeb59",
+    "CustomerComments": "Sesam allergie ",
+    "SK": "f4feb397-5a4e-425a-8d28-ba970d8aeb59",
+    "ReservationTime": "19:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Maaike Hilderink ",
+    "ReservationDate": "2026-03-05"
+  },
+  {
+    "PartySize": 9,
+    "TableID": [
+      "b1be9f7a-a5e6-4639-97cb-e92c45e339de",
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb",
+      "2ca8bd78-7fbe-4feb-a227-e6e1e5b0009e"
+    ],
+    "CustomerMail": "v_roker@hotmail.com",
+    "Status": "PLANNED",
+    "CustomerPhone": "0640061728",
+    "Duration": 6,
+    "ReservationID": "d1fea198-5c82-415a-904d-e823bee2723b",
+    "CustomerComments": "1x vega is gebeld voor chefs choice",
+    "SK": "d1fea198-5c82-415a-904d-e823bee2723b",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "vincent roker",
+    "ReservationDate": "2026-03-06"
+  },
+  {
+    "PartySize": 6,
+    "TableID": [
+      "7bcedc40-3cc1-48bd-97cb-d3fd2da59863"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "paulien-visser@hotmail.com ",
+    "CustomerPhone": "0625463144",
+    "Duration": 4.5,
+    "ReservationID": "66b623d7-6c6e-4be9-8837-1b77304dea84",
+    "CustomerComments": "",
+    "SK": "66b623d7-6c6e-4be9-8837-1b77304dea84",
+    "ReservationTime": "19:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Paulien  visser",
+    "ReservationDate": "2026-03-06"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "b1be9f7a-a5e6-4639-97cb-e92c45e339de"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 6,
+    "ReservationID": "4789a9b7-d5d8-46d7-b745-643da3230a06",
+    "SK": "4789a9b7-d5d8-46d7-b745-643da3230a06",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "",
+    "ReservationDate": "2026-03-07"
+  },
+  {
+    "PartySize": 6,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "CustomerMail": "selmav1@live.nl",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 9,
+    "ReservationID": "75a560ca-d851-4b91-b6a3-27ebc1400199",
+    "SK": "75a560ca-d851-4b91-b6a3-27ebc1400199",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Selma visser",
+    "CustomerComments": "Mijn voedselallergieën zijn:\nCitrusvruchten,\nCitroenzuur / E330 \nBanaan\nKiwi\nMango\nAvocado\nKokos\nCacao",
+    "ReservationDate": "2026-03-07"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "2ca8bd78-7fbe-4feb-a227-e6e1e5b0009e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Koningsveldbv@gmail.com",
+    "CustomerPhone": "0620262125",
+    "Duration": 5.5,
+    "ReservationID": "664feaf9-acff-476a-a219-4a39cc50ef63",
+    "CustomerComments": "",
+    "SK": "664feaf9-acff-476a-a219-4a39cc50ef63",
+    "ReservationTime": "18:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Ben van Koningsveld",
+    "ReservationDate": "2026-03-07"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "b1be9f7a-a5e6-4639-97cb-e92c45e339de"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 6,
+    "ReservationID": "e26da9af-d118-41d5-87da-607f4726a91a",
+    "SK": "e26da9af-d118-41d5-87da-607f4726a91a",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Selma",
+    "ReservationDate": "2026-03-07"
+  },
+  {
+    "PartySize": 3,
+    "TableID": [
+      "645e4071-9f04-46d7-b5ff-1dd34c041c2e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "lars.hendriks.nl@gmail.com",
+    "CustomerPhone": "0619537926",
+    "Duration": 4,
+    "ReservationID": "f867e105-dd08-469b-84a5-412501b1713d",
+    "CustomerComments": "",
+    "SK": "f867e105-dd08-469b-84a5-412501b1713d",
+    "ReservationTime": "19:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Lars Hendriks",
+    "ReservationDate": "2026-03-08"
+  },
+  {
+    "PartySize": 4,
+    "TableID": [
+      "645e4071-9f04-46d7-b5ff-1dd34c041c2e"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Daan.hendriks1986@gmail.com",
+    "CustomerPhone": "0641706040",
+    "Duration": 5,
+    "ReservationID": "dcb96322-0466-47be-926b-2b0db5cdb485",
+    "CustomerComments": "",
+    "SK": "dcb96322-0466-47be-926b-2b0db5cdb485",
+    "ReservationTime": "19:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Daan Hendriks",
+    "ReservationDate": "2026-03-14"
+  },
+  {
+    "PartySize": 5,
+    "TableID": [
+      "7bcedc40-3cc1-48bd-97cb-d3fd2da59863"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "rebeccaemmerik@gmail.com",
+    "CustomerPhone": "0652378440",
+    "Duration": 6,
+    "ReservationID": "c45a00c2-3fa3-4779-875d-9fadc5f35947",
+    "CustomerComments": "",
+    "SK": "c45a00c2-3fa3-4779-875d-9fadc5f35947",
+    "ReservationTime": "18:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Rebecca emmerik",
+    "ReservationDate": "2026-03-20"
+  },
+  {
+    "PartySize": 7,
+    "TableID": [
+      "b1be9f7a-a5e6-4639-97cb-e92c45e339de"
+    ],
+    "CustomerMail": "",
+    "Status": "PLANNED",
+    "CustomerPhone": "",
+    "Duration": 5,
+    "ReservationID": "50a7a649-5186-4397-8065-26c7e8436504",
+    "SK": "50a7a649-5186-4397-8065-26c7e8436504",
+    "ReservationTime": "19:00:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "Reshma sampat",
+    "CustomerComments": "7 dames chefs choice met wijn arrangement. 1p geen vlles, wel vis en kip geen geitenkaas. 1p geen geitenkaas ",
+    "ReservationDate": "2026-03-20"
+  },
+  {
+    "PartySize": 2,
+    "TableID": [
+      "9601e9aa-e1cb-4672-9ef4-4d9e1848a6cb"
+    ],
+    "ZoneID": "908a0d38-78ac-4913-8ea9-18eb2ebb6f46",
+    "CustomerMail": "Jmulder96@hotmail.nl",
+    "CustomerPhone": "0624537367",
+    "Duration": 6.5,
+    "ReservationID": "7a8d892a-e825-412e-8f17-d63b855bd8db",
+    "CustomerComments": "",
+    "SK": "7a8d892a-e825-412e-8f17-d63b855bd8db",
+    "ReservationTime": "17:30:00",
+    "RestaurantID": "e915e6ca-9391-4777-b651-7e2d2c145afc",
+    "PK": "e915e6ca-9391-4777-b651-7e2d2c145afc#Reservation",
+    "CustomerName": "jaco mulder",
+    "ReservationDate": "2026-03-27"
+  }
+]

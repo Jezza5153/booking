@@ -40,6 +40,7 @@ interface Booking {
     group_id?: string
     is_primary?: boolean
     table_name?: string
+    linked_tables?: string | null
 }
 
 interface Customer {
@@ -1251,7 +1252,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                                                     onClick={() => available && handleCellClick(table, slot)}
                                                                     className={`w-[60px] shrink-0 border-l border-gray-100 transition-colors ${available
                                                                         ? 'hover:bg-emerald-50 cursor-pointer'
-                                                                        : 'cursor-not-allowed'
+                                                                        : 'bg-red-50/40 cursor-not-allowed'
                                                                         }`}
                                                                 />
                                                             )
@@ -1282,7 +1283,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                                                         <span className="truncate">🔗 {booking.customer_name}</span>
                                                                     )}
                                                                     {isGrouped && booking.is_primary && (
-                                                                        <span className="shrink-0 bg-white/20 px-1 rounded text-[9px]">🔗{groupTableCount}</span>
+                                                                        <span className="shrink-0 bg-white/20 px-1 rounded text-[9px]" title={booking.linked_tables || ''}>🔗{booking.linked_tables ? ` ${booking.linked_tables}` : groupTableCount}</span>
                                                                     )}
                                                                     {Number(booking.visit_count) > 0 && <span>⭐</span>}
                                                                 </div>
@@ -1589,12 +1590,9 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                     </div>
 
                                     {/* Multi-table indicator */}
-                                    {isGrouped && (
+                                    {(showBookingDetail.linked_tables || isGrouped) && (
                                         <div className="p-2 bg-blue-50 rounded-lg text-sm text-blue-800 flex items-center gap-2">
-                                            🔗 Groepsboeking over {groupSiblings.length} tafels: {groupSiblings.map(b => {
-                                                const t = tables.find(tt => tt.id === b.table_id)
-                                                return t?.name || 'Onbekend'
-                                            }).join(' + ')}
+                                            🔗 Groepsboeking: {showBookingDetail.table_name}{showBookingDetail.linked_tables ? ` + ${showBookingDetail.linked_tables}` : ''}
                                         </div>
                                     )}
 

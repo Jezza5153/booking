@@ -867,7 +867,15 @@ router.get('/api/admin/restaurant-bookings', authMiddleware, async (req, res) =>
                        AND past.customer_id IS NOT NULL
                        AND past.status = 'arrived' 
                        AND past.booking_date < rb.booking_date
-                    ) as visit_count
+                    ) as visit_count,
+                    (SELECT string_agg(COALESCE(rt2.name, sibling.table_id), ' + ' ORDER BY rt2.seats DESC)
+                     FROM restaurant_bookings sibling
+                     LEFT JOIN restaurant_tables rt2 ON rt2.id = sibling.table_id
+                     WHERE sibling.group_id = rb.group_id 
+                       AND sibling.group_id IS NOT NULL
+                       AND sibling.id != rb.id
+                       AND sibling.status != 'cancelled'
+                    ) as linked_tables
              FROM restaurant_bookings rb
              LEFT JOIN restaurant_tables rt ON rt.id = rb.table_id
              WHERE rb.restaurant_id = $1 AND rb.booking_date = $2 AND rb.status != 'cancelled'
