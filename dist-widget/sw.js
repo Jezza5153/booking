@@ -1,6 +1,6 @@
 // Service Worker for EVENTS PWA
 // Bump this version on each deploy to force cache refresh on all devices
-const CACHE_NAME = 'events-admin-20260226v3';
+const CACHE_NAME = 'events-admin-20260226v6';
 
 // Assets to cache on install (app shell)
 const SHELL_ASSETS = [
