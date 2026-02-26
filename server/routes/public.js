@@ -492,19 +492,31 @@ router.get('/api/calendar/:restaurantId.ics', calendarRateLimiter, async (req, r
 });
 
 // Route: /api/health
+// P1 PERF: Cache DB health check to avoid hitting Neon on every Railway healthcheck
+let _healthCache = { ok: false, ts: 0 };
 router.get('/api/health', async (req, res) => {
     try {
-        // Verify DB connectivity
+        const now = Date.now();
+        // Reuse cached result for 10 seconds
+        if (_healthCache.ok && (now - _healthCache.ts) < 10_000) {
+            return res.json({
+                status: 'ok',
+                timestamp: new Date().toISOString(),
+                db: 'connected'
+            });
+        }
         const dbResult = await pool.query('SELECT 1 as ok');
         if (dbResult.rows[0]?.ok !== 1) {
             throw new Error('DB check failed');
         }
+        _healthCache = { ok: true, ts: now };
         res.json({
             status: 'ok',
             timestamp: new Date().toISOString(),
             db: 'connected'
         });
     } catch (error) {
+        _healthCache = { ok: false, ts: 0 };
         console.error('Health check failed:', error.message);
         res.status(503).json({
             status: 'unhealthy',
@@ -774,79 +786,110 @@ router.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
             }
         }
 
-        // Cached availability computation (5s fresh, 30s stale-while-revalidate)
-        const cacheKey = `availability:${restaurantId}:${date}:${guestCount}`;
-        const { value: payload, cacheStatus } = await getCachedValue({
+        // PERF P0+P2: Cache by restaurant+date only (guest filtering is cheap on cached data).
+        // Increased TTL: underlying data (tables/bookings) rarely changes within 10 seconds.
+        const cacheKey = `availability:${restaurantId}:${date}`;
+        const { value: cachedData, cacheStatus } = await getCachedValue({
             key: cacheKey,
-            ttlMs: 5_000,
-            staleMs: 30_000,
+            ttlMs: 10_000,
+            staleMs: 60_000,
             loader: async () => {
-                // Get opening hours
-                const openingResult = await pool.query(
-                    `SELECT open_time, close_time, slot_duration_minutes, is_closed 
-                     FROM restaurant_openings 
-                     WHERE restaurant_id = $1 AND (day_of_week = $2 OR specific_date = $3)
-                     ORDER BY specific_date DESC NULLS LAST LIMIT 1`,
-                    [restaurantId, dayOfWeek, date]
-                );
+                // PERF P0: Run all 3 queries in parallel instead of sequentially
+                const [openingResult, tablesResult, bookingsResult] = await Promise.all([
+                    pool.query(
+                        `SELECT open_time, close_time, slot_duration_minutes, is_closed 
+                         FROM restaurant_openings 
+                         WHERE restaurant_id = $1 AND (day_of_week = $2 OR specific_date = $3)
+                         ORDER BY specific_date DESC NULLS LAST LIMIT 1`,
+                        [restaurantId, dayOfWeek, date]
+                    ),
+                    pool.query(
+                        `SELECT id, name, seats, zone FROM restaurant_tables 
+                         WHERE restaurant_id = $1 AND is_active = true
+                         ORDER BY seats DESC`,
+                        [restaurantId]
+                    ),
+                    pool.query(
+                        `SELECT table_id, to_char(start_time, 'HH24:MI') AS start_time, to_char(end_time, 'HH24:MI') AS end_time
+                         FROM restaurant_bookings 
+                         WHERE restaurant_id = $1 AND booking_date = $2 AND lower(status) != 'cancelled'`,
+                        [restaurantId, date]
+                    ),
+                ]);
 
                 if (openingResult.rowCount === 0) {
-                    return { date, guest_count: guestCount, close_time: null, slots: [], message: 'No opening hours configured for this restaurant' };
+                    return { closed: false, noConfig: true };
                 }
-
                 if (openingResult.rows[0].is_closed) {
-                    return { date, guest_count: guestCount, close_time: null, slots: [], message: 'Restaurant is closed' };
+                    return { closed: true };
                 }
 
                 const { open_time, close_time } = openingResult.rows[0];
 
-                // Get ALL active tables (sorted seats DESC for greedy combo)
-                const tablesResult = await pool.query(
-                    `SELECT id, name, seats, zone FROM restaurant_tables 
-                     WHERE restaurant_id = $1 AND is_active = true
-                     ORDER BY seats DESC`,
-                    [restaurantId]
-                );
-                const allTables = tablesResult.rows;
-
-                // Prefetch all bookings for this day, build lookup map
-                const bookingsResult = await pool.query(
-                    `SELECT table_id, to_char(start_time, 'HH24:MI') AS start_time, to_char(end_time, 'HH24:MI') AS end_time
-                     FROM restaurant_bookings 
-                     WHERE restaurant_id = $1 AND booking_date = $2 AND lower(status) != 'cancelled'`,
-                    [restaurantId, date]
-                );
-                const bookingsByTableId = buildBookingsMap(bookingsResult.rows);
-
-                // Generate time slots
-                const slots = [];
-                const openMins = timeToMins(open_time);
-                const closeMins = timeToMins(close_time);
-
-                // FIX #37: Use Amsterdam timezone for "today" check instead of server TZ
-                const nowAmsterdam = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Amsterdam' }));
-                const isToday = bookingDate.toDateString() === nowAmsterdam.toDateString();
-                const currentMins = isToday ? nowAmsterdam.getHours() * 60 + nowAmsterdam.getMinutes() : 0;
-
-                for (let m = openMins; m < closeMins; m += SLOT_STEP_MINS) {
-                    // Skip past time slots for today
-                    if (isToday && m <= currentMins) continue;
-
-                    const slotStart = minsToTime(m);
-                    const slotEndMins = Math.min(m + BOOKING_DURATION_MINS, closeMins);
-                    const slotEnd = minsToTime(slotEndMins);
-
-                    // Use the SAME selection logic as the booking endpoint
-                    const picked = selectTablesForSlot({ allTables, bookingsByTableId, slotStart, slotEnd, guestCount });
-                    if (picked) {
-                        const seatsTotal = picked.reduce((s, t) => s + t.seats, 0);
-                        slots.push({ time: slotStart, end_time: slotEnd, available: 1, tables_needed: picked.length, seats_total: seatsTotal });
-                    }
+                // PERF P0: Pre-convert booking times to minutes once (avoids repeated parsing in hot loop)
+                const bookingsMins = bookingsResult.rows.map(b => ({
+                    table_id: b.table_id,
+                    start: timeToMins(b.start_time),
+                    end: timeToMins(b.end_time),
+                }));
+                const bookingsByTableIdMins = new Map();
+                for (const b of bookingsMins) {
+                    if (!bookingsByTableIdMins.has(b.table_id)) bookingsByTableIdMins.set(b.table_id, []);
+                    bookingsByTableIdMins.get(b.table_id).push(b);
                 }
 
-                return { date, guest_count: guestCount, close_time: normalizeToHHMM(close_time), slots };
+                return {
+                    closed: false,
+                    open_time,
+                    close_time,
+                    allTables: tablesResult.rows,
+                    bookingsByTableIdMins,
+                    // Keep original string-based map for selectTablesForSlot compatibility
+                    bookingsByTableId: buildBookingsMap(bookingsResult.rows),
+                };
             },
         });
+
+        // Handle closed / not configured
+        if (cachedData.noConfig) {
+            const payload = { date, guest_count: guestCount, close_time: null, slots: [], message: 'No opening hours configured for this restaurant' };
+            setPublicCacheHeaders(res, { maxAge: 5, sMaxAge: 15, staleWhileRevalidate: 30 });
+            res.set('X-Cache-Status', cacheStatus);
+            return res.json(payload);
+        }
+        if (cachedData.closed) {
+            const payload = { date, guest_count: guestCount, close_time: null, slots: [], message: 'Restaurant is closed' };
+            setPublicCacheHeaders(res, { maxAge: 5, sMaxAge: 15, staleWhileRevalidate: 30 });
+            res.set('X-Cache-Status', cacheStatus);
+            return res.json(payload);
+        }
+
+        // PERF P2: Guest-specific slot filtering on cached data (fast, no DB hit)
+        const { open_time, close_time, allTables, bookingsByTableId } = cachedData;
+        const slots = [];
+        const openMins = timeToMins(open_time);
+        const closeMins = timeToMins(close_time);
+
+        // FIX #37: Use Amsterdam timezone for "today" check instead of server TZ
+        const nowAmsterdam = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Amsterdam' }));
+        const isToday = bookingDate.toDateString() === nowAmsterdam.toDateString();
+        const currentMins = isToday ? nowAmsterdam.getHours() * 60 + nowAmsterdam.getMinutes() : 0;
+
+        for (let m = openMins; m < closeMins; m += SLOT_STEP_MINS) {
+            if (isToday && m <= currentMins) continue;
+
+            const slotStart = minsToTime(m);
+            const slotEndMins = Math.min(m + BOOKING_DURATION_MINS, closeMins);
+            const slotEnd = minsToTime(slotEndMins);
+
+            const picked = selectTablesForSlot({ allTables, bookingsByTableId, slotStart, slotEnd, guestCount });
+            if (picked) {
+                const seatsTotal = picked.reduce((s, t) => s + t.seats, 0);
+                slots.push({ time: slotStart, end_time: slotEnd, available: 1, tables_needed: picked.length, seats_total: seatsTotal });
+            }
+        }
+
+        const payload = { date, guest_count: guestCount, close_time: normalizeToHHMM(close_time), slots };
 
         setPublicCacheHeaders(res, { maxAge: 5, sMaxAge: 15, staleWhileRevalidate: 30 });
         res.set('X-Cache-Status', cacheStatus);
@@ -876,9 +919,9 @@ router.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
         return res.status(400).json({ error: 'Ongeldig e-mailadres' });
     }
 
-    // Validate guest count (max 12 for restaurant bookings)
-    if (guest_count < 1 || guest_count > 12) {
-        return res.status(400).json({ error: 'Guest count must be between 1 and 12' });
+    // P4: Increased cap for real-life scenarios (birthday parties, company dinners)
+    if (guest_count < 1 || guest_count > 20) {
+        return res.status(400).json({ error: 'Guest count must be between 1 and 20' });
     }
 
     // FIX #36: Reject bookings in the past

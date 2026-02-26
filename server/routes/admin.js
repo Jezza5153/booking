@@ -856,28 +856,34 @@ router.get('/api/admin/restaurant-bookings', authMiddleware, async (req, res) =>
     const targetDate = date || new Date().toISOString().split('T')[0];
 
     try {
+        // P3 PERF: Use CTEs instead of correlated subqueries (eliminates N+1 queries)
         const result = await pool.query(
-            `SELECT rb.id, rb.table_id, rb.start_time::text, rb.end_time::text, 
+            `WITH visit_counts AS (
+                SELECT customer_id, COUNT(DISTINCT id) as visit_count
+                FROM restaurant_bookings
+                WHERE restaurant_id = $1 AND customer_id IS NOT NULL AND status = 'arrived' AND booking_date < $2
+                GROUP BY customer_id
+            ),
+            linked AS (
+                SELECT sibling.group_id,
+                       string_agg(COALESCE(rt2.name, sibling.table_id), ' + ' ORDER BY rt2.seats DESC) as linked_tables
+                FROM restaurant_bookings sibling
+                LEFT JOIN restaurant_tables rt2 ON rt2.id = sibling.table_id
+                WHERE sibling.restaurant_id = $1 AND sibling.booking_date = $2
+                  AND sibling.group_id IS NOT NULL AND sibling.status != 'cancelled'
+                  AND sibling.is_primary IS DISTINCT FROM true
+                GROUP BY sibling.group_id
+            )
+            SELECT rb.id, rb.table_id, rb.start_time::text, rb.end_time::text, 
                     rb.guest_count, rb.customer_name, rb.customer_email, rb.customer_phone,
                     rb.status, COALESCE(rt.name, 'Geen tafel') as table_name,
                     rb.remarks, rb.customer_id, rb.group_id, rb.is_primary,
-                    (SELECT COUNT(DISTINCT past.id) 
-                     FROM restaurant_bookings past 
-                     WHERE past.customer_id = rb.customer_id 
-                       AND past.customer_id IS NOT NULL
-                       AND past.status = 'arrived' 
-                       AND past.booking_date < rb.booking_date
-                    ) as visit_count,
-                    (SELECT string_agg(COALESCE(rt2.name, sibling.table_id), ' + ' ORDER BY rt2.seats DESC)
-                     FROM restaurant_bookings sibling
-                     LEFT JOIN restaurant_tables rt2 ON rt2.id = sibling.table_id
-                     WHERE sibling.group_id = rb.group_id 
-                       AND sibling.group_id IS NOT NULL
-                       AND sibling.id != rb.id
-                       AND sibling.status != 'cancelled'
-                    ) as linked_tables
+                    COALESCE(vc.visit_count, 0) as visit_count,
+                    lnk.linked_tables
              FROM restaurant_bookings rb
              LEFT JOIN restaurant_tables rt ON rt.id = rb.table_id
+             LEFT JOIN visit_counts vc ON vc.customer_id = rb.customer_id
+             LEFT JOIN linked lnk ON lnk.group_id = rb.group_id AND rb.group_id IS NOT NULL
              WHERE rb.restaurant_id = $1 AND rb.booking_date = $2 AND rb.status != 'cancelled'
                AND (rb.group_id IS NULL OR rb.is_primary = true)
              ORDER BY rb.start_time ASC`,

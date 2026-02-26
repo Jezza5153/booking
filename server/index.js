@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import crypto from 'crypto';
 import helmet from 'helmet';
+import compression from 'compression';
 import pool from './db-postgres.js';
 import { escapeHtml, sanitizeString, validateRestaurantId, generateUnsubscribeToken, buildBookingsMap } from './utils.js';
 import { authMiddleware } from './auth.js';
@@ -95,6 +96,9 @@ app.use(cors({
     credentials: true
 }));
 app.use(express.json({ limit: '16kb' }));
+
+// P5 PERF: Compress all responses (gzip/brotli)
+app.use(compression({ threshold: 1024 }));
 
 // Helmet for security headers including CSP
 // FIX #34: Tighten CSP — restrict frame-ancestors and connect-src
