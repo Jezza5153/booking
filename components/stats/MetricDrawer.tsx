@@ -1,18 +1,9 @@
 import React from 'react'
 import { X, ArrowUpRight } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
-import { DayStats, Summary, ACCENT } from './types'
+import type { DayStats, MetricDetail } from './types'
+import { ACCENT } from './types'
 import { fmtDateFull, fmtCurrencyDecimal, fmtChartLabel } from './formatters'
-
-interface MetricDetail {
-    key: string
-    label: string
-    value: string | number
-    prevValue?: string | number
-    delta?: number
-    explanation: string
-    trendData: { label: string; value: number }[]
-}
 
 interface Props {
     day?: DayStats | null
@@ -28,16 +19,16 @@ export const MetricDrawer: React.FC<Props> = ({ day, metric, totalSeats, onClose
 
     return (
         <>
-            {/* Backdrop */}
-            <div className="fixed inset-0 bg-black/20 z-40 transition-opacity" onClick={onClose} />
+            {/* Backdrop — locks background interaction */}
+            <div className="fixed inset-0 bg-black/30 z-40 transition-opacity" onClick={onClose} />
 
             {/* Drawer */}
-            <div className="fixed inset-y-0 right-0 w-80 max-w-[90vw] bg-white border-l border-gray-200 shadow-2xl z-50 flex flex-col">
+            <div className="fixed inset-y-0 right-0 w-80 max-w-[90vw] bg-white border-l border-gray-200 shadow-2xl z-50 flex flex-col" role="dialog" aria-modal="true">
                 <div className="p-5 border-b border-gray-200 flex items-center justify-between shrink-0">
                     <h3 className="text-base font-bold text-gray-900 truncate pr-2">
                         {day ? fmtDateFull(day.date) : metric?.label || ''}
                     </h3>
-                    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg shrink-0" style={{ minHeight: 44, minWidth: 44 }}>
+                    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg shrink-0" style={{ minHeight: 44, minWidth: 44 }} aria-label="Sluiten">
                         <X className="w-5 h-5 text-gray-500" />
                     </button>
                 </div>
@@ -70,7 +61,7 @@ export const MetricDrawer: React.FC<Props> = ({ day, metric, totalSeats, onClose
                             {totalSeats > 0 && (
                                 <div className="bg-gray-50 rounded-lg p-4">
                                     <div className="text-sm text-gray-600 font-medium">Bezetting</div>
-                                    <div className="text-2xl font-bold text-gray-900 mt-1">{Math.round((day.couverts / totalSeats) * 100)}%</div>
+                                    <div className="text-2xl font-bold text-gray-900 mt-1">{Math.min(100, Math.round((day.couverts / totalSeats) * 100))}%</div>
                                     <div className="text-sm text-gray-400 mt-1">{day.couverts} van {totalSeats} stoelen</div>
                                 </div>
                             )}
@@ -105,7 +96,7 @@ export const MetricDrawer: React.FC<Props> = ({ day, metric, totalSeats, onClose
                                     <ResponsiveContainer width="100%" height={120}>
                                         <AreaChart data={metric.trendData}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                            <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
+                                            <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
                                             <YAxis hide />
                                             <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
                                             <Area type="monotone" dataKey="value" stroke={ACCENT} strokeWidth={1.5} fill={ACCENT} fillOpacity={0.08} />

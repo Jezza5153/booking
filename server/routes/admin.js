@@ -355,7 +355,8 @@ router.get('/api/admin/stats', authMiddleware, async (req, res) => {
         const [
             dailyResult, peakHoursResult, avgResult, busiestDayResult,
             prevResult, prevDailyResult, prevRevenueResult,
-            heatmapResult, tableUtilResult, repeatResult, revenueResult
+            heatmapResult, tableUtilResult, repeatResult, revenueResult,
+            partySizeResult, leadTimeResult, prevDailyRevenueResult
         ] = await Promise.all([
             // 1. Daily breakdown (current period)
             pool.query(
@@ -476,9 +477,60 @@ router.get('/api/admin/stats', authMiddleware, async (req, res) => {
                 WHERE restaurant_id = $1 AND date BETWEEN $2 AND $3
                 ORDER BY date`,
                 [restaurantId, from, to]
-            ).catch(() => ({ rows: [] })) // table might not exist yet
+            ).catch(() => ({ rows: [] })), // table might not exist yet
+            // 10. PARTY SIZE DISTRIBUTION
+            pool.query(
+                `SELECT 
+                    CASE 
+                        WHEN guest_count = 1 THEN '1'
+                        WHEN guest_count = 2 THEN '2'
+                        WHEN guest_count BETWEEN 3 AND 4 THEN '3-4'
+                        WHEN guest_count BETWEEN 5 AND 6 THEN '5-6'
+                        ELSE '7+'
+                    END as party_size,
+                    COUNT(*) as count,
+                    COALESCE(SUM(guest_count), 0) as total_guests
+                FROM restaurant_bookings
+                WHERE ${activeWhere} AND booking_date BETWEEN $2 AND $3
+                GROUP BY 1
+                ORDER BY MIN(guest_count)`,
+                [restaurantId, from, to]
+            ),
+            // 11. BOOKING LEAD TIME (days between created_at and booking_date)
+            pool.query(
+                `SELECT 
+                    CASE 
+                        WHEN (booking_date - created_at::date) = 0 THEN 'same_day'
+                        WHEN (booking_date - created_at::date) = 1 THEN '1_day'
+                        WHEN (booking_date - created_at::date) BETWEEN 2 AND 3 THEN '2_3_days'
+                        WHEN (booking_date - created_at::date) BETWEEN 4 AND 7 THEN '4_7_days'
+                        ELSE '8_plus'
+                    END as lead_time,
+                    COUNT(*) as count
+                FROM restaurant_bookings
+                WHERE ${activeWhere} AND booking_date BETWEEN $2 AND $3
+                    AND created_at IS NOT NULL
+                GROUP BY 1`,
+                [restaurantId, from, to]
+            ),
+            // 12. PREVIOUS PERIOD daily revenue (for chart overlay)
+            pool.query(
+                `SELECT date::text, revenue::float
+                FROM daily_revenue
+                WHERE restaurant_id = $1 AND date BETWEEN $2 AND $3
+                ORDER BY date`,
+                [restaurantId, prevFrom.toISOString().split('T')[0], prevTo]
+            ).catch(() => ({ rows: [] }))
         ]);
 
+        // Revenue totals (MUST be before comparison calc)
+        const totalRevenue = revenueResult.rows.reduce((s, r) => s + (r.revenue || 0), 0);
+        const revenueMap = {};
+        for (const r of revenueResult.rows) revenueMap[r.date] = { revenue: r.revenue, notes: r.notes };
+
+        // Previous period revenue map for chart overlay
+        const prevRevenueMap = {};
+        for (const r of (prevDailyRevenueResult?.rows || [])) prevRevenueMap[r.date] = r.revenue || 0;
 
         // Compute totals
         const totals = dailyResult.rows.reduce((acc, row) => ({
@@ -512,11 +564,6 @@ router.get('/api/admin/stats', authMiddleware, async (req, res) => {
             revenue: pctChange(totalRevenue, prevRevenue)
         };
 
-        // Revenue totals
-        const totalRevenue = revenueResult.rows.reduce((s, r) => s + (r.revenue || 0), 0);
-        const revenueMap = {};
-        for (const r of revenueResult.rows) revenueMap[r.date] = { revenue: r.revenue, notes: r.notes };
-
         // Repeat rate
         const repeatData = repeatResult.rows[0] || {};
         const repeatRate = parseInt(repeatData.total_bookings) > 0
@@ -546,10 +593,23 @@ router.get('/api/admin/stats', authMiddleware, async (req, res) => {
             repeat_rate: repeatRate,
             repeat_customers: parseInt(repeatData.repeat_customers) || 0,
             revenue: { total: totalRevenue, avg_per_couvert: totals.couverts > 0 ? Math.round(totalRevenue / totals.couverts * 100) / 100 : 0 },
-            prev_daily: prevDailyResult.rows.map(r => ({
-                date: r.date,
-                bookings: parseInt(r.bookings) || 0,
-                couverts: parseInt(r.couverts) || 0
+            prev_daily: prevDailyResult.rows.map((r, i) => {
+                const prevRevRow = (prevDailyRevenueResult?.rows || []).find(pr => pr.date === r.date);
+                return {
+                    date: r.date,
+                    bookings: parseInt(r.bookings) || 0,
+                    couverts: parseInt(r.couverts) || 0,
+                    revenue: prevRevRow?.revenue || 0
+                };
+            }),
+            party_size_distribution: (partySizeResult?.rows || []).map(r => ({
+                size: r.party_size,
+                count: parseInt(r.count) || 0,
+                guests: parseInt(r.total_guests) || 0
+            })),
+            lead_time_distribution: (leadTimeResult?.rows || []).map(r => ({
+                bucket: r.lead_time,
+                count: parseInt(r.count) || 0
             })),
             period: { from, to }
         });
