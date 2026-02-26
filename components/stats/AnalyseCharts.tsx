@@ -1,7 +1,7 @@
 import React from 'react'
 import { TrendingDown } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from 'recharts'
-import type { DayStats, Comparison, PartySizeBucket, LeadTimeBucket, TableUtil } from './types'
+import type { DayStats, Comparison, PartySizeBucket, LeadTimeBucket, TableUtil, HeatmapCell } from './types'
 import { ACCENT, LEAD_TIME_LABELS } from './types'
 import { fmtChartLabel } from './formatters'
 
@@ -14,12 +14,24 @@ interface Props {
     partySizes: PartySizeBucket[]
     leadTimes: LeadTimeBucket[]
     repeatRate: number
+    peakHours: { hour: number; count: number }[]
+    totalSeats: number
+    activeDays: number
     onDayClick: (day: DayStats) => void
 }
 
-export const AnalyseCharts: React.FC<Props> = ({ stats, comparison, tableUtil, partySizes, leadTimes, repeatRate, onDayClick }) => {
+export const AnalyseCharts: React.FC<Props> = ({ stats, comparison, tableUtil, partySizes, leadTimes, repeatRate, peakHours, totalSeats, activeDays, onDayClick }) => {
     const hasCancellations = stats.some(d => d.cancellations > 0 || d.noShows > 0)
     const maxTableCount = Math.max(...tableUtil.map(t => t.booking_count), 1)
+
+    // Time slot utilization data
+    const slotData = Array.from({ length: 12 }, (_, i) => {
+        const hour = i + 11
+        const ph = peakHours.find(p => p.hour === hour)
+        const count = ph?.count || 0
+        const capacity = totalSeats * (activeDays || 1)
+        return { hour: `${hour}:00`, boekingen: count, bezetting: capacity > 0 ? Math.min(100, Math.round(count / capacity * 100)) : 0 }
+    })
 
     // First-time vs repeat data
     const repeatData = repeatRate > 0 ? [
@@ -141,6 +153,21 @@ export const AnalyseCharts: React.FC<Props> = ({ stats, comparison, tableUtil, p
                         )
                     })}
                 </div>
+            </div>
+
+            {/* Time slot utilization */}
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+                <h2 className="text-base font-semibold text-gray-900 mb-1">Tijdslotbezetting</h2>
+                <p className="text-xs text-gray-400 mb-4">Boekingen per uur versus capaciteit ({totalSeats} stoelen × {activeDays} dagen)</p>
+                <ResponsiveContainer width="100%" height={180}>
+                    <BarChart data={slotData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis dataKey="hour" tick={{ fontSize: 11, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
+                        <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} tickLine={false} axisLine={false} width={30} allowDecimals={false} />
+                        <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} formatter={(v: number, name: string) => [name === 'bezetting' ? `${v}%` : v, name === 'bezetting' ? 'Bezetting' : 'Boekingen']} />
+                        <Bar dataKey="boekingen" fill={ACCENT} radius={[3, 3, 0, 0]} name="Boekingen" />
+                    </BarChart>
+                </ResponsiveContainer>
             </div>
 
             {/* Covers bar chart */}

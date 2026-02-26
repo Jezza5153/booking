@@ -356,7 +356,7 @@ const App: React.FC = () => {
         {view === 'stats' && (
           <Suspense fallback={<div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-gray-400" /></div>}>
             <div className="animate-in slide-in-from-bottom-4 duration-300 max-w-6xl mx-auto px-4">
-              <BookingStats restaurantId={getRestaurantId()} onBack={() => setView('timeline')} />
+              <BookingStats restaurantId={getRestaurantId()} onBack={(date?: string) => { setView('timeline'); /* date available for filtering */ }} />
             </div>
           </Suspense>
         )}

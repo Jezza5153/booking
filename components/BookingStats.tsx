@@ -4,7 +4,6 @@ import { API_BASE_URL } from '../api'
 import type { DayStats, PrevDayStats, HeatmapCell, TableUtil, Comparison, Summary, ExtraStats, RevenueData, Tab, ChartMetric, DatePreset, MetricDetail, PartySizeBucket, LeadTimeBucket } from './stats/types'
 import { SERVICE_CONFIG } from './stats/types'
 import { fmtCurrency, fmtCurrencyDecimal, fmtPct, fmtDate, fmtChartLabel } from './stats/formatters'
-import { MetricTooltip } from './stats/MetricTooltip'
 import { MetricDrawer } from './stats/MetricDrawer'
 import { LoadingSkeleton, ErrorState, EmptyState } from './stats/LoadingStates'
 import { KpiGrid } from './stats/KpiGrid'
@@ -12,6 +11,7 @@ import { HeroChart } from './stats/HeroChart'
 import { DailyTable } from './stats/DailyTable'
 import { HeatmapCard } from './stats/HeatmapCard'
 import { AnalyseCharts } from './stats/AnalyseCharts'
+import { HealthSummary } from './stats/HealthSummary'
 
 // ── Date Helpers ───────────────────────────────────────────────
 function getPresetRange(p: DatePreset): { from: string; to: string } {
@@ -45,7 +45,7 @@ function writeUrlState(tab: Tab, range: { from: string; to: string }) {
 }
 
 // ── Main Orchestrator ──────────────────────────────────────────
-interface Props { restaurantId: string; onBack: () => void }
+interface Props { restaurantId: string; onBack: (date?: string) => void }
 
 export const BookingStats: React.FC<Props> = ({ restaurantId, onBack }) => {
     const urlState = useMemo(() => readUrlState(), [])
@@ -247,6 +247,7 @@ export const BookingStats: React.FC<Props> = ({ restaurantId, onBack }) => {
                     <>
                         {tab === 'overzicht' && (
                             <div className="p-5 space-y-5">
+                                <HealthSummary summary={summary} comparison={comparison} extraStats={extraStats} revenueData={revenueData} repeatRate={repeatRate} totalSeats={totalSeats} />
                                 <KpiGrid summary={summary} comparison={comparison} extraStats={extraStats} revenueData={revenueData} totalSeats={totalSeats} stats={stats}
                                     onSelectMetric={m => { setSelectedMetric(m); setSelectedDay(null) }} />
                                 <HeroChart data={chartData} metric={chartMetric} onMetricChange={setChartMetric} onDayClick={onDayClick} stats={stats} />
@@ -272,7 +273,9 @@ export const BookingStats: React.FC<Props> = ({ restaurantId, onBack }) => {
                         {tab === 'analyse' && (
                             <div className="p-5">
                                 <AnalyseCharts stats={stats} comparison={comparison} tableUtil={tableUtil}
-                                    partySizes={partySizes} leadTimes={leadTimes} repeatRate={repeatRate} onDayClick={onDayClick} />
+                                    partySizes={partySizes} leadTimes={leadTimes} repeatRate={repeatRate}
+                                    peakHours={extraStats.peakHours} totalSeats={totalSeats} activeDays={extraStats.activeDays}
+                                    onDayClick={onDayClick} />
                                 <div className="mt-5">
                                     <HeatmapCard heatmap={heatmap} onCellClick={onHeatmapClick} />
                                 </div>
@@ -284,7 +287,7 @@ export const BookingStats: React.FC<Props> = ({ restaurantId, onBack }) => {
 
             {/* Drawer */}
             <MetricDrawer day={selectedDay} metric={selectedMetric} totalSeats={totalSeats} onClose={closeDrawer}
-                onViewBookings={(date) => { closeDrawer(); onBack() /* TODO: pass date filter to parent */ }} />
+                onViewBookings={(date) => { closeDrawer(); onBack(date) }} />
         </div>
     )
 }
