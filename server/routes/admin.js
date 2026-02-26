@@ -347,6 +347,12 @@ router.get('/api/admin/stats', authMiddleware, async (req, res) => {
     prevFrom.setDate(prevFrom.getDate() - periodDays);
     const prevTo = from; // previous period ends where current starts
 
+    // YoY: same period last year
+    const yoyFrom = new Date(fromDate); yoyFrom.setFullYear(yoyFrom.getFullYear() - 1);
+    const yoyTo = new Date(toDate); yoyTo.setFullYear(yoyTo.getFullYear() - 1);
+    const yoyFromStr = yoyFrom.toISOString().split('T')[0];
+    const yoyToStr = yoyTo.toISOString().split('T')[0];
+
     try {
         const baseWhere = `restaurant_id = $1 AND (group_id IS NULL OR is_primary = true)`;
         const activeWhere = `${baseWhere} AND status != 'cancelled'`;
@@ -356,7 +362,8 @@ router.get('/api/admin/stats', authMiddleware, async (req, res) => {
             dailyResult, peakHoursResult, avgResult, busiestDayResult,
             prevResult, prevDailyResult, prevRevenueResult,
             heatmapResult, tableUtilResult, repeatResult, revenueResult,
-            partySizeResult, leadTimeResult, prevDailyRevenueResult
+            partySizeResult, leadTimeResult, prevDailyRevenueResult,
+            yoyBookingsResult, yoyRevenueResult
         ] = await Promise.all([
             // 1. Daily breakdown (current period)
             pool.query(
@@ -520,7 +527,23 @@ router.get('/api/admin/stats', authMiddleware, async (req, res) => {
                 WHERE restaurant_id = $1 AND date BETWEEN $2 AND $3
                 ORDER BY date`,
                 [restaurantId, prevFrom.toISOString().split('T')[0], prevTo]
-            ).catch(() => ({ rows: [] }))
+            ).catch(() => ({ rows: [] })),
+            // 13. YOY bookings + couverts
+            pool.query(
+                `SELECT 
+                    COUNT(*) FILTER (WHERE status != 'cancelled') as bookings,
+                    COALESCE(SUM(guest_count) FILTER (WHERE status != 'cancelled'), 0) as couverts
+                FROM restaurant_bookings
+                WHERE ${baseWhere} AND booking_date BETWEEN $2 AND $3`,
+                [restaurantId, yoyFromStr, yoyToStr]
+            ).catch(() => ({ rows: [{ bookings: 0, couverts: 0 }] })),
+            // 14. YOY revenue
+            pool.query(
+                `SELECT COALESCE(SUM(revenue), 0) as total_revenue
+                FROM daily_revenue
+                WHERE restaurant_id = $1 AND date BETWEEN $2 AND $3`,
+                [restaurantId, yoyFromStr, yoyToStr]
+            ).catch(() => ({ rows: [{ total_revenue: 0 }] }))
         ]);
 
         // Revenue totals (MUST be before comparison calc)
@@ -611,7 +634,18 @@ router.get('/api/admin/stats', authMiddleware, async (req, res) => {
                 bucket: r.lead_time,
                 count: parseInt(r.count) || 0
             })),
-            period: { from, to }
+            period: { from, to },
+            yoy: (() => {
+                const yb = parseInt(yoyBookingsResult?.rows?.[0]?.bookings) || 0;
+                const yc = parseInt(yoyBookingsResult?.rows?.[0]?.couverts) || 0;
+                const yr = parseFloat(yoyRevenueResult?.rows?.[0]?.total_revenue) || 0;
+                return {
+                    bookings: yb > 0 ? Math.round(((totals.bookings - yb) / yb) * 100) : null,
+                    couverts: yc > 0 ? Math.round(((totals.couverts - yc) / yc) * 100) : null,
+                    revenue: yr > 0 ? Math.round(((totalRevenue - yr) / yr) * 100) : null,
+                    has_data: yb > 0 || yc > 0
+                };
+            })()
         });
     } catch (error) {
         console.error('Stats error:', error.message);

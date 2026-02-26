@@ -3,6 +3,8 @@ import { ArrowLeft, Download, RefreshCw, ChevronLeft, ChevronRight } from 'lucid
 import { API_BASE_URL } from '../api'
 import type { DayStats, PrevDayStats, HeatmapCell, TableUtil, Comparison, Summary, ExtraStats, RevenueData, Tab, ChartMetric, DatePreset, MetricDetail, PartySizeBucket, LeadTimeBucket } from './stats/types'
 import { SERVICE_CONFIG } from './stats/types'
+
+interface YoyData { bookings: number | null; couverts: number | null; revenue: number | null; has_data: boolean }
 import { fmtCurrency, fmtCurrencyDecimal, fmtPct, fmtDate, fmtChartLabel } from './stats/formatters'
 import { MetricDrawer } from './stats/MetricDrawer'
 import { LoadingSkeleton, ErrorState, EmptyState } from './stats/LoadingStates'
@@ -64,6 +66,7 @@ export const BookingStats: React.FC<Props> = ({ restaurantId, onBack }) => {
     const [extraStats, setExtraStats] = useState<ExtraStats>({ avgPartySize: 0, busiestDay: null, peakHours: [], activeDays: 0 })
     const [partySizes, setPartySizes] = useState<PartySizeBucket[]>([])
     const [leadTimes, setLeadTimes] = useState<LeadTimeBucket[]>([])
+    const [yoy, setYoy] = useState<YoyData>({ bookings: null, couverts: null, revenue: null, has_data: false })
     const [chartMetric, setChartMetric] = useState<ChartMetric>('couverts')
     const [selectedDay, setSelectedDay] = useState<DayStats | null>(null)
     const [selectedMetric, setSelectedMetric] = useState<MetricDetail | null>(null)
@@ -110,6 +113,7 @@ export const BookingStats: React.FC<Props> = ({ restaurantId, onBack }) => {
             setExtraStats({ avgPartySize: data.avg_party_size || 0, busiestDay: data.busiest_day || null, peakHours: data.peak_hours || [], activeDays: data.active_days || 0 })
             setPartySizes(data.party_size_distribution || [])
             setLeadTimes(data.lead_time_distribution || [])
+            setYoy(data.yoy || { bookings: null, couverts: null, revenue: null, has_data: false })
             setLastUpdated(new Date())
         } catch (e) { console.error('Stats fetch error:', e); setError(true); setStats([]) }
         finally { setLoading(false) }
@@ -248,7 +252,7 @@ export const BookingStats: React.FC<Props> = ({ restaurantId, onBack }) => {
                         {tab === 'overzicht' && (
                             <div className="p-5 space-y-5">
                                 <HealthSummary summary={summary} comparison={comparison} extraStats={extraStats} revenueData={revenueData} repeatRate={repeatRate} totalSeats={totalSeats} />
-                                <KpiGrid summary={summary} comparison={comparison} extraStats={extraStats} revenueData={revenueData} totalSeats={totalSeats} stats={stats}
+                                <KpiGrid summary={summary} comparison={comparison} extraStats={extraStats} revenueData={revenueData} totalSeats={totalSeats} stats={stats} yoy={yoy}
                                     onSelectMetric={m => { setSelectedMetric(m); setSelectedDay(null) }} />
                                 <HeroChart data={chartData} metric={chartMetric} onMetricChange={setChartMetric} onDayClick={onDayClick} stats={stats} />
                                 {insights.length > 0 && (

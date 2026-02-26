@@ -16,6 +16,8 @@ const Delta = ({ value, invert }: { value?: number; invert?: boolean }) => {
     )
 }
 
+interface YoyData { bookings: number | null; couverts: number | null; revenue: number | null; has_data: boolean }
+
 interface Props {
     summary: Summary
     comparison: Comparison
@@ -23,10 +25,11 @@ interface Props {
     revenueData: RevenueData
     totalSeats: number
     stats: DayStats[]
+    yoy: YoyData
     onSelectMetric: (m: MetricDetail) => void
 }
 
-export const KpiGrid: React.FC<Props> = ({ summary, comparison, extraStats, revenueData, totalSeats, stats, onSelectMetric }) => {
+export const KpiGrid: React.FC<Props> = ({ summary, comparison, extraStats, revenueData, totalSeats, stats, yoy, onSelectMetric }) => {
     const { hoursPerDay } = SERVICE_CONFIG
 
     const openDetail = (key: string, label: string, value: string | number, delta?: number, explanation?: string) => {
@@ -53,8 +56,8 @@ export const KpiGrid: React.FC<Props> = ({ summary, comparison, extraStats, reve
     }
 
     const heroKpis = [
-        { key: 'revenue', label: 'Omzet', value: fmtCurrency(summary.revenue), delta: comparison.revenue, sub: revenueData.avg_per_couvert > 0 ? `Ø ${fmtCurrencyDecimal(revenueData.avg_per_couvert)}/couvert` : null, tooltip: 'avgSpend', explain: 'Totale handmatig ingevoerde omzet. Klik voor dagtrend.' },
-        { key: 'couverts', label: 'Couverts', value: summary.couverts, delta: comparison.couverts, sub: `Ø ${summary.avgPerDay}/dag`, explain: 'Totaal gasten (excl. annuleringen). Klik voor dagtrend.' },
+        { key: 'revenue', label: 'Omzet', value: fmtCurrency(summary.revenue), delta: comparison.revenue, yoyDelta: yoy.revenue, sub: revenueData.avg_per_couvert > 0 ? `Ø ${fmtCurrencyDecimal(revenueData.avg_per_couvert)}/couvert` : null, tooltip: 'avgSpend', explain: 'Totale handmatig ingevoerde omzet. Klik voor dagtrend.' },
+        { key: 'couverts', label: 'Couverts', value: summary.couverts, delta: comparison.couverts, yoyDelta: yoy.couverts, sub: `Ø ${summary.avgPerDay}/dag`, explain: 'Totaal gasten (excl. annuleringen). Klik voor dagtrend.' },
         { key: 'occupancy', label: 'Bezetting', value: fmtPct(summary.occupancy), sub: `${totalSeats} stoelen · ${summary.activeDays}d`, tooltip: 'occupancy', explain: `Couverts ÷ (${totalSeats} × ${summary.activeDays}d). Begrensd op 100% per dag.` },
         { key: 'revpash', label: 'RevPASH', value: fmtCurrencyDecimal(summary.revpash), sub: 'per stoel per uur', tooltip: 'revpash', explain: `Omzet ÷ (${totalSeats} × ${summary.activeDays}d × ${hoursPerDay}u)` },
     ]
@@ -81,6 +84,11 @@ export const KpiGrid: React.FC<Props> = ({ summary, comparison, extraStats, reve
                         </div>
                         <div className="text-3xl font-bold text-gray-900 tabular-nums">{kpi.value}</div>
                         {kpi.sub && <div className="text-sm text-gray-400 mt-1">{kpi.sub}</div>}
+                        {yoy.has_data && kpi.yoyDelta != null && kpi.yoyDelta !== 0 && (
+                            <div className={`text-xs mt-1 ${kpi.yoyDelta > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                {kpi.yoyDelta > 0 ? '↑' : '↓'} {Math.abs(kpi.yoyDelta)}% vs vorig jaar
+                            </div>
+                        )}
                     </button>
                 ))}
             </div>
