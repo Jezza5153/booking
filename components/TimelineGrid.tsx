@@ -1230,18 +1230,16 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                         return (
                                             <div
                                                 key={table.id}
-                                                className={`flex border-b border-gray-100 ${tableIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}
+                                                className={`flex border-b border-gray-100 ${tableIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}
                                             >
-                                                {/* Table Info */}
-                                                <div className="w-32 shrink-0 px-3 py-2 flex items-center gap-2">
-                                                    <span className="font-medium text-sm text-gray-900">{table.name}</span>
-                                                    <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
-                                                        {table.seats}
-                                                    </span>
+                                                {/* Table Info — compact like Tapla */}
+                                                <div className="w-28 shrink-0 px-2 py-0.5 flex items-baseline gap-0">
+                                                    <span className="font-medium text-xs text-gray-900 leading-tight">{table.name}</span>
+                                                    <sup className="text-[9px] text-gray-400 ml-0.5">{table.seats}</sup>
                                                 </div>
 
                                                 {/* Timeline */}
-                                                <div className="flex-1 relative h-14">
+                                                <div className="flex-1 relative h-8">
                                                     {/* Clickable grid cells */}
                                                     <div className="absolute inset-0 flex">
                                                         {timeSlots.map((slot, i) => {
@@ -1272,10 +1270,10 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                                                 key={booking.id}
                                                                 style={getBookingStyle(booking)}
                                                                 onClick={() => setShowBookingDetail(booking)}
-                                                                className={`absolute top-1 bottom-1 ${statusConfig.bg} ${statusConfig.hover} rounded-md px-2 py-1 cursor-pointer transition-all shadow-sm hover:shadow-md overflow-hidden z-10 ${isGrouped ? 'ring-2 ring-white/50 ring-offset-1' : ''}`}
+                                                                className={`absolute top-0.5 bottom-0.5 ${statusConfig.bg} ${statusConfig.hover} rounded px-1.5 py-0 cursor-pointer transition-all shadow-sm hover:shadow-md overflow-hidden z-10 flex items-center ${isGrouped ? 'ring-1 ring-white/50' : ''}`}
                                                                 title={`${booking.customer_name} - ${totalGroupGuests} pers.${isGrouped ? ` (${groupTableCount} tafels)` : ''}`}
                                                             >
-                                                                <div className="flex items-center gap-1 text-white text-xs font-medium">
+                                                                <div className="flex items-center gap-0.5 text-white text-[11px] font-medium leading-none">
                                                                     <StatusIcon status={booking.status} />
                                                                     {booking.is_primary || !isGrouped ? (
                                                                         <span className="truncate">{totalGroupGuests}p {booking.customer_name}</span>

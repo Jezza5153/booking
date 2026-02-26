@@ -288,20 +288,26 @@ async function runMigrations() {
     }
 
     // Auto-fix: redistribute oversized bookings (guest_count > table seats) across multiple tables
+    // Catches: (1) no group_id at all, (2) group_id set but no secondary table entries
     try {
         const oversized = await pool.query(
             `SELECT rb.id, rb.restaurant_id, rb.table_id, rb.booking_date::text, 
                     rb.start_time::text, rb.end_time::text, rb.guest_count,
                     rb.customer_name, rb.customer_email, rb.customer_phone, rb.remarks,
-                    rb.customer_id, rb.status, rt.seats as table_seats
+                    rb.customer_id, rb.status, rt.seats as table_seats, rb.group_id
              FROM restaurant_bookings rb
              JOIN restaurant_tables rt ON rt.id = rb.table_id
-             WHERE rb.guest_count > rt.seats AND rb.group_id IS NULL AND rb.status != 'cancelled'`
+             WHERE rb.guest_count > rt.seats AND rb.status != 'cancelled'
+               AND rb.is_primary = true
+               AND NOT EXISTS (
+                   SELECT 1 FROM restaurant_bookings rb2 
+                   WHERE rb2.group_id = rb.group_id AND rb2.is_primary = false
+               )`
         );
         if (oversized.rowCount > 0) {
             console.log(`🔧 Found ${oversized.rowCount} oversized bookings to redistribute...`);
             for (const booking of oversized.rows) {
-                const groupId = crypto.randomUUID();
+                const groupId = booking.group_id || crypto.randomUUID();
                 // Find free tables for this slot
                 const freeTables = await pool.query(
                     `SELECT rt.id, rt.name, rt.seats, rt.zone FROM restaurant_tables rt
