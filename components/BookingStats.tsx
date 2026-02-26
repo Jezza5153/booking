@@ -260,7 +260,7 @@ export const BookingStats: React.FC<Props> = ({ restaurantId, onBack }) => {
                                 <HealthSummary summary={summary} comparison={comparison} extraStats={extraStats} revenueData={revenueData} repeatRate={repeatRate} totalSeats={totalSeats} />
                                 <KpiGrid summary={summary} comparison={comparison} extraStats={extraStats} revenueData={revenueData} totalSeats={totalSeats} stats={stats} yoy={yoy}
                                     onSelectMetric={m => { setSelectedMetric(m); setSelectedDay(null) }} />
-                                <HeroChart data={chartData} metric={chartMetric} onMetricChange={setChartMetric} onDayClick={onDayClick} stats={stats} />
+                                <HeroChart data={chartData} metric={chartMetric} onMetricChange={setChartMetric} onDayClick={onDayClick} stats={stats} restaurantId={restaurantId} />
                                 {insights.length > 0 && (
                                     <div className="flex items-center gap-3 flex-wrap">
                                         {insights.map((ins, i) => (
