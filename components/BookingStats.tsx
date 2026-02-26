@@ -16,6 +16,7 @@ import { DateRangePicker } from './stats/DateRangePicker'
 import { RevenueQuickEntry } from './stats/RevenueQuickEntry'
 import { WeekdayAverages } from './stats/WeekdayAverages'
 import { SourceBreakdown } from './stats/SourceBreakdown'
+import { ComparePeriods } from './stats/ComparePeriods'
 
 interface YoyData { bookings: number | null; couverts: number | null; revenue: number | null; has_data: boolean }
 
@@ -293,6 +294,20 @@ export const BookingStats: React.FC<Props> = ({ restaurantId, onBack }) => {
                                     </div>
                                 )}
                                 {weekdayAvgs.length > 0 && <WeekdayAverages weekdayAverages={weekdayAvgs} stats={stats} />}
+                                <ComparePeriods
+                                    restaurantId={restaurantId}
+                                    currentRange={dateRange}
+                                    currentData={{
+                                        bookings: summary.bookings, couverts: summary.couverts,
+                                        revenue: revenueData.total,
+                                        walkins: summary.walkins || 0,
+                                        noShows: summary.noShows || 0,
+                                        cancellations: summary.cancellations || 0,
+                                        avgPerDay: summary.avgPerDay || 0,
+                                        activeDays: extraStats.activeDays || 0
+                                    }}
+                                    token={token}
+                                />
                             </div>
                         )}
                         {tab === 'dagelijks' && (
