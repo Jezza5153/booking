@@ -363,7 +363,7 @@ router.get('/api/admin/stats', authMiddleware, async (req, res) => {
             prevResult, prevDailyResult, prevRevenueResult,
             heatmapResult, tableUtilResult, repeatResult, revenueResult,
             partySizeResult, leadTimeResult, prevDailyRevenueResult,
-            yoyBookingsResult, yoyRevenueResult
+            yoyBookingsResult, yoyRevenueResult, weekdayAvgResult
         ] = await Promise.all([
             // 1. Daily breakdown (current period)
             pool.query(
@@ -543,7 +543,18 @@ router.get('/api/admin/stats', authMiddleware, async (req, res) => {
                 FROM daily_revenue
                 WHERE restaurant_id = $1 AND date BETWEEN $2 AND $3`,
                 [restaurantId, yoyFromStr, yoyToStr]
-            ).catch(() => ({ rows: [{ total_revenue: 0 }] }))
+            ).catch(() => ({ rows: [{ total_revenue: 0 }] })),
+            // 15. WEEKDAY AVERAGES — all-time baseline per day-of-week
+            pool.query(
+                `SELECT 
+                    EXTRACT(DOW FROM booking_date)::int as dow,
+                    ROUND(COUNT(*) FILTER (WHERE status != 'cancelled')::numeric / NULLIF(COUNT(DISTINCT booking_date), 0), 1) as avg_bookings,
+                    ROUND(COALESCE(SUM(guest_count) FILTER (WHERE status != 'cancelled'), 0)::numeric / NULLIF(COUNT(DISTINCT booking_date), 0), 1) as avg_couverts
+                FROM restaurant_bookings
+                WHERE ${baseWhere}
+                GROUP BY 1 ORDER BY 1`,
+                [restaurantId]
+            ).catch(() => ({ rows: [] }))
         ]);
 
         // Revenue totals (MUST be before comparison calc)
@@ -645,7 +656,12 @@ router.get('/api/admin/stats', authMiddleware, async (req, res) => {
                     revenue: yr > 0 ? Math.round(((totalRevenue - yr) / yr) * 100) : null,
                     has_data: yb > 0 || yc > 0
                 };
-            })()
+            }),
+            weekday_averages: (weekdayAvgResult?.rows || []).map(r => ({
+                dow: parseInt(r.dow),
+                avg_bookings: parseFloat(r.avg_bookings) || 0,
+                avg_couverts: parseFloat(r.avg_couverts) || 0
+            }))
         });
     } catch (error) {
         console.error('Stats error:', error.message);
@@ -718,9 +734,27 @@ router.get('/api/admin/stats/export', authMiddleware, async (req, res) => {
     }
 });
 
+// Route: POST /api/admin/stats/pdf-token — Generate short-lived token for PDF access
+router.post('/api/admin/stats/pdf-token', authMiddleware, async (req, res) => {
+    try {
+        const jwt = require('jsonwebtoken');
+        const secret = process.env.JWT_SECRET || 'your-secret-key';
+        // Short-lived token (5 minutes) scoped to PDF only
+        const pdfToken = jwt.sign(
+            { userId: req.user?.id || req.user?.userId, purpose: 'pdf' },
+            secret,
+            { expiresIn: '5m' }
+        );
+        res.json({ token: pdfToken });
+    } catch (error) {
+        console.error('PDF token error:', error.message);
+        res.status(500).json({ error: 'Failed to generate PDF token' });
+    }
+});
+
 // Route: GET /api/admin/stats/pdf — Print-ready HTML summary (save as PDF from browser)
 router.get('/api/admin/stats/pdf', async (req, res) => {
-    // Auth via query param (since opened via <a> tag)
+    // Auth via query param (since opened via <a> tag) — accepts both regular and short-lived tokens
     const token = req.query.token;
     if (!token) return res.status(401).json({ error: 'Missing token' });
     try {

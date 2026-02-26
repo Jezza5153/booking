@@ -14,6 +14,7 @@ import { AnalyseCharts } from './stats/AnalyseCharts'
 import { HealthSummary } from './stats/HealthSummary'
 import { DateRangePicker } from './stats/DateRangePicker'
 import { RevenueQuickEntry } from './stats/RevenueQuickEntry'
+import { WeekdayAverages } from './stats/WeekdayAverages'
 
 interface YoyData { bookings: number | null; couverts: number | null; revenue: number | null; has_data: boolean }
 
@@ -69,6 +70,7 @@ export const BookingStats: React.FC<Props> = ({ restaurantId, onBack }) => {
     const [partySizes, setPartySizes] = useState<PartySizeBucket[]>([])
     const [leadTimes, setLeadTimes] = useState<LeadTimeBucket[]>([])
     const [yoy, setYoy] = useState<YoyData>({ bookings: null, couverts: null, revenue: null, has_data: false })
+    const [weekdayAvgs, setWeekdayAvgs] = useState<{ dow: number; avg_bookings: number; avg_couverts: number }[]>([])
     const [chartMetric, setChartMetric] = useState<ChartMetric>('couverts')
     const [selectedDay, setSelectedDay] = useState<DayStats | null>(null)
     const [selectedMetric, setSelectedMetric] = useState<MetricDetail | null>(null)
@@ -116,6 +118,7 @@ export const BookingStats: React.FC<Props> = ({ restaurantId, onBack }) => {
             setPartySizes(data.party_size_distribution || [])
             setLeadTimes(data.lead_time_distribution || [])
             setYoy(data.yoy || { bookings: null, couverts: null, revenue: null, has_data: false })
+            setWeekdayAvgs(data.weekday_averages || [])
             setLastUpdated(new Date())
         } catch (e) { console.error('Stats fetch error:', e); setError(true); setStats([]) }
         finally { setLoading(false) }
@@ -227,10 +230,17 @@ export const BookingStats: React.FC<Props> = ({ restaurantId, onBack }) => {
                     <button onClick={exportCSV} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200" style={{ minHeight: 44 }}>
                         <Download className="w-4 h-4" /> CSV
                     </button>
-                    <a href={`${API_BASE_URL}/api/admin/stats/pdf?restaurantId=${restaurantId}&from=${dateRange.from}&to=${dateRange.to}&token=${token}`}
-                        target="_blank" rel="noopener" className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200" style={{ minHeight: 44 }}>
+                    <button onClick={async () => {
+                        try {
+                            const res = await fetch(`${API_BASE_URL}/api/admin/stats/pdf-token`, {
+                                method: 'POST', headers: { 'Authorization': `Bearer ${token}` }
+                            })
+                            const { token: pdfToken } = await res.json()
+                            window.open(`${API_BASE_URL}/api/admin/stats/pdf?restaurantId=${restaurantId}&from=${dateRange.from}&to=${dateRange.to}&token=${pdfToken}`, '_blank')
+                        } catch (e) { console.error('PDF token error:', e) }
+                    }} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200" style={{ minHeight: 44 }}>
                         <FileText className="w-4 h-4" /> PDF
-                    </a>
+                    </button>
                     <button onClick={fetchStats} className="p-2 hover:bg-gray-100 rounded-lg" style={{ minHeight: 44 }}>
                         <RefreshCw className={`w-4 h-4 text-gray-400 ${loading ? 'animate-spin' : ''}`} />
                     </button>
@@ -279,6 +289,7 @@ export const BookingStats: React.FC<Props> = ({ restaurantId, onBack }) => {
                                         ))}
                                     </div>
                                 )}
+                                {weekdayAvgs.length > 0 && <WeekdayAverages weekdayAverages={weekdayAvgs} stats={stats} />}
                             </div>
                         )}
                         {tab === 'dagelijks' && (
