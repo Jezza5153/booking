@@ -51,32 +51,29 @@ const App: React.FC = () => {
       setSessionRestaurantId(storedRestaurantId);
     }
     if (token) {
-      // Silently refresh token — get a fresh 30-day token on every app load
-      fetch(`${API_BASE_URL}/api/auth/refresh`, {
-        method: 'POST',
+      // Verify token with server (primary — blocks page load)
+      fetch(`${API_BASE_URL}/api/auth/verify`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
         .then(res => {
           if (res.ok) {
-            return res.json();
+            setIsAuthenticated(true);
+            // Background: silently refresh token for another 30 days (non-blocking)
+            fetch(`${API_BASE_URL}/api/auth/refresh`, {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${token}` }
+            }).then(r => r.ok ? r.json() : null).then(data => {
+              if (data?.token) localStorage.setItem('events_token', data.token);
+            }).catch(() => { });
+          } else {
+            localStorage.removeItem('events_token');
+            localStorage.removeItem('events_user');
           }
-          throw new Error('Token expired');
-        })
-        .then(data => {
-          // Store the fresh token
-          localStorage.setItem('events_token', data.token);
-          if (data.restaurantId) {
-            localStorage.setItem('events_restaurantId', data.restaurantId);
-            setSessionRestaurantId(data.restaurantId);
-          }
-          setIsAuthenticated(true);
         })
         .catch(() => {
-          // Token expired or server unreachable — force re-login
-          console.warn('Token refresh failed — re-login required');
+          console.warn('Auth verification failed: server unreachable');
           localStorage.removeItem('events_token');
           localStorage.removeItem('events_user');
-          localStorage.removeItem('events_restaurantId');
         })
         .finally(() => setIsCheckingAuth(false));
     } else {
