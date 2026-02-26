@@ -15,6 +15,7 @@ import { HealthSummary } from './stats/HealthSummary'
 import { DateRangePicker } from './stats/DateRangePicker'
 import { RevenueQuickEntry } from './stats/RevenueQuickEntry'
 import { WeekdayAverages } from './stats/WeekdayAverages'
+import { SourceBreakdown } from './stats/SourceBreakdown'
 
 interface YoyData { bookings: number | null; couverts: number | null; revenue: number | null; has_data: boolean }
 
@@ -71,6 +72,7 @@ export const BookingStats: React.FC<Props> = ({ restaurantId, onBack }) => {
     const [leadTimes, setLeadTimes] = useState<LeadTimeBucket[]>([])
     const [yoy, setYoy] = useState<YoyData>({ bookings: null, couverts: null, revenue: null, has_data: false })
     const [weekdayAvgs, setWeekdayAvgs] = useState<{ dow: number; avg_bookings: number; avg_couverts: number }[]>([])
+    const [sources, setSources] = useState<{ source: string; bookings: number; couverts: number }[]>([])
     const [chartMetric, setChartMetric] = useState<ChartMetric>('couverts')
     const [selectedDay, setSelectedDay] = useState<DayStats | null>(null)
     const [selectedMetric, setSelectedMetric] = useState<MetricDetail | null>(null)
@@ -119,6 +121,7 @@ export const BookingStats: React.FC<Props> = ({ restaurantId, onBack }) => {
             setLeadTimes(data.lead_time_distribution || [])
             setYoy(data.yoy || { bookings: null, couverts: null, revenue: null, has_data: false })
             setWeekdayAvgs(data.weekday_averages || [])
+            setSources(data.source_breakdown || [])
             setLastUpdated(new Date())
         } catch (e) { console.error('Stats fetch error:', e); setError(true); setStats([]) }
         finally { setLoading(false) }
@@ -308,7 +311,8 @@ export const BookingStats: React.FC<Props> = ({ restaurantId, onBack }) => {
                                     partySizes={partySizes} leadTimes={leadTimes} repeatRate={repeatRate}
                                     peakHours={extraStats.peakHours} totalSeats={totalSeats} activeDays={extraStats.activeDays}
                                     onDayClick={onDayClick} />
-                                <div className="mt-5">
+                                <div className="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-5">
+                                    <SourceBreakdown sources={sources} />
                                     <HeatmapCard heatmap={heatmap} onCellClick={onHeatmapClick} />
                                 </div>
                             </div>

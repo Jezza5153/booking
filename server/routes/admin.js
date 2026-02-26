@@ -363,7 +363,7 @@ router.get('/api/admin/stats', authMiddleware, async (req, res) => {
             prevResult, prevDailyResult, prevRevenueResult,
             heatmapResult, tableUtilResult, repeatResult, revenueResult,
             partySizeResult, leadTimeResult, prevDailyRevenueResult,
-            yoyBookingsResult, yoyRevenueResult, weekdayAvgResult
+            yoyBookingsResult, yoyRevenueResult, weekdayAvgResult, sourceResult
         ] = await Promise.all([
             // 1. Daily breakdown (current period)
             pool.query(
@@ -554,6 +554,17 @@ router.get('/api/admin/stats', authMiddleware, async (req, res) => {
                 WHERE ${baseWhere}
                 GROUP BY 1 ORDER BY 1`,
                 [restaurantId]
+            ).catch(() => ({ rows: [] })),
+            // 16. SOURCE BREAKDOWN
+            pool.query(
+                `SELECT 
+                    COALESCE(source, 'website') as source,
+                    COUNT(*) FILTER (WHERE status != 'cancelled') as bookings,
+                    COALESCE(SUM(guest_count) FILTER (WHERE status != 'cancelled'), 0) as couverts
+                FROM restaurant_bookings
+                WHERE ${baseWhere} AND booking_date BETWEEN $2 AND $3
+                GROUP BY 1 ORDER BY 2 DESC`,
+                [restaurantId, from, to]
             ).catch(() => ({ rows: [] }))
         ]);
 
@@ -661,6 +672,11 @@ router.get('/api/admin/stats', authMiddleware, async (req, res) => {
                 dow: parseInt(r.dow),
                 avg_bookings: parseFloat(r.avg_bookings) || 0,
                 avg_couverts: parseFloat(r.avg_couverts) || 0
+            })),
+            source_breakdown: (sourceResult?.rows || []).map(r => ({
+                source: r.source,
+                bookings: parseInt(r.bookings) || 0,
+                couverts: parseInt(r.couverts) || 0
             }))
         });
     } catch (error) {

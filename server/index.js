@@ -281,6 +281,8 @@ async function runMigrations() {
         await pool.query('ALTER TABLE restaurant_bookings ADD COLUMN IF NOT EXISTS is_walkin BOOLEAN DEFAULT FALSE');
         await pool.query('ALTER TABLE restaurant_bookings ADD COLUMN IF NOT EXISTS arrived_at TIMESTAMPTZ');
         await pool.query('ALTER TABLE restaurant_bookings ADD COLUMN IF NOT EXISTS customer_id TEXT');
+        await pool.query("ALTER TABLE restaurant_bookings ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'website'");
+        await pool.query("UPDATE restaurant_bookings SET source = 'walkin' WHERE is_walkin = true AND (source IS NULL OR source = 'website')");
         await pool.query('CREATE INDEX IF NOT EXISTS idx_restaurant_bookings_status ON restaurant_bookings(status)');
         console.log('✅ Service-mode columns migration applied');
     } catch (e) {
