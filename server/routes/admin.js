@@ -1468,7 +1468,7 @@ router.post('/api/admin/newsletter/send', authMiddleware, upload.single('attachm
 // ============================================
 // TEMPORARY: Fix oversized Tapla-imported bookings
 // ============================================
-router.post('/fix-oversized-bookings', authMiddleware, async (req, res) => {
+router.post('/api/admin/fix-oversized-bookings', authMiddleware, async (req, res) => {
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
