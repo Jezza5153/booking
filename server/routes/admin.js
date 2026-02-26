@@ -338,6 +338,7 @@ router.get('/api/admin/stats', authMiddleware, async (req, res) => {
     const restaurantId = req.query.restaurantId || 'demo-restaurant';
     const from = req.query.from || new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
     const to = req.query.to || new Date().toISOString().split('T')[0];
+    console.log(`📊 Stats request: restaurantId=${restaurantId}, from=${from}, to=${to}`);
 
     try {
         // PERF: Run all 4 queries in parallel
@@ -401,6 +402,8 @@ router.get('/api/admin/stats', authMiddleware, async (req, res) => {
             cancellations: acc.cancellations + parseInt(row.cancellations),
             arrived: acc.arrived + parseInt(row.arrived)
         }), { bookings: 0, couverts: 0, walkins: 0, no_shows: 0, cancellations: 0, arrived: 0 });
+
+        console.log(`📊 Stats result: ${dailyResult.rows.length} days, totals:`, JSON.stringify(totals));
 
         const dayNames = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag'];
 

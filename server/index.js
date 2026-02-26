@@ -349,10 +349,22 @@ async function runMigrations() {
 
 // Start server: run migrations first, then listen
 runMigrations().then(() => {
-    const server = app.listen(PORT, () => {
+    const server = app.listen(PORT, async () => {
         console.log(`🚀 EVENTS API server running on http://localhost:${PORT}`);
         console.log(`📅 Calendar: http://localhost:${PORT}/api/calendar/demo-restaurant.ics`);
         console.log(`🔐 Auth: POST /api/auth/login`);
+
+        // Diagnostic: check booking data
+        try {
+            const diag = await pool.query(`
+                SELECT COUNT(*) as total, 
+                  MIN(booking_date)::text as earliest, MAX(booking_date)::text as latest,
+                  COUNT(*) FILTER (WHERE status != 'cancelled') as active,
+                  COUNT(*) FILTER (WHERE group_id IS NULL OR is_primary = true) as primary_only
+                FROM restaurant_bookings WHERE restaurant_id = 'demo-restaurant'`);
+            const d = diag.rows[0];
+            console.log(`📊 Booking data: ${d.total} total (${d.active} active, ${d.primary_only} primary), dates: ${d.earliest} → ${d.latest}`);
+        } catch (e) { console.warn('📊 Diagnostic failed:', e.message); }
         console.log(`🛡️  Security: Rate limiting, input validation, SERIALIZABLE transactions enabled`);
 
         // PERF: Self-ping every 4 min to keep Railway warm (eliminates ~1.7s cold start)
