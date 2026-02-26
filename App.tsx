@@ -51,23 +51,32 @@ const App: React.FC = () => {
       setSessionRestaurantId(storedRestaurantId);
     }
     if (token) {
-      // Verify token with server
-      fetch(`${API_BASE_URL}/api/auth/verify`, {
+      // Silently refresh token — get a fresh 30-day token on every app load
+      fetch(`${API_BASE_URL}/api/auth/refresh`, {
+        method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       })
         .then(res => {
           if (res.ok) {
-            setIsAuthenticated(true);
-          } else {
-            localStorage.removeItem('events_token');
-            localStorage.removeItem('events_user');
+            return res.json();
           }
+          throw new Error('Token expired');
+        })
+        .then(data => {
+          // Store the fresh token
+          localStorage.setItem('events_token', data.token);
+          if (data.restaurantId) {
+            localStorage.setItem('events_restaurantId', data.restaurantId);
+            setSessionRestaurantId(data.restaurantId);
+          }
+          setIsAuthenticated(true);
         })
         .catch(() => {
-          // FIX #20: Don't grant admin access when server is unreachable
-          console.warn('Auth verification failed: server unreachable');
+          // Token expired or server unreachable — force re-login
+          console.warn('Token refresh failed — re-login required');
           localStorage.removeItem('events_token');
           localStorage.removeItem('events_user');
+          localStorage.removeItem('events_restaurantId');
         })
         .finally(() => setIsCheckingAuth(false));
     } else {

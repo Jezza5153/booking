@@ -106,7 +106,7 @@ export function generateToken(userId, username, restaurantId) {
             role: 'admin'
         },
         JWT_SECRET,
-        { expiresIn: '24h', algorithm: 'HS256' }
+        { expiresIn: '30d', algorithm: 'HS256' }  // 30 days — iPad shouldn't need daily re-login
     );
 }
 
