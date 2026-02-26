@@ -43,9 +43,11 @@ export const ComparePeriods: React.FC<Props> = ({ restaurantId, currentRange, cu
     })
     const [compareData, setCompareData] = useState<PeriodData | null>(null)
     const [loading, setLoading] = useState(false)
+    const [fetchError, setFetchError] = useState(false)
 
     const fetchCompare = useCallback(async () => {
         setLoading(true)
+        setFetchError(false)
         try {
             const params = new URLSearchParams({ restaurantId, from: compareRange.from, to: compareRange.to })
             const res = await fetch(`${API_BASE_URL}/api/admin/stats?${params}`, {
@@ -66,7 +68,7 @@ export const ComparePeriods: React.FC<Props> = ({ restaurantId, currentRange, cu
                 avgPerDay: ad > 0 ? Math.round(c / ad) : 0,
                 activeDays: ad
             })
-        } catch (e) { console.error('Compare fetch error:', e); setCompareData(null) }
+        } catch (e) { console.error('Compare fetch error:', e); setCompareData(null); setFetchError(true) }
         finally { setLoading(false) }
     }, [compareRange, restaurantId, token])
 
@@ -123,6 +125,11 @@ export const ComparePeriods: React.FC<Props> = ({ restaurantId, currentRange, cu
             {loading ? (
                 <div className="animate-pulse grid grid-cols-3 gap-3">
                     {[1, 2, 3].map(i => <div key={i} className="h-20 bg-gray-100 rounded-lg" />)}
+                </div>
+            ) : fetchError ? (
+                <div className="text-center py-4">
+                    <div className="text-sm text-red-500 mb-2">Vergelijkingsdata kon niet geladen worden</div>
+                    <button onClick={fetchCompare} className="text-sm text-blue-600 font-medium hover:underline">Opnieuw proberen</button>
                 </div>
             ) : compareData ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">

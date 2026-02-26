@@ -1034,8 +1034,8 @@ router.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
             const rowId = i === 0 ? primaryBookingId : crypto.randomUUID();
             const isPrimary = i === 0;
             await client.query(
-                `INSERT INTO restaurant_bookings (id, restaurant_id, table_id, booking_date, start_time, end_time, guest_count, customer_name, customer_email, customer_phone, remarks, customer_id, group_id, is_primary)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+                `INSERT INTO restaurant_bookings (id, restaurant_id, table_id, booking_date, start_time, end_time, guest_count, customer_name, customer_email, customer_phone, remarks, customer_id, group_id, is_primary, source)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'website')`,
                 [rowId, restaurant_id, tbl.id, date, time, endTime, guest_count, customer_name, customer_email, customer_phone, isPrimary ? remarks : null, customerId, groupId, isPrimary]
             );
         }

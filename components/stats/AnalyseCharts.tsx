@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { TrendingDown, ChevronDown } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from 'recharts'
 import type { DayStats, Comparison, PartySizeBucket, LeadTimeBucket, TableUtil } from './types'
@@ -39,20 +39,20 @@ export const AnalyseCharts: React.FC<Props> = ({ stats, comparison, tableUtil, p
     const hasCancellations = stats.some(d => d.cancellations > 0 || d.noShows > 0)
     const maxTableCount = Math.max(...tableUtil.map(t => t.booking_count), 1)
 
-    // Time slot utilization data
-    const slotData = Array.from({ length: 12 }, (_, i) => {
+    // Time slot utilization data — memoized
+    const slotData = useMemo(() => Array.from({ length: 12 }, (_, i) => {
         const hour = i + 11
         const ph = peakHours.find(p => p.hour === hour)
         const count = ph?.count || 0
         const capacity = totalSeats * (activeDays || 1)
         return { hour: `${hour}:00`, boekingen: count, bezetting: capacity > 0 ? Math.min(100, Math.round(count / capacity * 100)) : 0 }
-    })
+    }), [peakHours, totalSeats, activeDays])
 
-    // First-time vs repeat data
-    const repeatData = repeatRate > 0 ? [
+    // First-time vs repeat data — memoized
+    const repeatData = useMemo(() => repeatRate > 0 ? [
         { name: 'Terugkerend', value: repeatRate },
         { name: 'Eerste bezoek', value: 100 - repeatRate },
-    ] : []
+    ] : [], [repeatRate])
 
     return (
         <div className="space-y-5">
