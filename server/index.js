@@ -287,6 +287,25 @@ async function runMigrations() {
         console.warn('⚠️ Service-mode migration skipped:', e.message);
     }
 
+    // Daily revenue table for manual revenue input
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS daily_revenue (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                restaurant_id TEXT NOT NULL,
+                date DATE NOT NULL,
+                revenue NUMERIC(10,2) NOT NULL DEFAULT 0,
+                notes TEXT,
+                created_at TIMESTAMPTZ DEFAULT now(),
+                updated_at TIMESTAMPTZ DEFAULT now(),
+                UNIQUE(restaurant_id, date)
+            )
+        `);
+        console.log('✅ Daily revenue table migration applied');
+    } catch (e) {
+        console.warn('⚠️ Daily revenue migration skipped:', e.message);
+    }
+
     // Auto-fix: redistribute oversized bookings (guest_count > table seats) across multiple tables
     // Catches: (1) no group_id at all, (2) group_id set but no secondary table entries
     try {

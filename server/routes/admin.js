@@ -333,16 +333,30 @@ router.get('/api/admin/bookings', authMiddleware, async (req, res) => {
     }
 });
 
-// Route: /api/admin/stats
+// Route: /api/admin/stats (ENHANCED — full analytics dashboard)
 router.get('/api/admin/stats', authMiddleware, async (req, res) => {
     const restaurantId = req.query.restaurantId || 'demo-restaurant';
     const from = req.query.from || new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
     const to = req.query.to || new Date().toISOString().split('T')[0];
-    console.log(`📊 Stats request: restaurantId=${restaurantId}, from=${from}, to=${to}`);
+
+    // Calculate previous period for comparison
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+    const periodDays = Math.round((toDate - fromDate) / 86400000);
+    const prevFrom = new Date(fromDate);
+    prevFrom.setDate(prevFrom.getDate() - periodDays);
+    const prevTo = from; // previous period ends where current starts
 
     try {
-        // PERF: Run all 4 queries in parallel
-        const [dailyResult, peakHoursResult, avgResult, busiestDayResult] = await Promise.all([
+        const baseWhere = `restaurant_id = $1 AND (group_id IS NULL OR is_primary = true)`;
+        const activeWhere = `${baseWhere} AND status != 'cancelled'`;
+
+        // Run ALL queries in parallel for performance
+        const [
+            dailyResult, peakHoursResult, avgResult, busiestDayResult,
+            prevResult, heatmapResult, tableUtilResult, repeatResult, revenueResult
+        ] = await Promise.all([
+            // 1. Daily breakdown (current period)
             pool.query(
                 `SELECT 
                     booking_date::text as date,
@@ -353,47 +367,90 @@ router.get('/api/admin/stats', authMiddleware, async (req, res) => {
                     COUNT(*) FILTER (WHERE status = 'cancelled') as cancellations,
                     COUNT(*) FILTER (WHERE status = 'arrived') as arrived
                 FROM restaurant_bookings
-                WHERE restaurant_id = $1 AND booking_date BETWEEN $2 AND $3
-                  AND (group_id IS NULL OR is_primary = true)
-                GROUP BY booking_date
-                ORDER BY booking_date`,
+                WHERE ${baseWhere} AND booking_date BETWEEN $2 AND $3
+                GROUP BY booking_date ORDER BY booking_date`,
                 [restaurantId, from, to]
             ),
+            // 2. Peak hours
+            pool.query(
+                `SELECT EXTRACT(HOUR FROM start_time::time) as hour, COUNT(*) as count
+                FROM restaurant_bookings
+                WHERE ${activeWhere} AND booking_date BETWEEN $2 AND $3
+                GROUP BY EXTRACT(HOUR FROM start_time::time) ORDER BY count DESC`,
+                [restaurantId, from, to]
+            ),
+            // 3. Averages
+            pool.query(
+                `SELECT ROUND(AVG(guest_count), 1) as avg_party_size, COUNT(DISTINCT booking_date) as active_days
+                FROM restaurant_bookings
+                WHERE ${activeWhere} AND booking_date BETWEEN $2 AND $3`,
+                [restaurantId, from, to]
+            ),
+            // 4. Busiest day of week
+            pool.query(
+                `SELECT EXTRACT(DOW FROM booking_date) as day_of_week, COUNT(*) as count
+                FROM restaurant_bookings
+                WHERE ${activeWhere} AND booking_date BETWEEN $2 AND $3
+                GROUP BY EXTRACT(DOW FROM booking_date) ORDER BY count DESC LIMIT 1`,
+                [restaurantId, from, to]
+            ),
+            // 5. PREVIOUS PERIOD comparison totals
             pool.query(
                 `SELECT 
-                    EXTRACT(HOUR FROM start_time::time) as hour,
+                    COUNT(*) FILTER (WHERE status != 'cancelled') as bookings,
+                    COALESCE(SUM(guest_count) FILTER (WHERE status != 'cancelled'), 0) as couverts,
+                    COUNT(*) FILTER (WHERE is_walkin = true AND status != 'cancelled') as walkins,
+                    COUNT(*) FILTER (WHERE status = 'no_show') as no_shows
+                FROM restaurant_bookings
+                WHERE ${baseWhere} AND booking_date BETWEEN $2 AND $3`,
+                [restaurantId, prevFrom.toISOString().split('T')[0], prevTo]
+            ),
+            // 6. HOURLY HEATMAP (day_of_week × hour)
+            pool.query(
+                `SELECT 
+                    EXTRACT(DOW FROM booking_date)::int as dow,
+                    EXTRACT(HOUR FROM start_time::time)::int as hour,
                     COUNT(*) as count
                 FROM restaurant_bookings
-                WHERE restaurant_id = $1 AND booking_date BETWEEN $2 AND $3 AND status != 'cancelled'
-                  AND (group_id IS NULL OR is_primary = true)
-                GROUP BY EXTRACT(HOUR FROM start_time::time)
-                ORDER BY count DESC`,
+                WHERE ${activeWhere} AND booking_date BETWEEN $2 AND $3
+                GROUP BY EXTRACT(DOW FROM booking_date), EXTRACT(HOUR FROM start_time::time)`,
                 [restaurantId, from, to]
             ),
+            // 7. TABLE UTILIZATION
+            pool.query(
+                `SELECT rt.id, rt.name, rt.seats, rt.zone,
+                    COUNT(rb.id) as booking_count,
+                    COALESCE(SUM(rb.guest_count), 0) as total_guests
+                FROM restaurant_tables rt
+                LEFT JOIN restaurant_bookings rb 
+                    ON rb.table_id = rt.id AND rb.booking_date BETWEEN $2 AND $3 
+                    AND rb.status != 'cancelled' AND (rb.group_id IS NULL OR rb.is_primary = true)
+                WHERE rt.restaurant_id = $1 AND rt.is_active = true
+                GROUP BY rt.id, rt.name, rt.seats, rt.zone
+                ORDER BY booking_count DESC`,
+                [restaurantId, from, to]
+            ),
+            // 8. REPEAT CUSTOMERS
             pool.query(
                 `SELECT 
-                    ROUND(AVG(guest_count), 1) as avg_party_size,
-                    COUNT(DISTINCT booking_date) as active_days
+                    COUNT(*) as total_bookings,
+                    COUNT(*) FILTER (WHERE customer_visits > 1) as repeat_bookings,
+                    COUNT(DISTINCT customer_email) FILTER (WHERE customer_visits > 1) as repeat_customers
                 FROM restaurant_bookings
-                WHERE restaurant_id = $1 AND booking_date BETWEEN $2 AND $3 AND status != 'cancelled'
-                  AND (group_id IS NULL OR is_primary = true)`,
+                WHERE ${activeWhere} AND booking_date BETWEEN $2 AND $3`,
                 [restaurantId, from, to]
             ),
+            // 9. DAILY REVENUE (left join)
             pool.query(
-                `SELECT 
-                    EXTRACT(DOW FROM booking_date) as day_of_week,
-                    COUNT(*) as count
-                FROM restaurant_bookings
-                WHERE restaurant_id = $1 AND booking_date BETWEEN $2 AND $3 AND status != 'cancelled'
-                  AND (group_id IS NULL OR is_primary = true)
-                GROUP BY EXTRACT(DOW FROM booking_date)
-                ORDER BY count DESC
-                LIMIT 1`,
+                `SELECT date::text, revenue::float, notes 
+                FROM daily_revenue 
+                WHERE restaurant_id = $1 AND date BETWEEN $2 AND $3
+                ORDER BY date`,
                 [restaurantId, from, to]
-            ),
+            ).catch(() => ({ rows: [] })) // table might not exist yet
         ]);
 
-        // Totals
+        // Compute totals
         const totals = dailyResult.rows.reduce((acc, row) => ({
             bookings: acc.bookings + parseInt(row.bookings),
             couverts: acc.couverts + parseInt(row.couverts),
@@ -403,23 +460,128 @@ router.get('/api/admin/stats', authMiddleware, async (req, res) => {
             arrived: acc.arrived + parseInt(row.arrived)
         }), { bookings: 0, couverts: 0, walkins: 0, no_shows: 0, cancellations: 0, arrived: 0 });
 
-        console.log(`📊 Stats result: ${dailyResult.rows.length} days, totals:`, JSON.stringify(totals));
+        // Previous period totals for comparison
+        const prev = prevResult.rows[0] || {};
+        const prevTotals = {
+            bookings: parseInt(prev.bookings) || 0,
+            couverts: parseInt(prev.couverts) || 0,
+            walkins: parseInt(prev.walkins) || 0,
+            no_shows: parseInt(prev.no_shows) || 0
+        };
+
+        // Calculate % change
+        const pctChange = (curr, prev) => prev > 0 ? Math.round(((curr - prev) / prev) * 100) : (curr > 0 ? 100 : 0);
+        const comparison = {
+            bookings: pctChange(totals.bookings, prevTotals.bookings),
+            couverts: pctChange(totals.couverts, prevTotals.couverts),
+            walkins: pctChange(totals.walkins, prevTotals.walkins),
+            no_shows: pctChange(totals.no_shows, prevTotals.no_shows)
+        };
+
+        // Revenue totals
+        const totalRevenue = revenueResult.rows.reduce((s, r) => s + (r.revenue || 0), 0);
+        const revenueMap = {};
+        for (const r of revenueResult.rows) revenueMap[r.date] = { revenue: r.revenue, notes: r.notes };
+
+        // Repeat rate
+        const repeatData = repeatResult.rows[0] || {};
+        const repeatRate = parseInt(repeatData.total_bookings) > 0
+            ? Math.round((parseInt(repeatData.repeat_bookings) || 0) / parseInt(repeatData.total_bookings) * 100)
+            : 0;
 
         const dayNames = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag'];
 
         res.set('Cache-Control', 'private, max-age=30');
         res.json({
-            daily: dailyResult.rows,
+            daily: dailyResult.rows.map(r => ({
+                ...r,
+                revenue: revenueMap[r.date]?.revenue || null,
+                revenue_notes: revenueMap[r.date]?.notes || null
+            })),
             totals,
+            comparison,
             peak_hours: peakHoursResult.rows.map(r => ({ hour: parseInt(r.hour), count: parseInt(r.count) })),
             avg_party_size: parseFloat(avgResult.rows[0]?.avg_party_size) || 0,
             active_days: parseInt(avgResult.rows[0]?.active_days) || 0,
             busiest_day: busiestDayResult.rows[0] ? dayNames[parseInt(busiestDayResult.rows[0].day_of_week)] : null,
+            heatmap: heatmapResult.rows.map(r => ({ dow: parseInt(r.dow), hour: parseInt(r.hour), count: parseInt(r.count) })),
+            table_utilization: tableUtilResult.rows.map(r => ({
+                id: r.id, name: r.name, seats: r.seats, zone: r.zone,
+                booking_count: parseInt(r.booking_count), total_guests: parseInt(r.total_guests)
+            })),
+            repeat_rate: repeatRate,
+            repeat_customers: parseInt(repeatData.repeat_customers) || 0,
+            revenue: { total: totalRevenue, avg_per_couvert: totals.couverts > 0 ? Math.round(totalRevenue / totals.couverts * 100) / 100 : 0 },
             period: { from, to }
         });
     } catch (error) {
         console.error('Stats error:', error.message);
         res.status(500).json({ error: 'Failed to fetch stats' });
+    }
+});
+
+// Route: PUT /api/admin/daily-revenue — save/update daily revenue
+router.put('/api/admin/daily-revenue', authMiddleware, async (req, res) => {
+    const restaurantId = req.body.restaurantId || req.query.restaurantId || 'demo-restaurant';
+    const { date, revenue, notes } = req.body;
+
+    if (!date || revenue === undefined) {
+        return res.status(400).json({ error: 'date and revenue are required' });
+    }
+
+    try {
+        await pool.query(
+            `INSERT INTO daily_revenue (restaurant_id, date, revenue, notes, updated_at)
+             VALUES ($1, $2, $3, $4, now())
+             ON CONFLICT (restaurant_id, date) 
+             DO UPDATE SET revenue = $3, notes = $4, updated_at = now()`,
+            [restaurantId, date, parseFloat(revenue), notes || null]
+        );
+        res.json({ success: true, date, revenue: parseFloat(revenue) });
+    } catch (error) {
+        console.error('Revenue save error:', error.message);
+        res.status(500).json({ error: 'Failed to save revenue' });
+    }
+});
+
+// Route: GET /api/admin/stats/export — CSV export
+router.get('/api/admin/stats/export', authMiddleware, async (req, res) => {
+    const restaurantId = req.query.restaurantId || 'demo-restaurant';
+    const from = req.query.from || new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
+    const to = req.query.to || new Date().toISOString().split('T')[0];
+
+    try {
+        const result = await pool.query(
+            `SELECT 
+                rb.booking_date::text as datum,
+                COUNT(*) FILTER (WHERE rb.status != 'cancelled') as boekingen,
+                COALESCE(SUM(rb.guest_count) FILTER (WHERE rb.status != 'cancelled'), 0) as couverts,
+                COUNT(*) FILTER (WHERE rb.is_walkin = true AND rb.status != 'cancelled') as walkins,
+                COUNT(*) FILTER (WHERE rb.status = 'no_show') as no_shows,
+                COUNT(*) FILTER (WHERE rb.status = 'cancelled') as annuleringen,
+                COALESCE(dr.revenue, 0) as omzet
+            FROM restaurant_bookings rb
+            LEFT JOIN daily_revenue dr ON dr.restaurant_id = rb.restaurant_id AND dr.date = rb.booking_date
+            WHERE rb.restaurant_id = $1 AND rb.booking_date BETWEEN $2 AND $3
+              AND (rb.group_id IS NULL OR rb.is_primary = true)
+            GROUP BY rb.booking_date, dr.revenue
+            ORDER BY rb.booking_date`,
+            [restaurantId, from, to]
+        );
+
+        // Build CSV
+        const headers = ['Datum', 'Boekingen', 'Couverts', 'Walk-ins', 'No-shows', 'Annuleringen', 'Omzet (€)'];
+        const rows = result.rows.map(r =>
+            [r.datum, r.boekingen, r.couverts, r.walkins, r.no_shows, r.annuleringen, r.omzet].join(',')
+        );
+        const csv = [headers.join(','), ...rows].join('\n');
+
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="stats-${from}-${to}.csv"`);
+        res.send('\uFEFF' + csv); // BOM for Excel compatibility
+    } catch (error) {
+        console.error('CSV export error:', error.message);
+        res.status(500).json({ error: 'Failed to export stats' });
     }
 });
 
