@@ -363,7 +363,8 @@ router.get('/api/admin/stats', authMiddleware, async (req, res) => {
             prevResult, prevDailyResult, prevRevenueResult,
             heatmapResult, tableUtilResult, repeatResult, revenueResult,
             partySizeResult, leadTimeResult, prevDailyRevenueResult,
-            yoyBookingsResult, yoyRevenueResult, weekdayAvgResult, sourceResult
+            yoyBookingsResult, yoyRevenueResult, weekdayAvgResult, sourceResult,
+            customerFreqResult
         ] = await Promise.all([
             // 1. Daily breakdown (current period)
             pool.query(
@@ -565,6 +566,27 @@ router.get('/api/admin/stats', authMiddleware, async (req, res) => {
                 WHERE ${baseWhere} AND booking_date BETWEEN $2 AND $3
                 GROUP BY 1 ORDER BY 2 DESC`,
                 [restaurantId, from, to]
+            ).catch(() => ({ rows: [] })),
+            // 17. CUSTOMER BOOKING FREQUENCY (all-time per email)
+            pool.query(
+                `SELECT 
+                    booking_count as times,
+                    COUNT(*) as customers,
+                    SUM(booking_count) as total_bookings,
+                    SUM(total_couverts) as total_couverts
+                FROM (
+                    SELECT customer_email, 
+                        COUNT(*) FILTER (WHERE status != 'cancelled') as booking_count,
+                        COALESCE(SUM(guest_count) FILTER (WHERE status != 'cancelled'), 0) as total_couverts
+                    FROM restaurant_bookings
+                    WHERE restaurant_id = $1 AND (group_id IS NULL OR is_primary = true)
+                        AND customer_email IS NOT NULL AND customer_email != ''
+                    GROUP BY customer_email
+                ) sub
+                WHERE booking_count > 0
+                GROUP BY booking_count
+                ORDER BY booking_count`,
+                [restaurantId]
             ).catch(() => ({ rows: [] }))
         ]);
 
@@ -677,6 +699,12 @@ router.get('/api/admin/stats', authMiddleware, async (req, res) => {
                 source: r.source,
                 bookings: parseInt(r.bookings) || 0,
                 couverts: parseInt(r.couverts) || 0
+            })),
+            customer_frequency: (customerFreqResult?.rows || []).map(r => ({
+                times: parseInt(r.times) || 0,
+                customers: parseInt(r.customers) || 0,
+                total_bookings: parseInt(r.total_bookings) || 0,
+                total_couverts: parseInt(r.total_couverts) || 0
             }))
         });
     } catch (error) {

@@ -17,6 +17,7 @@ import { RevenueQuickEntry } from './stats/RevenueQuickEntry'
 import { WeekdayAverages } from './stats/WeekdayAverages'
 import { SourceBreakdown } from './stats/SourceBreakdown'
 import { ComparePeriods } from './stats/ComparePeriods'
+import { ReturnCustomers } from './stats/ReturnCustomers'
 
 interface YoyData { bookings: number | null; couverts: number | null; revenue: number | null; has_data: boolean }
 
@@ -74,6 +75,7 @@ export const BookingStats: React.FC<Props> = ({ restaurantId, onBack }) => {
     const [yoy, setYoy] = useState<YoyData>({ bookings: null, couverts: null, revenue: null, has_data: false })
     const [weekdayAvgs, setWeekdayAvgs] = useState<{ dow: number; avg_bookings: number; avg_couverts: number }[]>([])
     const [sources, setSources] = useState<{ source: string; bookings: number; couverts: number }[]>([])
+    const [customerFreq, setCustomerFreq] = useState<{ times: number; customers: number; total_bookings: number; total_couverts: number }[]>([])
     const [chartMetric, setChartMetric] = useState<ChartMetric>('couverts')
     const [selectedDay, setSelectedDay] = useState<DayStats | null>(null)
     const [selectedMetric, setSelectedMetric] = useState<MetricDetail | null>(null)
@@ -123,6 +125,7 @@ export const BookingStats: React.FC<Props> = ({ restaurantId, onBack }) => {
             setYoy(data.yoy || { bookings: null, couverts: null, revenue: null, has_data: false })
             setWeekdayAvgs(data.weekday_averages || [])
             setSources(data.source_breakdown || [])
+            setCustomerFreq(data.customer_frequency || [])
             setLastUpdated(new Date())
         } catch (e) { console.error('Stats fetch error:', e); setError(true); setStats([]) }
         finally { setLoading(false) }
@@ -308,6 +311,7 @@ export const BookingStats: React.FC<Props> = ({ restaurantId, onBack }) => {
                                     }}
                                     token={token}
                                 />
+                                <ReturnCustomers frequency={customerFreq} />
                             </div>
                         )}
                         {tab === 'dagelijks' && (
