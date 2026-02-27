@@ -900,6 +900,51 @@ router.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
     }
 });
 
+// Route: /api/restaurant/:restaurantId/couverts-today
+// Lightweight endpoint for iOS Shortcuts — returns today's total couverts
+router.get('/api/restaurant/:restaurantId/couverts-today', async (req, res) => {
+    const { restaurantId } = req.params;
+    // Optional: query a specific date, otherwise default to today (Amsterdam TZ)
+    const nowAmsterdam = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Amsterdam' }));
+    const date = req.query.date || nowAmsterdam.toISOString().split('T')[0];
+    const currentTime = `${nowAmsterdam.getHours().toString().padStart(2, '0')}:${nowAmsterdam.getMinutes().toString().padStart(2, '0')}`;
+
+    try {
+        const result = await pool.query(
+            `SELECT 
+                COALESCE(SUM(guest_count) FILTER (WHERE is_primary = true AND status != 'cancelled'), 0)::int as total_couverts,
+                COUNT(*) FILTER (WHERE is_primary = true AND status != 'cancelled')::int as total_bookings,
+                COUNT(*) FILTER (WHERE is_primary = true AND status = 'arrived')::int as arrived,
+                COUNT(*) FILTER (WHERE is_primary = true AND status = 'confirmed')::int as upcoming,
+                MIN(start_time) FILTER (WHERE is_primary = true AND status = 'confirmed' AND start_time >= $3::time) as next_booking_time
+             FROM restaurant_bookings
+             WHERE restaurant_id = $1 AND booking_date = $2`,
+            [restaurantId, date, currentTime]
+        );
+
+        const row = result.rows[0];
+        const [yr, mo, dy] = date.split('-').map(Number);
+        const dateLabel = new Date(yr, mo - 1, dy).toLocaleDateString('nl-NL', {
+            weekday: 'long', day: 'numeric', month: 'long'
+        });
+
+        res.json({
+            date,
+            date_label: dateLabel,
+            total_couverts: row.total_couverts,
+            total_bookings: row.total_bookings,
+            arrived: row.arrived,
+            upcoming: row.upcoming,
+            next_booking: row.next_booking_time ? row.next_booking_time.substring(0, 5) : null,
+            // Short summary for Siri / notifications
+            summary: `${row.total_couverts} couverts (${row.total_bookings} boekingen) — ${dateLabel}`
+        });
+    } catch (error) {
+        console.error('Couverts-today error:', error);
+        res.status(500).json({ error: 'Failed to fetch couverts' });
+    }
+});
+
 // Route: /api/restaurant/book
 router.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
     const { restaurant_id, date, time, guest_count, customer_name, customer_email, customer_phone, remarks, newsletter_opt_in } = req.body;
