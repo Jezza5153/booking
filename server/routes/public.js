@@ -924,9 +924,14 @@ router.get('/api/restaurant/:restaurantId/couverts-today', async (req, res) => {
 
         const row = result.rows[0];
         const [yr, mo, dy] = date.split('-').map(Number);
-        const dateLabel = new Date(yr, mo - 1, dy).toLocaleDateString('nl-NL', {
+        const lang = req.query.lang === 'en' ? 'en-US' : 'nl-NL';
+        const dateLabel = new Date(yr, mo - 1, dy).toLocaleDateString(lang, {
             weekday: 'long', day: 'numeric', month: 'long'
         });
+
+        const summary = lang === 'en-US'
+            ? `${row.total_couverts} guests across ${row.total_bookings} bookings — ${dateLabel}`
+            : `${row.total_couverts} couverts (${row.total_bookings} boekingen) — ${dateLabel}`;
 
         res.json({
             date,
@@ -936,8 +941,7 @@ router.get('/api/restaurant/:restaurantId/couverts-today', async (req, res) => {
             arrived: row.arrived,
             upcoming: row.upcoming,
             next_booking: row.next_booking_time ? row.next_booking_time.substring(0, 5) : null,
-            // Short summary for Siri / notifications
-            summary: `${row.total_couverts} couverts (${row.total_bookings} boekingen) — ${dateLabel}`
+            summary
         });
     } catch (error) {
         console.error('Couverts-today error:', error);
