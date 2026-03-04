@@ -1360,7 +1360,7 @@ router.get('/api/admin/restaurant-bookings', authMiddleware, async (req, res) =>
                   AND sibling.is_primary IS DISTINCT FROM true
                 GROUP BY sibling.group_id
             )
-            SELECT rb.id, rb.table_id, rb.start_time::text, rb.end_time::text, 
+            SELECT rb.id, rb.table_id, to_char(rb.start_time, 'HH24:MI') as start_time, to_char(rb.end_time, 'HH24:MI') as end_time, 
                     rb.guest_count, rb.customer_name, rb.customer_email, rb.customer_phone,
                     rb.status, COALESCE(rt.name, 'Geen tafel') as table_name,
                     rb.remarks, rb.customer_id, rb.group_id, rb.is_primary,
@@ -1392,7 +1392,7 @@ router.get('/api/admin/customer-history', authMiddleware, async (req, res) => {
         let result;
         if (customerId) {
             result = await pool.query(
-                `SELECT rb.booking_date::text, rb.start_time::text, rb.guest_count, 
+                `SELECT rb.booking_date::text, to_char(rb.start_time, 'HH24:MI') as start_time, rb.guest_count, 
                         rb.status, rb.remarks, rb.customer_name,
                         COALESCE(rt.name, '-') as table_name
                  FROM restaurant_bookings rb
@@ -1404,7 +1404,7 @@ router.get('/api/admin/customer-history', authMiddleware, async (req, res) => {
             );
         } else if (email) {
             result = await pool.query(
-                `SELECT rb.booking_date::text, rb.start_time::text, rb.guest_count, 
+                `SELECT rb.booking_date::text, to_char(rb.start_time, 'HH24:MI') as start_time, rb.guest_count, 
                         rb.status, rb.remarks, rb.customer_name,
                         COALESCE(rt.name, '-') as table_name
                  FROM restaurant_bookings rb

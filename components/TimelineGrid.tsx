@@ -208,6 +208,9 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
     // View mode: day or week
     const [viewMode, setViewMode] = useState<'day' | 'week'>('day')
 
+    // Helper: strip seconds from time strings (e.g. "17:30:00" → "17:30")
+    const fmtTime = (t: string) => t?.slice(0, 5) || t
+
     // Waitlist
     const [waitlist, setWaitlist] = useState<Array<{
         id: string
@@ -1598,7 +1601,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                         <div>
                                             <div className="font-medium text-gray-900">{showBookingDetail.customer_name}</div>
                                             <div className="text-sm text-gray-500">
-                                                {showBookingDetail.start_time} - {showBookingDetail.end_time}
+                                                {fmtTime(showBookingDetail.start_time)} - {fmtTime(showBookingDetail.end_time)}
                                             </div>
                                         </div>
                                         {Number(showBookingDetail.visit_count) > 0 && (
