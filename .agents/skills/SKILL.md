@@ -65,3 +65,28 @@ description: Tech stack, deployment, and architecture reference for the EVENTS b
 - Repo: `https://github.com/Jezza5153/booking.git`
 - Branch: `main`
 - GCloud accounts: `info@jezzacooks.com`, `info@tafelaaramersfoort.nl` (billing disabled)
+
+## Workflow Rules — FOLLOW THESE ALWAYS
+
+### 1. Code Only — No Browser Testing
+- **DO NOT** use browser subagent for testing — it can't log in
+- User handles all browser testing themselves
+- Focus on writing correct code, building, and pushing
+
+### 2. Read Before Writing
+- Always read the existing code FIRST before making changes
+- Understand the current implementation before modifying
+
+### 3. Deploy = Build + Push
+```bash
+npx vite build          # verify build
+git add -A && git commit -m "..." && git push   # auto-deploys to Vercel + Railway
+```
+
+### 4. Time Formatting
+- Backend: use `to_char(column, 'HH24:MI')` — never `::text`
+- Frontend: `fmtTime()` helper strips seconds as safety net
+
+### 5. Database Queries
+- Visit counts: only `status = 'arrived' AND booking_date <= CURRENT_DATE`
+- Never count future or cancelled bookings as visits
