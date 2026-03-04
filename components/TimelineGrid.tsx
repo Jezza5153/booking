@@ -1645,6 +1645,30 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                         )}
                                     </div>
 
+                                    {/* Edit button — always visible at top */}
+                                    <button
+                                        onClick={() => {
+                                            const b = showBookingDetail
+                                            const startMins = parseInt(b.start_time.split(':')[0]) * 60 + parseInt(b.start_time.split(':')[1])
+                                            const endMins = parseInt(b.end_time.split(':')[0]) * 60 + parseInt(b.end_time.split(':')[1])
+                                            setEditForm({
+                                                guest_count: b.guest_count,
+                                                customer_name: b.customer_name,
+                                                customer_phone: b.customer_phone || '',
+                                                customer_email: b.customer_email || '',
+                                                remarks: b.remarks || '',
+                                                time: b.start_time,
+                                                duration: endMins - startMins
+                                            })
+                                            setEditingBooking(b)
+                                            setShowBookingDetail(null)
+                                        }}
+                                        className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600"
+                                    >
+                                        <Edit3 className="w-4 h-4" />
+                                        Boeking bewerken
+                                    </button>
+
                                     {/* Multi-table indicator */}
                                     {(showBookingDetail.linked_tables || isGrouped) && (
                                         <div className="p-2 bg-blue-50 rounded-lg text-sm text-blue-800 flex items-center gap-2">
@@ -1687,31 +1711,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                         />
                                     )}
 
-                                    {/* Edit button */}
-                                    <div className="border-t pt-3">
-                                        <button
-                                            onClick={() => {
-                                                const b = showBookingDetail
-                                                const startMins = parseInt(b.start_time.split(':')[0]) * 60 + parseInt(b.start_time.split(':')[1])
-                                                const endMins = parseInt(b.end_time.split(':')[0]) * 60 + parseInt(b.end_time.split(':')[1])
-                                                setEditForm({
-                                                    guest_count: b.guest_count,
-                                                    customer_name: b.customer_name,
-                                                    customer_phone: b.customer_phone || '',
-                                                    customer_email: b.customer_email || '',
-                                                    remarks: b.remarks || '',
-                                                    time: b.start_time,
-                                                    duration: endMins - startMins
-                                                })
-                                                setEditingBooking(b)
-                                                setShowBookingDetail(null)
-                                            }}
-                                            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 mb-3"
-                                        >
-                                            <Edit3 className="w-4 h-4" />
-                                            Boeking bewerken
-                                        </button>
-                                    </div>
+
 
                                     {/* Status buttons */}
                                     <div className="border-t pt-3">
