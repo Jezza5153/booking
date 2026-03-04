@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react"
 import { fetchBookings, cancelBooking, bookTable, fetchAdminData, RESTAURANT_ID, API_BASE_URL } from "../api"
-import { Search, RefreshCw, Download, X, AlertTriangle, Plus, Calendar, Users, MessageSquare, Mail, ChevronLeft, ChevronRight, Phone, UserCheck, UserX, Check } from "lucide-react"
+import { Search, RefreshCw, Download, X, AlertTriangle, Plus, Calendar, Users, MessageSquare, Mail, ChevronLeft, ChevronRight, Phone, UserCheck, UserX, Check, Edit3 } from "lucide-react"
 
 const TZ = "Europe/Amsterdam"
 
@@ -80,9 +80,15 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
         date: new Date().toISOString().split('T')[0],
         time: '18:00',
         remarks: '',
-        event_id: ''
+        event_id: '',
+        duration: 180
     })
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [editingBooking, setEditingBooking] = useState<RestaurantBooking | null>(null)
+    const [editForm, setEditForm] = useState({
+        guest_count: 2, customer_name: '', customer_email: '', customer_phone: '',
+        remarks: '', time: '', duration: 180
+    })
 
     // Fetch event bookings and all events
     const fetchData = async () => {
@@ -215,7 +221,7 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                 setBookingForm({
                     customer_name: '', customer_email: '', customer_phone: '',
                     guest_count: 2, date: new Date().toISOString().split('T')[0],
-                    time: '18:00', remarks: '', event_id: ''
+                    time: '18:00', remarks: '', event_id: '', duration: 180
                 })
                 await fetchData()
             } else {
@@ -250,7 +256,8 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                     customer_email: bookingForm.customer_email,
                     customer_phone: bookingForm.customer_phone,
                     guest_count: bookingForm.guest_count,
-                    remarks: bookingForm.remarks
+                    remarks: bookingForm.remarks,
+                    duration: bookingForm.duration
                 })
             })
             if (res.ok) {
@@ -258,7 +265,7 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                 setBookingForm({
                     customer_name: '', customer_email: '', customer_phone: '',
                     guest_count: 2, date: new Date().toISOString().split('T')[0],
-                    time: '18:00', remarks: '', event_id: ''
+                    time: '18:00', remarks: '', event_id: '', duration: 180
                 })
                 await fetchTimelineData()
             } else {
@@ -341,12 +348,12 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
     }, [timelineDate, openingHours])
 
     return (
-        <div className="w-full max-w-7xl mx-auto p-6">
+        <div className="w-full max-w-7xl mx-auto px-3 sm:px-6">
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-2">
                 <div>
-                    <h2 className="text-2xl font-extrabold text-gray-900">Boekingen Overzicht</h2>
-                    <p className="text-sm text-gray-500 mt-1">Events links, Restaurant rechts</p>
+                    <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900">Boekingen Overzicht</h2>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-1">Events links, Restaurant rechts</p>
                 </div>
                 <div className="flex gap-2">
                     <button
@@ -360,7 +367,7 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
             </div>
 
             {/* Couverts Stats Bar */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
                 <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200 p-4">
                     <div className="flex items-center gap-2 mb-1">
                         <span className="text-lg">📊</span>
@@ -553,19 +560,22 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                         ) : (
                             <div className="overflow-x-auto">
                                 {/* Time Header */}
-                                <div className="flex border-b border-gray-200 sticky top-0 bg-white z-10">
-                                    <div className="w-24 shrink-0 px-3 py-2 bg-gray-50 text-xs font-medium text-gray-500 uppercase border-r border-gray-200">
+                                <div className="flex border-b-2 border-gray-300 sticky top-0 bg-white z-10">
+                                    <div className="w-24 shrink-0 px-2 py-2 bg-gray-100 text-xs font-bold text-gray-600 uppercase border-r-2 border-gray-300 flex items-center">
                                         Tafel
                                     </div>
                                     <div className="flex-1 flex">
-                                        {timeSlots.map((slot, i) => (
-                                            <div
-                                                key={slot}
-                                                className={`w-14 shrink-0 px-1 py-2 text-center text-[10px] font-medium ${i % 2 === 0 ? 'text-gray-700 bg-gray-50' : 'text-gray-400'} border-r border-gray-100`}
-                                            >
-                                                {slot}
-                                            </div>
-                                        ))}
+                                        {timeSlots.map((slot) => {
+                                            const isFullHour = slot.endsWith(':00')
+                                            return (
+                                                <div
+                                                    key={slot}
+                                                    className={`w-14 shrink-0 px-1 py-2 text-center text-[10px] font-semibold border-l ${isFullHour ? 'border-gray-300 bg-gray-50 text-gray-800' : 'border-gray-100 text-gray-400'}`}
+                                                >
+                                                    {slot}
+                                                </div>
+                                            )
+                                        })}
                                     </div>
                                 </div>
 
@@ -577,16 +587,19 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                                             key={table.id}
                                             className={`flex border-b border-gray-100 ${tableIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}
                                         >
-                                            <div className="w-24 shrink-0 px-3 py-2 flex items-center gap-2 border-r border-gray-200">
-                                                <span className="font-medium text-sm text-gray-900">{table.name}</span>
-                                                <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
-                                                    {table.seats}
+                                            <div className="w-24 shrink-0 px-2 py-2 flex items-center gap-1.5 border-r-2 border-gray-300 bg-gray-50/50">
+                                                <span className="font-semibold text-sm text-gray-900">{table.name}</span>
+                                                <span className="text-[10px] text-gray-400 bg-gray-200 px-1 py-0.5 rounded">
+                                                    {table.seats}p
                                                 </span>
                                             </div>
                                             <div className="flex-1 relative h-12 flex">
-                                                {timeSlots.map((_, i) => (
-                                                    <div key={i} className="w-14 shrink-0 border-r border-gray-100" />
-                                                ))}
+                                                {timeSlots.map((slot, i) => {
+                                                    const isFullHour = slot.endsWith(':00')
+                                                    return (
+                                                        <div key={i} className={`w-14 shrink-0 border-l ${isFullHour ? 'border-gray-300' : 'border-gray-100'}`} />
+                                                    )
+                                                })}
                                                 {/* Booking blocks */}
                                                 {tableBookings.map(booking => {
                                                     const startMins = parseInt(booking.start_time.split(':')[0]) * 60 + parseInt(booking.start_time.split(':')[1])
@@ -841,6 +854,32 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                                 </div>
                             )}
 
+                            {/* Edit button */}
+                            <div className="border-t pt-3">
+                                <button
+                                    onClick={() => {
+                                        const b = selectedRestaurantBooking
+                                        const startMins = parseInt(b.start_time.split(':')[0]) * 60 + parseInt(b.start_time.split(':')[1])
+                                        const endMins = parseInt(b.end_time.split(':')[0]) * 60 + parseInt(b.end_time.split(':')[1])
+                                        setEditForm({
+                                            guest_count: b.guest_count,
+                                            customer_name: b.customer_name,
+                                            customer_phone: b.customer_phone || '',
+                                            customer_email: b.customer_email || '',
+                                            remarks: b.remarks || '',
+                                            time: b.start_time,
+                                            duration: endMins - startMins
+                                        })
+                                        setEditingBooking(b)
+                                        setSelectedRestaurantBooking(null)
+                                    }}
+                                    className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 mb-3"
+                                >
+                                    <Edit3 className="w-4 h-4" />
+                                    Boeking bewerken
+                                </button>
+                            </div>
+
                             {/* Status buttons */}
                             <div className="border-t pt-3">
                                 <label className="text-xs text-gray-500 block mb-2">Status wijzigen</label>
@@ -1017,27 +1056,46 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                                     />
                                 </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Naam</label>
-                                    <input
-                                        type="text"
-                                        value={bookingForm.customer_name}
-                                        onChange={e => setBookingForm(f => ({ ...f, customer_name: e.target.value }))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                                        placeholder="Klantnaam"
-                                    />
-                                </div>
+                            <div className="grid grid-cols-3 gap-3">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Gasten</label>
                                     <input
                                         type="number"
                                         min="1"
+                                        max="50"
                                         value={bookingForm.guest_count}
                                         onChange={e => setBookingForm(f => ({ ...f, guest_count: parseInt(e.target.value) || 1 }))}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                                     />
                                 </div>
+                                <div className="col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Duur</label>
+                                    <select
+                                        value={bookingForm.duration}
+                                        onChange={e => setBookingForm(f => ({ ...f, duration: Number(e.target.value) }))}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                                    >
+                                        <option value={60}>1 uur</option>
+                                        <option value={90}>1.5 uur</option>
+                                        <option value={120}>2 uur</option>
+                                        <option value={150}>2.5 uur</option>
+                                        <option value={180}>3 uur</option>
+                                        <option value={210}>3.5 uur</option>
+                                        <option value={240}>4 uur</option>
+                                        <option value={300}>5 uur</option>
+                                        <option value={360}>6 uur</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Naam</label>
+                                <input
+                                    type="text"
+                                    value={bookingForm.customer_name}
+                                    onChange={e => setBookingForm(f => ({ ...f, customer_name: e.target.value }))}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                                    placeholder="Klantnaam"
+                                />
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
@@ -1084,6 +1142,161 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                                     className="flex-1 px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg font-bold hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50"
                                 >
                                     {isSubmitting ? 'Bezig...' : 'Boeken'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Restaurant Booking Modal */}
+            {editingBooking && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+                        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                    <Edit3 className="w-5 h-5" />
+                                    Boeking Bewerken
+                                </h3>
+                                <button onClick={() => setEditingBooking(null)} className="text-white/80 hover:text-white">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                        </div>
+                        <div className="p-4 space-y-4">
+                            <div className="grid grid-cols-3 gap-3">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Gasten</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="50"
+                                        value={editForm.guest_count}
+                                        onChange={e => setEditForm(f => ({ ...f, guest_count: parseInt(e.target.value) || 1 }))}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Tijd</label>
+                                    <input
+                                        type="time"
+                                        value={editForm.time}
+                                        onChange={e => setEditForm(f => ({ ...f, time: e.target.value }))}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Duur</label>
+                                    <select
+                                        value={editForm.duration}
+                                        onChange={e => setEditForm(f => ({ ...f, duration: Number(e.target.value) }))}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        <option value={60}>1 uur</option>
+                                        <option value={90}>1.5 uur</option>
+                                        <option value={120}>2 uur</option>
+                                        <option value={150}>2.5 uur</option>
+                                        <option value={180}>3 uur</option>
+                                        <option value={210}>3.5 uur</option>
+                                        <option value={240}>4 uur</option>
+                                        <option value={300}>5 uur</option>
+                                        <option value={360}>6 uur</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Naam *</label>
+                                <input
+                                    type="text"
+                                    value={editForm.customer_name}
+                                    onChange={e => setEditForm(f => ({ ...f, customer_name: e.target.value }))}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                    <input
+                                        type="email"
+                                        value={editForm.customer_email}
+                                        onChange={e => setEditForm(f => ({ ...f, customer_email: e.target.value }))}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Telefoon</label>
+                                    <input
+                                        type="tel"
+                                        value={editForm.customer_phone}
+                                        onChange={e => setEditForm(f => ({ ...f, customer_phone: e.target.value }))}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Opmerkingen</label>
+                                <textarea
+                                    value={editForm.remarks}
+                                    onChange={e => setEditForm(f => ({ ...f, remarks: e.target.value }))}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    rows={2}
+                                />
+                            </div>
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    onClick={() => setEditingBooking(null)}
+                                    className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium"
+                                >
+                                    Annuleren
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        if (!editForm.customer_name || isSubmitting) return
+                                        setIsSubmitting(true)
+                                        try {
+                                            const token = localStorage.getItem('events_token')
+                                            const [h, m] = editForm.time.split(':').map(Number)
+                                            const endMins = h * 60 + m + editForm.duration
+                                            const endTime = `${Math.floor(endMins / 60).toString().padStart(2, '0')}:${(endMins % 60).toString().padStart(2, '0')}`
+
+                                            const res = await fetch(`${API_BASE_URL}/api/admin/restaurant-bookings/${editingBooking.id}`, {
+                                                method: 'PATCH',
+                                                headers: {
+                                                    'Content-Type': 'application/json',
+                                                    'Authorization': `Bearer ${token}`
+                                                },
+                                                body: JSON.stringify({
+                                                    restaurantId,
+                                                    guest_count: editForm.guest_count,
+                                                    customer_name: editForm.customer_name,
+                                                    customer_phone: editForm.customer_phone,
+                                                    customer_email: editForm.customer_email,
+                                                    remarks: editForm.remarks,
+                                                    time: editForm.time,
+                                                    end_time: endTime,
+                                                    date: timelineDate
+                                                })
+                                            })
+
+                                            if (res.ok) {
+                                                setEditingBooking(null)
+                                                await fetchTimelineData()
+                                            } else {
+                                                const err = await res.json().catch(() => null)
+                                                alert(err?.error || 'Bewerken mislukt')
+                                            }
+                                        } catch (e) {
+                                            console.error('Failed to edit booking:', e)
+                                            alert('Bewerken mislukt')
+                                        } finally {
+                                            setIsSubmitting(false)
+                                        }
+                                    }}
+                                    disabled={!editForm.customer_name || isSubmitting}
+                                    className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-bold hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50"
+                                >
+                                    {isSubmitting ? 'Bezig...' : 'Opslaan'}
                                 </button>
                             </div>
                         </div>

@@ -951,7 +951,7 @@ router.get('/api/restaurant/:restaurantId/couverts-today', async (req, res) => {
 
 // Route: /api/restaurant/book
 router.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
-    const { restaurant_id, date, time, guest_count, customer_name, customer_email, customer_phone, remarks, newsletter_opt_in } = req.body;
+    const { restaurant_id, date, time, end_time: requestedEndTime, guest_count, customer_name, customer_email, customer_phone, remarks, newsletter_opt_in } = req.body;
 
     // FIX #43: Validate restaurant_id format
     if (!restaurant_id || typeof restaurant_id !== 'string' || !/^[a-zA-Z0-9_-]{1,64}$/.test(restaurant_id)) {
@@ -975,9 +975,9 @@ router.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
         return res.status(400).json({ error: 'Ongeldig e-mailadres' });
     }
 
-    // P4: Increased cap for real-life scenarios (birthday parties, company dinners)
-    if (guest_count < 1 || guest_count > 20) {
-        return res.status(400).json({ error: 'Guest count must be between 1 and 20' });
+    // P4: Increased cap for real-life scenarios (birthday parties, company dinners, large groups)
+    if (guest_count < 1 || guest_count > 50) {
+        return res.status(400).json({ error: 'Guest count must be between 1 and 50' });
     }
 
     // FIX #36: Reject bookings in the past
@@ -1001,7 +1001,16 @@ router.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
             [restaurant_id, dayOfWeek]
         );
         const closeTime = openingQ.rows[0]?.close_time || '23:59';
-        const endTime = computeEndTime(time, closeTime);
+        // Use frontend-supplied end_time when provided (quick-book with custom duration);
+        // otherwise compute from default duration, always capped at closing time.
+        let endTime;
+        if (requestedEndTime) {
+            const closeMins = timeToMins(closeTime);
+            const reqEndMins = timeToMins(requestedEndTime);
+            endTime = reqEndMins <= closeMins ? requestedEndTime : minsToTime(closeMins);
+        } else {
+            endTime = computeEndTime(time, closeTime);
+        }
 
         // Reject bookings at or after closing time (zero-length booking)
         if (timeToMins(endTime) <= timeToMins(time)) {

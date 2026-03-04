@@ -214,11 +214,12 @@ export function minsToTime(m) {
     return `${Math.floor(m / 60).toString().padStart(2, '0')}:${(m % 60).toString().padStart(2, '0')}`;
 }
 
-/** Compute booking end time, capped at closing */
-export function computeEndTime(startTime, closeTime) {
+/** Compute booking end time, capped at closing. Optional durationMins overrides default. */
+export function computeEndTime(startTime, closeTime, durationMins) {
     const startMins = timeToMins(startTime);
     const closeMins = timeToMins(closeTime);
-    return minsToTime(Math.min(startMins + BOOKING_DURATION_MINS, closeMins));
+    const duration = durationMins || BOOKING_DURATION_MINS;
+    return minsToTime(Math.min(startMins + duration, closeMins));
 }
 
 /** Check if two time intervals overlap. Compares as minutes to avoid format bugs. */

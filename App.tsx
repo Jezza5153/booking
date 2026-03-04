@@ -175,87 +175,63 @@ const App: React.FC = () => {
 
       {/* Top Navigation Bar */}
       <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
+        <div className="max-w-6xl mx-auto px-2 sm:px-4">
+          <div className="flex items-center justify-between h-14 sm:h-16">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-black flex items-center justify-center shadow-md">
                 <span className="text-white font-bold text-lg tracking-wider">E</span>
               </div>
-              <span className="font-bold text-xl tracking-tight text-gray-900">EVENTS <span className="text-xs text-gray-400 font-normal uppercase ml-1">Manager</span></span>
+              <span className="font-bold text-lg sm:text-xl tracking-tight text-gray-900 hidden sm:inline">EVENTS <span className="text-xs text-gray-400 font-normal uppercase ml-1">Manager</span></span>
             </div>
 
-            <div className="flex items-center gap-4">
-              <div className="flex items-center bg-gray-100 p-1 rounded-lg overflow-x-auto">
-                <button
-                  onClick={() => setView('widget')}
-                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-2 whitespace-nowrap ${view === 'widget' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
-                >
-                  <Smartphone className="w-4 h-4" />
-                  Preview
-                </button>
-                <button
-                  onClick={() => setView('calendar')}
-                  onMouseEnter={prefetchMap.calendar}
-                  onTouchStart={prefetchMap.calendar}
-                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-2 whitespace-nowrap ${view === 'calendar' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
-                >
-                  <CalendarIcon className="w-4 h-4" />
-                  Schedule
-                </button>
-                <button
-                  onClick={() => setView('admin')}
-                  onMouseEnter={prefetchMap.admin}
-                  onTouchStart={prefetchMap.admin}
-                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-2 whitespace-nowrap ${view === 'admin' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
-                >
-                  <Settings className="w-4 h-4" />
-                  Editor
-                </button>
-                <button
-                  onClick={() => setView('bookings')}
-                  onMouseEnter={prefetchMap.bookings}
-                  onTouchStart={prefetchMap.bookings}
-                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-2 whitespace-nowrap ${view === 'bookings' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
-                >
-                  <Users className="w-4 h-4" />
-                  Boekingen
-                </button>
-                <button
-                  onClick={() => setView('timeline')}
-                  onMouseEnter={prefetchMap.timeline}
-                  onTouchStart={prefetchMap.timeline}
-                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-2 whitespace-nowrap ${view === 'timeline' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
-                >
-                  <LayoutGrid className="w-4 h-4" />
-                  Tafels
-                </button>
-                <button
-                  onClick={() => setView('stats')}
-                  onMouseEnter={prefetchMap.stats}
-                  onTouchStart={prefetchMap.stats}
-                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-2 whitespace-nowrap ${view === 'stats' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
-                >
-                  <BarChart3 className="w-4 h-4" />
-                  Stats
-                </button>
-                <button
-                  onClick={() => setView('newsletter')}
-                  onMouseEnter={prefetchMap.newsletter}
-                  onTouchStart={prefetchMap.newsletter}
-                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-2 whitespace-nowrap ${view === 'newsletter' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
-                >
-                  <Mail className="w-4 h-4" />
-                  Emails
-                </button>
-                <button
-                  onClick={() => setView('guide')}
-                  onMouseEnter={prefetchMap.guide}
-                  onTouchStart={prefetchMap.guide}
-                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-2 whitespace-nowrap ${view === 'guide' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
-                >
-                  <BookOpen className="w-4 h-4" />
-                  Guide
-                </button>
+            <div className="flex items-center gap-2 sm:gap-4">
+              {/* Desktop: full tabs with labels */}
+              <div className="hidden md:flex items-center bg-gray-100 p-1 rounded-lg">
+                {([
+                  { key: 'widget', icon: Smartphone, label: 'Preview' },
+                  { key: 'calendar', icon: CalendarIcon, label: 'Schedule' },
+                  { key: 'admin', icon: Settings, label: 'Editor' },
+                  { key: 'bookings', icon: Users, label: 'Boekingen' },
+                  { key: 'timeline', icon: LayoutGrid, label: 'Tafels' },
+                  { key: 'stats', icon: BarChart3, label: 'Stats' },
+                  { key: 'newsletter', icon: Mail, label: 'Emails' },
+                  { key: 'guide', icon: BookOpen, label: 'Guide' },
+                ] as const).map(({ key, icon: Icon, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => setView(key)}
+                    onMouseEnter={prefetchMap[key]}
+                    onTouchStart={prefetchMap[key]}
+                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-1.5 whitespace-nowrap ${view === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Mobile: compact scrollable icon tabs */}
+              <div className="flex md:hidden items-center gap-1 overflow-x-auto scrollbar-hide bg-gray-100 p-1 rounded-lg max-w-[calc(100vw-120px)]">
+                {([
+                  { key: 'widget', icon: Smartphone, label: 'Preview' },
+                  { key: 'calendar', icon: CalendarIcon, label: 'Cal' },
+                  { key: 'admin', icon: Settings, label: 'Edit' },
+                  { key: 'bookings', icon: Users, label: 'Boek' },
+                  { key: 'timeline', icon: LayoutGrid, label: 'Tafels' },
+                  { key: 'stats', icon: BarChart3, label: 'Stats' },
+                  { key: 'newsletter', icon: Mail, label: 'Mail' },
+                  { key: 'guide', icon: BookOpen, label: 'Gids' },
+                ] as const).map(({ key, icon: Icon, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => setView(key)}
+                    onTouchStart={prefetchMap[key]}
+                    className={`flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-md transition-all min-w-[44px] ${view === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400'}`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span className="text-[10px] font-medium leading-tight">{label}</span>
+                  </button>
+                ))}
               </div>
 
               {/* Logout button */}
@@ -271,8 +247,9 @@ const App: React.FC = () => {
         </div>
       </nav>
 
-      {/* Main Content Area */}
-      <main className="flex-1 py-8">
+      {/* Main Content Area — reduced padding on mobile */}
+      <main className="flex-1 py-4 sm:py-8 pb-20 md:pb-8">
+
 
         {/* VIEW: WIDGET PREVIEW */}
         {view === 'widget' && (

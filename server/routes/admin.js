@@ -4,7 +4,7 @@ import { authMiddleware } from '../auth.js';
 import { bookingRateLimiter, widgetRateLimiter, calendarRateLimiter } from '../ratelimit.js';
 import { captureException } from '../sentry.js';
 import { sendBookingConfirmation, sendLargeGroupNotification, sendRestaurantBookingConfirmation, sendChefsChoiceNotification } from '../email.js';
-import { escapeHtml, sanitizeString, validateRestaurantId, generateUnsubscribeToken, parseSlotDateTime, buildBookingsMap, selectTablesForSlot, overlaps } from '../utils.js';
+import { escapeHtml, sanitizeString, validateRestaurantId, generateUnsubscribeToken, parseSlotDateTime, buildBookingsMap, selectTablesForSlot, overlaps, timeToMins, minsToTime, computeEndTime } from '../utils.js';
 import { invalidatePublicCacheForRestaurant } from '../public-cache.js';
 import multer from 'multer';
 const upload = multer({ storage: multer.memoryStorage() });
@@ -1478,8 +1478,8 @@ router.post('/api/admin/bookings', authMiddleware, async (req, res) => {
         if (typeof customer_name !== 'string' || customer_name.trim().length === 0 || customer_name.length > 120) {
             return res.status(422).json({ error: 'Invalid customer name' });
         }
-        if (typeof guest_count !== 'number' || guest_count < 1 || guest_count > 50) {
-            return res.status(422).json({ error: 'Guest count must be 1-50' });
+        if (typeof guest_count !== 'number' || guest_count < 1) {
+            return res.status(422).json({ error: 'Guest count must be at least 1' });
         }
 
         // Get or create customer
@@ -1536,8 +1536,8 @@ router.post('/api/admin/restaurant-bookings', authMiddleware, async (req, res) =
     if (typeof customer_name !== 'string' || customer_name.trim().length === 0 || customer_name.length > 120) {
         return res.status(422).json({ error: 'Invalid customer name' });
     }
-    if (typeof guest_count !== 'number' || guest_count < 1 || guest_count > 20) {
-        return res.status(422).json({ error: 'Guest count must be 1-20' });
+    if (typeof guest_count !== 'number' || guest_count < 1) {
+        return res.status(422).json({ error: 'Guest count must be at least 1' });
     }
     if (customer_email && (typeof customer_email !== 'string' || customer_email.length > 254)) {
         return res.status(422).json({ error: 'Invalid email' });
@@ -1562,7 +1562,17 @@ router.post('/api/admin/restaurant-bookings', authMiddleware, async (req, res) =
             [restaurantId, dayOfWeek]
         );
         const closeTime = openingQ.rows[0]?.close_time || '23:59';
-        const endTime = computeEndTime(time, closeTime);
+        // Accept optional end_time or duration from frontend
+        const reqEndTime = req.body.end_time;
+        const reqDuration = req.body.duration; // in minutes
+        let endTime;
+        if (reqEndTime) {
+            const closeMins = timeToMins(closeTime);
+            const reqEndMins = timeToMins(reqEndTime);
+            endTime = reqEndMins <= closeMins ? reqEndTime : minsToTime(closeMins);
+        } else {
+            endTime = computeEndTime(time, closeTime, reqDuration || undefined);
+        }
 
         // Reject bookings at or after closing time (zero-length booking)
         if (timeToMins(endTime) <= timeToMins(time)) {
@@ -1660,6 +1670,122 @@ router.post('/api/admin/restaurant-bookings', authMiddleware, async (req, res) =
         }
         console.error('Admin restaurant booking error:', error);
         res.status(500).json({ error: 'Failed to create booking' });
+    } finally {
+        client.release();
+    }
+});
+
+// Route: PATCH /api/admin/restaurant-bookings/:id — Edit booking details
+router.patch('/api/admin/restaurant-bookings/:id', authMiddleware, async (req, res) => {
+    const { id } = req.params;
+    const restaurantId = req.body.restaurantId || req.query.restaurantId || req.user?.restaurantId || 'demo-restaurant';
+    const { guest_count, customer_name, customer_email, customer_phone, remarks, date, time, end_time, duration } = req.body;
+
+    // Input validation
+    if (guest_count !== undefined && (typeof guest_count !== 'number' || guest_count < 1)) {
+        return res.status(422).json({ error: 'Guest count must be at least 1' });
+    }
+    if (customer_name !== undefined && (typeof customer_name !== 'string' || customer_name.trim().length === 0 || customer_name.length > 120)) {
+        return res.status(422).json({ error: 'Invalid customer name' });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // Fetch current booking
+        const currentQ = await client.query(
+            `SELECT * FROM restaurant_bookings WHERE id = $1 AND restaurant_id = $2`,
+            [id, restaurantId]
+        );
+        if (currentQ.rowCount === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: 'Booking not found' });
+        }
+        const current = currentQ.rows[0];
+
+        // Build updated fields
+        const updatedName = customer_name !== undefined ? customer_name.trim() : current.customer_name;
+        const updatedEmail = customer_email !== undefined ? (customer_email || null) : current.customer_email;
+        const updatedPhone = customer_phone !== undefined ? (customer_phone || null) : current.customer_phone;
+        const updatedRemarks = remarks !== undefined ? (remarks || null) : current.remarks;
+        const updatedGuests = guest_count !== undefined ? guest_count : current.guest_count;
+        const updatedDate = date || (typeof current.booking_date === 'string' ? current.booking_date : current.booking_date.toISOString().split('T')[0]);
+        const currentStartStr = typeof current.start_time === 'string' ? current.start_time.substring(0, 5) : current.start_time;
+        const updatedTime = time || currentStartStr;
+
+        // Calculate end time if time/date/duration changed
+        let updatedEndTime;
+        if (end_time) {
+            updatedEndTime = end_time;
+        } else if (time || duration || date) {
+            const [yr, mo, dy] = updatedDate.split('-').map(Number);
+            const dayOfWeek = new Date(yr, mo - 1, dy).getDay();
+            const openingQ = await client.query(
+                `SELECT close_time FROM restaurant_openings WHERE restaurant_id = $1 AND day_of_week = $2 LIMIT 1`,
+                [restaurantId, dayOfWeek]
+            );
+            const closeTime = openingQ.rows[0]?.close_time || '23:59';
+            updatedEndTime = computeEndTime(updatedTime, closeTime, duration || undefined);
+        } else {
+            updatedEndTime = typeof current.end_time === 'string' ? current.end_time.substring(0, 5) : current.end_time;
+        }
+
+        // If time/date/guests changed, re-check table availability
+        const timeChanged = time || date || (guest_count !== undefined && guest_count !== current.guest_count);
+        let newTableId = current.table_id;
+
+        if (timeChanged) {
+            const allTablesQ = await client.query(
+                `SELECT id, name, seats, zone FROM restaurant_tables WHERE restaurant_id = $1 AND is_active = true ORDER BY seats DESC`,
+                [restaurantId]
+            );
+            const bookingsQ = await client.query(
+                `SELECT table_id, to_char(start_time, 'HH24:MI') AS start_time, to_char(end_time, 'HH24:MI') AS end_time
+                 FROM restaurant_bookings
+                 WHERE restaurant_id = $1 AND booking_date = $2 AND lower(status) != 'cancelled' AND id != $3`,
+                [restaurantId, updatedDate, id]
+            );
+            const bookingsByTableId = buildBookingsMap(bookingsQ.rows);
+            const selectedTables = selectTablesForSlot({
+                allTables: allTablesQ.rows,
+                bookingsByTableId,
+                slotStart: updatedTime,
+                slotEnd: updatedEndTime,
+                guestCount: updatedGuests
+            });
+
+            if (!selectedTables) {
+                await client.query('ROLLBACK');
+                return res.status(409).json({ error: 'Geen tafels beschikbaar voor deze wijziging' });
+            }
+            newTableId = selectedTables[0].id;
+        }
+
+        // Update the booking
+        const result = await client.query(
+            `UPDATE restaurant_bookings
+             SET customer_name = $1, customer_email = $2, customer_phone = $3, remarks = $4,
+                 guest_count = $5, booking_date = $6, start_time = $7, end_time = $8,
+                 table_id = $9, updated_at = NOW()
+             WHERE id = $10 AND restaurant_id = $11
+             RETURNING *`,
+            [updatedName, updatedEmail, updatedPhone, updatedRemarks, updatedGuests,
+                updatedDate, updatedTime, updatedEndTime, newTableId, id, restaurantId]
+        );
+
+        await client.query('COMMIT');
+        invalidatePublicCacheForRestaurant(restaurantId);
+
+        // Get table name for response
+        const tableQ = await pool.query('SELECT name FROM restaurant_tables WHERE id = $1', [newTableId]);
+        const tableName = tableQ.rows[0]?.name || '';
+
+        res.json({ success: true, booking: { ...result.rows[0], table_name: tableName } });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Edit booking error:', error);
+        res.status(500).json({ error: 'Failed to update booking' });
     } finally {
         client.release();
     }

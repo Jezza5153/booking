@@ -175,7 +175,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
         customer_name: '',
         customer_phone: '',
         customer_email: '',
-        duration: 90,
+        duration: 180,
         remarks: ''
     })
 
@@ -184,6 +184,18 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
         guest_count: 2,
         customer_name: '',
         table_id: ''
+    })
+
+    // Edit booking state
+    const [editingBooking, setEditingBooking] = useState<Booking | null>(null)
+    const [editForm, setEditForm] = useState({
+        guest_count: 2,
+        customer_name: '',
+        customer_phone: '',
+        customer_email: '',
+        remarks: '',
+        time: '',
+        duration: 180
     })
 
     // Submitting state for double-click protection
@@ -1026,7 +1038,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                                             customer_name: entry.customer_name,
                                                             customer_phone: entry.customer_phone || '',
                                                             customer_email: '',
-                                                            duration: 90,
+                                                            duration: 180,
                                                             remarks: entry.notes || ''
                                                         })
                                                         setShowNewBookingModal(true)
@@ -1204,20 +1216,22 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                         <div className="overflow-x-auto">
                             <div className="min-w-[1000px]">
                                 {/* Time Header */}
-                                <div className="flex border-b border-gray-200">
-                                    <div className="w-32 shrink-0 px-3 py-2 bg-gray-50 text-xs font-medium text-gray-500 uppercase">
+                                <div className="flex border-b-2 border-gray-300 sticky top-0 bg-white z-10">
+                                    <div className="w-28 shrink-0 px-2 py-2 bg-gray-100 text-xs font-bold text-gray-600 uppercase border-r-2 border-gray-300 flex items-center">
                                         Tafel
                                     </div>
                                     <div className="flex-1 flex">
-                                        {timeSlots.map((slot, i) => (
-                                            <div
-                                                key={slot}
-                                                className={`w-[60px] shrink-0 px-1 py-2 text-center text-xs font-medium ${i % 2 === 0 ? 'text-gray-700' : 'text-gray-400'
-                                                    } border-l border-gray-100`}
-                                            >
-                                                {slot}
-                                            </div>
-                                        ))}
+                                        {timeSlots.map((slot, i) => {
+                                            const isFullHour = slot.endsWith(':00')
+                                            return (
+                                                <div
+                                                    key={slot}
+                                                    className={`w-[60px] shrink-0 px-1 py-2 text-center text-xs font-semibold border-l ${isFullHour ? 'border-gray-300 bg-gray-50 text-gray-800' : 'border-gray-100 text-gray-400'}`}
+                                                >
+                                                    {slot}
+                                                </div>
+                                            )
+                                        })}
                                     </div>
                                 </div>
 
@@ -1232,26 +1246,27 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                         return (
                                             <div
                                                 key={table.id}
-                                                className={`flex border-b border-gray-100 ${tableIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}
+                                                className={`flex border-b border-gray-100 ${tableIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'} hover:bg-emerald-50/20 transition-colors`}
                                             >
-                                                {/* Table Info — compact like Tapla */}
-                                                <div className="w-28 shrink-0 px-2 py-0.5 flex items-baseline gap-0">
-                                                    <span className="font-medium text-xs text-gray-900 leading-tight">{table.name}</span>
-                                                    <sup className="text-[9px] text-gray-400 ml-0.5">{table.seats}</sup>
+                                                {/* Table Info */}
+                                                <div className="w-28 shrink-0 px-2 py-1 flex items-center gap-1.5 border-r-2 border-gray-300 bg-gray-50/50">
+                                                    <span className="font-semibold text-xs text-gray-900">{table.name}</span>
+                                                    <span className="text-[10px] text-gray-400 bg-gray-200 px-1 py-0.5 rounded">{table.seats}p</span>
                                                 </div>
 
                                                 {/* Timeline */}
-                                                <div className="flex-1 relative h-8">
+                                                <div className="flex-1 relative h-10">
                                                     {/* Clickable grid cells */}
                                                     <div className="absolute inset-0 flex">
                                                         {timeSlots.map((slot, i) => {
                                                             const available = isSlotAvailable(table, slot)
+                                                            const isFullHour = slot.endsWith(':00')
                                                             return (
                                                                 <div
                                                                     key={i}
                                                                     onClick={() => available && handleCellClick(table, slot)}
-                                                                    className={`w-[60px] shrink-0 border-l border-gray-100 transition-colors ${available
-                                                                        ? 'hover:bg-emerald-50 cursor-pointer'
+                                                                    className={`w-[60px] shrink-0 border-l ${isFullHour ? 'border-gray-300' : 'border-gray-100'} transition-colors ${available
+                                                                        ? 'hover:bg-emerald-100 cursor-pointer'
                                                                         : 'bg-red-50/40 cursor-not-allowed'
                                                                         }`}
                                                                 />
@@ -1339,15 +1354,13 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                 <div className="flex gap-2">
                                     <div className="flex-1">
                                         <label className="text-xs text-gray-500">Gasten</label>
-                                        <select
+                                        <input
+                                            type="number"
+                                            min="1"
                                             value={quickBookForm.guest_count}
-                                            onChange={e => setQuickBookForm(f => ({ ...f, guest_count: Number(e.target.value) }))}
+                                            onChange={e => setQuickBookForm(f => ({ ...f, guest_count: Math.max(1, Number(e.target.value) || 1) }))}
                                             className="w-full px-2 py-1.5 border rounded text-sm"
-                                        >
-                                            {[1, 2, 3, 4, 5, 6, 7, 8].map(n => (
-                                                <option key={n} value={n}>{n} pers.</option>
-                                            ))}
-                                        </select>
+                                        />
                                     </div>
                                     <div className="flex-1">
                                         <label className="text-xs text-gray-500">Duur</label>
@@ -1359,6 +1372,12 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                             <option value={60}>1 uur</option>
                                             <option value={90}>1.5 uur</option>
                                             <option value={120}>2 uur</option>
+                                            <option value={150}>2.5 uur</option>
+                                            <option value={180}>3 uur</option>
+                                            <option value={210}>3.5 uur</option>
+                                            <option value={240}>4 uur</option>
+                                            <option value={300}>5 uur</option>
+                                            <option value={360}>6 uur</option>
                                         </select>
                                     </div>
                                 </div>
@@ -1631,6 +1650,32 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                         />
                                     )}
 
+                                    {/* Edit button */}
+                                    <div className="border-t pt-3">
+                                        <button
+                                            onClick={() => {
+                                                const b = showBookingDetail
+                                                const startMins = parseInt(b.start_time.split(':')[0]) * 60 + parseInt(b.start_time.split(':')[1])
+                                                const endMins = parseInt(b.end_time.split(':')[0]) * 60 + parseInt(b.end_time.split(':')[1])
+                                                setEditForm({
+                                                    guest_count: b.guest_count,
+                                                    customer_name: b.customer_name,
+                                                    customer_phone: b.customer_phone || '',
+                                                    customer_email: b.customer_email || '',
+                                                    remarks: b.remarks || '',
+                                                    time: b.start_time,
+                                                    duration: endMins - startMins
+                                                })
+                                                setEditingBooking(b)
+                                                setShowBookingDetail(null)
+                                            }}
+                                            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 mb-3"
+                                        >
+                                            <Edit3 className="w-4 h-4" />
+                                            Boeking bewerken
+                                        </button>
+                                    </div>
+
                                     {/* Status buttons */}
                                     <div className="border-t pt-3">
                                         <label className="text-xs text-gray-500 block mb-2">Status wijzigen</label>
@@ -1684,6 +1729,158 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                         </div>
                     )
                 })()
+            }
+
+            {/* Edit Booking Modal */}
+            {
+                editingBooking && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-xl max-w-md w-full p-4 shadow-xl max-h-[85vh] overflow-y-auto">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                                    <Edit3 className="w-5 h-5 text-blue-500" />
+                                    Boeking bewerken
+                                </h3>
+                                <button onClick={() => setEditingBooking(null)} className="p-1 hover:bg-gray-100 rounded">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            <div className="space-y-3">
+                                <div className="flex gap-2">
+                                    <div className="flex-1">
+                                        <label className="text-xs text-gray-500">Gasten</label>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            value={editForm.guest_count}
+                                            onChange={e => setEditForm(f => ({ ...f, guest_count: Math.max(1, Number(e.target.value) || 1) }))}
+                                            className="w-full px-2 py-1.5 border rounded text-sm"
+                                        />
+                                    </div>
+                                    <div className="flex-1">
+                                        <label className="text-xs text-gray-500">Tijd</label>
+                                        <input
+                                            type="time"
+                                            value={editForm.time}
+                                            onChange={e => setEditForm(f => ({ ...f, time: e.target.value }))}
+                                            className="w-full px-2 py-1.5 border rounded text-sm"
+                                        />
+                                    </div>
+                                    <div className="flex-1">
+                                        <label className="text-xs text-gray-500">Duur</label>
+                                        <select
+                                            value={editForm.duration}
+                                            onChange={e => setEditForm(f => ({ ...f, duration: Number(e.target.value) }))}
+                                            className="w-full px-2 py-1.5 border rounded text-sm"
+                                        >
+                                            <option value={60}>1 uur</option>
+                                            <option value={90}>1.5 uur</option>
+                                            <option value={120}>2 uur</option>
+                                            <option value={150}>2.5 uur</option>
+                                            <option value={180}>3 uur</option>
+                                            <option value={210}>3.5 uur</option>
+                                            <option value={240}>4 uur</option>
+                                            <option value={300}>5 uur</option>
+                                            <option value={360}>6 uur</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-xs text-gray-500">Naam *</label>
+                                    <input
+                                        type="text"
+                                        value={editForm.customer_name}
+                                        onChange={e => setEditForm(f => ({ ...f, customer_name: e.target.value }))}
+                                        className="w-full px-2 py-1.5 border rounded text-sm"
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label className="text-xs text-gray-500">Telefoon</label>
+                                        <input
+                                            type="tel"
+                                            value={editForm.customer_phone}
+                                            onChange={e => setEditForm(f => ({ ...f, customer_phone: e.target.value }))}
+                                            className="w-full px-2 py-1.5 border rounded text-sm"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-gray-500">Email</label>
+                                        <input
+                                            type="email"
+                                            value={editForm.customer_email}
+                                            onChange={e => setEditForm(f => ({ ...f, customer_email: e.target.value }))}
+                                            className="w-full px-2 py-1.5 border rounded text-sm"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-xs text-gray-500">Opmerkingen</label>
+                                    <textarea
+                                        value={editForm.remarks}
+                                        onChange={e => setEditForm(f => ({ ...f, remarks: e.target.value }))}
+                                        className="w-full px-2 py-1.5 border rounded text-sm h-16 resize-none"
+                                    />
+                                </div>
+
+                                <button
+                                    onClick={async () => {
+                                        if (!editForm.customer_name || isSubmitting) return
+                                        setIsSubmitting(true)
+                                        try {
+                                            const token = localStorage.getItem('events_token')
+                                            const [h, m] = editForm.time.split(':').map(Number)
+                                            const endMins = h * 60 + m + editForm.duration
+                                            const endTime = `${Math.floor(endMins / 60).toString().padStart(2, '0')}:${(endMins % 60).toString().padStart(2, '0')}`
+
+                                            const res = await fetch(`${API_BASE_URL}/api/admin/restaurant-bookings/${editingBooking.id}`, {
+                                                method: 'PATCH',
+                                                headers: {
+                                                    'Content-Type': 'application/json',
+                                                    'Authorization': `Bearer ${token}`
+                                                },
+                                                body: JSON.stringify({
+                                                    restaurantId,
+                                                    guest_count: editForm.guest_count,
+                                                    customer_name: editForm.customer_name,
+                                                    customer_phone: editForm.customer_phone,
+                                                    customer_email: editForm.customer_email,
+                                                    remarks: editForm.remarks,
+                                                    time: editForm.time,
+                                                    end_time: endTime,
+                                                    date
+                                                })
+                                            })
+
+                                            if (res.ok) {
+                                                setEditingBooking(null)
+                                                showToast('Boeking succesvol bijgewerkt', 'success')
+                                                fetchData()
+                                            } else {
+                                                const err = await res.json().catch(() => null)
+                                                showToast(err?.error || 'Bewerken mislukt', 'error')
+                                            }
+                                        } catch (e) {
+                                            console.error('Failed to edit booking:', e)
+                                            showToast('Bewerken mislukt', 'error')
+                                        } finally {
+                                            setIsSubmitting(false)
+                                        }
+                                    }}
+                                    disabled={!editForm.customer_name || isSubmitting}
+                                    className="w-full py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    {isSubmitting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                                    Opslaan
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )
             }
 
             {/* New Booking Modal (Full Widget) */}
