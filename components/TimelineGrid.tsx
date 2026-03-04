@@ -1247,7 +1247,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                     <div style={{ minWidth: `${112 + totalGridPx}px` }}>
                                         {/* Time Header */}
                                         <div className="flex border-b border-gray-300 sticky top-0 bg-white z-20">
-                                            <div className="w-28 shrink-0 border-r border-gray-300" />
+                                            <div className="w-28 shrink-0 border-r border-gray-300 sticky left-0 bg-white z-10" />
                                             <div className="flex-1 flex">
                                                 {timeSlots.map((slot) => {
                                                     const isFullHour = slot.label.endsWith(':00')
@@ -1269,7 +1269,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
 
                                         {/* Restaurant zone label */}
                                         <div className="flex border-b border-gray-200 bg-gray-50">
-                                            <div className="w-28 shrink-0 px-2 py-0.5 text-xs font-medium text-gray-500 border-r border-gray-300">Restaurant</div>
+                                            <div className="w-28 shrink-0 px-2 py-0.5 text-xs font-medium text-gray-500 border-r border-gray-300 sticky left-0 bg-gray-50 z-10">Restaurant</div>
                                             <div className="flex-1" />
                                         </div>
 
@@ -1285,7 +1285,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                                     return (
                                                         <div key={table.id} className="flex border-b border-gray-200 bg-white">
                                                             {/* Table label */}
-                                                            <div className="w-28 shrink-0 px-2 py-1 flex items-center gap-1 border-r border-gray-300">
+                                                            <div className="w-28 shrink-0 px-2 py-1 flex items-center gap-1 border-r border-gray-300 sticky left-0 bg-white z-10">
                                                                 <span className="font-medium text-xs text-gray-800">{table.name}</span>
                                                                 <sup className="text-[9px] text-gray-400 -mt-1">{table.seats}</sup>
                                                             </div>
@@ -1302,8 +1302,8 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                                                                 key={i}
                                                                                 onClick={() => !isClosed && available && handleCellClick(table, slot.label)}
                                                                                 className={`shrink-0 border-l border-gray-300 ${isClosed ? 'bg-gray-100 cursor-default'
-                                                                                        : available ? 'hover:bg-blue-50 cursor-pointer'
-                                                                                            : 'bg-red-50/20 cursor-not-allowed'
+                                                                                    : available ? 'hover:bg-blue-50 cursor-pointer'
+                                                                                        : 'bg-red-50/20 cursor-not-allowed'
                                                                                     }`}
                                                                                 style={{ width: `${COL}px` }}
                                                                             />
