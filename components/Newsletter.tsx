@@ -23,6 +23,7 @@ type SubscriberData = {
 export function Newsletter({ restaurantId }: { restaurantId: string }) {
     const [data, setData] = useState<SubscriberData | null>(null)
     const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
     const [search, setSearch] = useState('')
     const [showComposer, setShowComposer] = useState(false)
     const [subject, setSubject] = useState('')
@@ -37,6 +38,7 @@ export function Newsletter({ restaurantId }: { restaurantId: string }) {
     }, [])
 
     const loadSubscribers = async () => {
+        setError(null)
         try {
             const token = localStorage.getItem('events_token')
             const res = await fetch(`${API_BASE_URL}/api/admin/newsletter/subscribers?restaurantId=${restaurantId}`, {
@@ -45,9 +47,12 @@ export function Newsletter({ restaurantId }: { restaurantId: string }) {
             if (res.ok) {
                 const json = await res.json()
                 setData(json)
+            } else {
+                setError(`Server error: ${res.status}`)
             }
         } catch (e) {
             console.error('Failed to load subscribers:', e)
+            setError('Kan niet verbinden met de server')
         } finally {
             setLoading(false)
         }
@@ -107,6 +112,21 @@ export function Newsletter({ restaurantId }: { restaurantId: string }) {
         return (
             <div className="flex items-center justify-center h-64">
                 <div className="animate-spin w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full" />
+            </div>
+        )
+    }
+
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center h-64 gap-4">
+                <AlertCircle className="w-10 h-10 text-red-400" />
+                <p className="text-gray-600">{error}</p>
+                <button
+                    onClick={() => { setLoading(true); loadSubscribers() }}
+                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm"
+                >
+                    Opnieuw proberen
+                </button>
             </div>
         )
     }

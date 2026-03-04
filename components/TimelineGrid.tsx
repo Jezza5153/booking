@@ -1286,8 +1286,8 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                                         <div key={table.id} className="flex border-b border-gray-200 bg-white">
                                                             {/* Table label */}
                                                             <div className="w-28 shrink-0 px-2 py-1 flex items-center gap-1 border-r border-gray-300 sticky left-0 bg-white z-10">
-                                                                <span className="font-medium text-xs text-gray-800">{table.name}</span>
-                                                                <sup className="text-[9px] text-gray-400 -mt-1">{table.seats}</sup>
+                                                                <span className="font-medium text-xs text-gray-800 truncate">{table.name}</span>
+                                                                <span className="text-[9px] text-gray-400 ml-0.5">{table.seats}</span>
                                                             </div>
 
                                                             {/* Timeline */}
