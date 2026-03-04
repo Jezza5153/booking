@@ -1215,27 +1215,24 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                             </div>
                         </div>
                     ) : (
-                        /* Day View */
+                        /* Day View — Tapla-style grid */
                         <div className="overflow-x-auto">
-                            <div style={{ minWidth: `${112 + timeSlots.length * 120}px` }}>
+                            <div style={{ minWidth: `${112 + timeSlots.length * 140}px` }}>
                                 {/* Time Header */}
-                                <div className="flex border-b-2 border-gray-300 sticky top-0 bg-white z-20">
-                                    <div className="w-28 shrink-0 px-2 py-2 bg-gray-100 text-xs font-bold text-gray-600 uppercase border-r border-gray-300 flex items-center">
-                                        Tafel
-                                    </div>
+                                <div className="flex border-b border-gray-300 sticky top-0 bg-white z-20">
+                                    <div className="w-28 shrink-0 border-r border-gray-300" />
                                     <div className="flex-1 flex">
                                         {timeSlots.map((slot) => {
                                             const isFullHour = slot.endsWith(':00')
                                             return (
                                                 <div
                                                     key={slot}
-                                                    className={`shrink-0 py-2 border-l text-xs font-semibold ${isFullHour
-                                                        ? 'border-gray-400 text-gray-900 font-bold'
-                                                        : 'border-gray-200 text-gray-400'
-                                                        }`}
-                                                    style={{ width: '120px' }}
+                                                    className="shrink-0 border-l border-gray-300 py-2"
+                                                    style={{ width: '140px' }}
                                                 >
-                                                    <span className="pl-2">{slot}</span>
+                                                    <span className={`pl-2 text-sm ${isFullHour ? 'font-bold text-gray-900' : 'font-normal text-gray-400'}`}>
+                                                        {slot}
+                                                    </span>
                                                 </div>
                                             )
                                         })}
@@ -1253,36 +1250,35 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                         return (
                                             <div
                                                 key={table.id}
-                                                className={`flex border-b border-gray-200 ${tableIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}
+                                                className={`flex border-b border-gray-200 ${tableIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}
                                             >
-                                                {/* Table Info */}
-                                                <div className="w-28 shrink-0 px-2 py-1 flex items-center gap-1.5 border-r border-gray-300 bg-gray-50/70">
-                                                    <span className="font-semibold text-xs text-gray-900">{table.name}</span>
-                                                    <span className="text-[10px] text-gray-400 bg-gray-200 px-1 py-0.5 rounded">{table.seats}p</span>
+                                                {/* Table label */}
+                                                <div className="w-28 shrink-0 px-3 py-2 flex items-center gap-1.5 border-r border-gray-300">
+                                                    <span className="font-medium text-sm text-gray-800">{table.name}</span>
+                                                    <span className="text-[10px] text-gray-400">{table.seats}p</span>
                                                 </div>
 
-                                                {/* Timeline */}
-                                                <div className="flex-1 relative" style={{ height: '40px' }}>
-                                                    {/* Grid cells — visual gridlines + click targets */}
+                                                {/* Timeline cells */}
+                                                <div className="flex-1 relative" style={{ height: '44px' }}>
+                                                    {/* Grid cells */}
                                                     <div className="absolute inset-0 flex">
                                                         {timeSlots.map((slot, i) => {
                                                             const available = isSlotAvailable(table, slot)
-                                                            const isFullHour = slot.endsWith(':00')
                                                             return (
                                                                 <div
                                                                     key={i}
                                                                     onClick={() => available && handleCellClick(table, slot)}
-                                                                    className={`shrink-0 border-l ${isFullHour ? 'border-gray-400' : 'border-gray-200'} transition-colors ${available
-                                                                        ? 'hover:bg-emerald-100/60 cursor-pointer'
-                                                                        : 'bg-red-50/30 cursor-not-allowed'
+                                                                    className={`shrink-0 border-l border-gray-300 ${available
+                                                                        ? 'hover:bg-blue-50 cursor-pointer'
+                                                                        : 'bg-red-50/20 cursor-not-allowed'
                                                                         }`}
-                                                                    style={{ width: '120px' }}
+                                                                    style={{ width: '140px' }}
                                                                 />
                                                             )
                                                         })}
                                                     </div>
 
-                                                    {/* Bookings — positioned using same 120px-per-slot math */}
+                                                    {/* Booking blocks */}
                                                     {tableBookings.map(booking => {
                                                         const statusConfig = STATUS_COLORS[booking.status as keyof typeof STATUS_COLORS] || STATUS_COLORS.confirmed
                                                         const isGrouped = booking.group_id && bookings.filter(b => b.group_id === booking.group_id).length > 1
@@ -1290,39 +1286,33 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                                         const groupTableCount = groupSiblings.length
                                                         const totalGroupGuests = isGrouped ? groupSiblings[0]?.guest_count || booking.guest_count : booking.guest_count
 
-                                                        // Position calc: 120px per slot (slotDuration minutes)
-                                                        const pxPerSlot = 120
+                                                        const PX_PER_SLOT = 140
                                                         const startMins = parseInt(booking.start_time.split(':')[0]) * 60 + parseInt(booking.start_time.split(':')[1])
                                                         const endMins = parseInt(booking.end_time.split(':')[0]) * 60 + parseInt(booking.end_time.split(':')[1])
                                                         const gridStartMins = gridStartHour * 60
-                                                        const left = ((startMins - gridStartMins) / slotDuration) * pxPerSlot
-                                                        const width = ((endMins - startMins) / slotDuration) * pxPerSlot
+                                                        const left = ((startMins - gridStartMins) / slotDuration) * PX_PER_SLOT
+                                                        const width = ((endMins - startMins) / slotDuration) * PX_PER_SLOT
 
                                                         return (
                                                             <div
                                                                 key={booking.id}
-                                                                style={{ left: `${left}px`, width: `${Math.max(width, pxPerSlot)}px` }}
+                                                                style={{ left: `${left}px`, width: `${Math.max(width, PX_PER_SLOT)}px` }}
                                                                 onClick={() => setShowBookingDetail(booking)}
-                                                                className={`absolute top-1 bottom-1 ${statusConfig.bg} ${statusConfig.hover} rounded-md px-2 cursor-pointer transition-all shadow-sm hover:shadow-md overflow-hidden z-10 flex items-center ${isGrouped ? 'ring-1 ring-white/50' : ''}`}
+                                                                className={`absolute top-1 bottom-1 ${statusConfig.bg} ${statusConfig.hover} rounded px-2.5 cursor-pointer transition-shadow hover:shadow-md overflow-hidden z-10 flex items-center`}
                                                                 title={`${booking.customer_name} - ${totalGroupGuests} pers.${isGrouped ? ` (${groupTableCount} tafels)` : ''}`}
                                                             >
-                                                                <div className="flex items-center gap-1 text-white text-xs font-medium leading-none">
+                                                                <div className="flex items-center gap-1 text-white text-sm font-medium leading-none whitespace-nowrap">
                                                                     <StatusIcon status={booking.status} />
                                                                     {booking.is_primary || !isGrouped ? (
-                                                                        <span className="truncate">{totalGroupGuests}p {booking.customer_name}</span>
+                                                                        <span className="truncate">{totalGroupGuests} &nbsp;{booking.customer_name}</span>
                                                                     ) : (
                                                                         <span className="truncate">🔗 {booking.customer_name}</span>
                                                                     )}
                                                                     {isGrouped && booking.is_primary && (
-                                                                        <span className="shrink-0 bg-white/20 px-1 rounded text-[9px]" title={booking.linked_tables || ''}>🔗{booking.linked_tables ? ` ${booking.linked_tables}` : groupTableCount}</span>
+                                                                        <span className="shrink-0 bg-white/20 px-1 rounded text-[9px]">🔗{booking.linked_tables ? ` ${booking.linked_tables}` : groupTableCount}</span>
                                                                     )}
                                                                     {Number(booking.visit_count) > 0 && <span>⭐</span>}
                                                                 </div>
-                                                                {booking.dietary_notes && (
-                                                                    <div className="text-white/70 text-[10px] truncate ml-1">
-                                                                        ⚠️ {booking.dietary_notes}
-                                                                    </div>
-                                                                )}
                                                             </div>
                                                         )
                                                     })}
