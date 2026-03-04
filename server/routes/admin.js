@@ -1960,8 +1960,11 @@ router.get('/api/admin/newsletter/subscribers', authMiddleware, async (req, res)
     const restaurantId = req.query.restaurantId || 'demo-restaurant';
     try {
         const result = await pool.query(
-            `SELECT c.id, c.name, c.email, c.phone, c.newsletter_opt_in, c.total_visits, c.tags, c.dietary_notes, c.created_at,
-                    (SELECT MAX(rb.booking_date) FROM restaurant_bookings rb WHERE rb.customer_id = c.id) as last_visit
+            `SELECT c.id, c.name, c.email, c.phone, c.newsletter_opt_in, c.tags, c.dietary_notes, c.created_at,
+                    (SELECT COUNT(*) FROM restaurant_bookings rb 
+                     WHERE rb.customer_id = c.id AND rb.status = 'arrived' AND rb.booking_date <= CURRENT_DATE) as total_visits,
+                    (SELECT MAX(rb.booking_date) FROM restaurant_bookings rb 
+                     WHERE rb.customer_id = c.id AND rb.status = 'arrived' AND rb.booking_date <= CURRENT_DATE) as last_visit
              FROM customers c
              WHERE c.restaurant_id = $1 AND c.email IS NOT NULL AND c.email != ''
              ORDER BY c.created_at DESC`,
