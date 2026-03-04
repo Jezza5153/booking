@@ -233,7 +233,8 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
     const [slotDuration, setSlotDuration] = useState<15 | 30 | 60>(30) // minutes per slot
 
     // Generate time slots — extends 2hr past closing for gray area
-    const { timeSlots, closeMins } = useMemo(() => {
+    // Each slot has { label: "17:00", mins: 1020 } to avoid midnight wrap bugs
+    const { timeSlots, closeMins, gridStartMins } = useMemo(() => {
         const today = new Date(date)
         const dayOfWeek = today.getDay()
         const todayHours = openingHours.find(h => h.day === dayOfWeek)
@@ -252,22 +253,26 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
         }
 
         const closeMins = endHour * 60 + closeMin
-        const extendedEndHour = Math.min(endHour + 2, 25) // show 2hr past closing
+        const extendedEndHour = Math.min(endHour + 2, 25)
+        const gridStartMins = startHour * 60
 
-        const slots: string[] = []
+        const slots: { label: string; mins: number }[] = []
         for (let h = startHour; h <= extendedEndHour; h++) {
             const displayH = h >= 24 ? h - 24 : h
             for (let m = 0; m < 60; m += slotDuration) {
                 if (h === extendedEndHour && m > 0) break
-                slots.push(`${displayH.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`)
+                slots.push({
+                    label: `${displayH.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`,
+                    mins: h * 60 + m
+                })
             }
         }
-        return { timeSlots: slots, closeMins }
+        return { timeSlots: slots, closeMins, gridStartMins }
     }, [date, openingHours, slotDuration])
 
     const gridStartHour = useMemo(() => {
         if (timeSlots.length === 0) return 12
-        return parseInt(timeSlots[0].split(':')[0])
+        return Math.floor(timeSlots[0].mins / 60)
     }, [timeSlots])
 
     // Current time position for live indicator (updates every minute)
@@ -1229,33 +1234,32 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                         /* Day View — Tapla-style grid */
                         <div className="overflow-x-auto">
                             {(() => {
-                                const COL = 80 // px per slot — compact like Tapla
-                                const gridStartMins = gridStartHour * 60
+                                const COL = 80
                                 const totalGridPx = timeSlots.length * COL
-                                // Current time line position
+                                // Now line: use actual minutes for positioning
                                 const nowPx = ((nowMins - gridStartMins) / slotDuration) * COL
                                 const showNowLine = nowPx > 0 && nowPx < totalGridPx
-                                // Closed area starts at closeMins
-                                const closePx = ((closeMins - gridStartMins) / slotDuration) * COL
+                                // isToday check
+                                const today = new Date()
+                                const isToday = date === `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 
                                 return (
                                     <div style={{ minWidth: `${112 + totalGridPx}px` }}>
                                         {/* Time Header */}
                                         <div className="flex border-b border-gray-300 sticky top-0 bg-white z-20">
                                             <div className="w-28 shrink-0 border-r border-gray-300" />
-                                            <div className="flex-1 flex relative">
+                                            <div className="flex-1 flex">
                                                 {timeSlots.map((slot) => {
-                                                    const isFullHour = slot.endsWith(':00')
-                                                    const slotMins = parseInt(slot.split(':')[0]) * 60 + parseInt(slot.split(':')[1])
-                                                    const isClosed = slotMins >= closeMins
+                                                    const isFullHour = slot.label.endsWith(':00')
+                                                    const isClosed = slot.mins >= closeMins
                                                     return (
                                                         <div
-                                                            key={slot}
+                                                            key={slot.label + slot.mins}
                                                             className={`shrink-0 border-l border-gray-300 py-1.5 ${isClosed ? 'bg-gray-100' : ''}`}
                                                             style={{ width: `${COL}px` }}
                                                         >
                                                             <span className={`pl-1.5 text-xs ${isFullHour ? 'font-bold text-gray-900' : 'font-normal text-gray-400'}`}>
-                                                                {slot}
+                                                                {slot.label}
                                                             </span>
                                                         </div>
                                                     )
@@ -1263,13 +1267,13 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                             </div>
                                         </div>
 
-                                        {/* "Restaurant" zone label */}
+                                        {/* Restaurant zone label */}
                                         <div className="flex border-b border-gray-200 bg-gray-50">
                                             <div className="w-28 shrink-0 px-2 py-0.5 text-xs font-medium text-gray-500 border-r border-gray-300">Restaurant</div>
                                             <div className="flex-1" />
                                         </div>
 
-                                        {/* Table Rows */}
+                                        {/* Table Rows + Now Line wrapper */}
                                         {loading ? (
                                             <div className="px-4 py-8 text-center text-gray-400">Laden...</div>
                                         ) : tables.length === 0 ? (
@@ -1291,13 +1295,12 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                                                 {/* Grid cells */}
                                                                 <div className="absolute inset-0 flex">
                                                                     {timeSlots.map((slot, i) => {
-                                                                        const available = isSlotAvailable(table, slot)
-                                                                        const slotMins = parseInt(slot.split(':')[0]) * 60 + parseInt(slot.split(':')[1])
-                                                                        const isClosed = slotMins >= closeMins
+                                                                        const available = isSlotAvailable(table, slot.label)
+                                                                        const isClosed = slot.mins >= closeMins
                                                                         return (
                                                                             <div
                                                                                 key={i}
-                                                                                onClick={() => !isClosed && available && handleCellClick(table, slot)}
+                                                                                onClick={() => !isClosed && available && handleCellClick(table, slot.label)}
                                                                                 className={`shrink-0 border-l border-gray-300 ${isClosed ? 'bg-gray-100 cursor-default'
                                                                                         : available ? 'hover:bg-blue-50 cursor-pointer'
                                                                                             : 'bg-red-50/20 cursor-not-allowed'
@@ -1341,14 +1344,12 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                                     )
                                                 })}
 
-                                                {/* Live current-time line — full height blue line */}
-                                                {showNowLine && (
+                                                {/* Live current-time line */}
+                                                {isToday && showNowLine && (
                                                     <div
-                                                        className="absolute top-0 bottom-0 z-30 pointer-events-none"
-                                                        style={{ left: `${112 + nowPx}px`, width: '2px' }}
-                                                    >
-                                                        <div className="w-full h-full bg-blue-500" />
-                                                    </div>
+                                                        className="absolute top-0 bottom-0 pointer-events-none"
+                                                        style={{ left: `${112 + nowPx}px`, width: '3px', backgroundColor: '#3b82f6', zIndex: 50 }}
+                                                    />
                                                 )}
                                             </div>
                                         )}
