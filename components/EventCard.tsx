@@ -9,6 +9,7 @@ interface EventCardProps {
   wijken: Wijk[]
   onBookingComplete?: () => void
   bookingEmail?: string // pass from widget data if available
+  autoExpand?: boolean
 }
 
 type TableType = "2" | "4" | "6" | "7+"
@@ -21,8 +22,13 @@ function guestCountToTableType(count: number): TableType {
   return "7+"
 }
 
-export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingComplete, bookingEmail }) => {
-  const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null)
+export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingComplete, bookingEmail, autoExpand }) => {
+  const [selectedSlotId, setSelectedSlotId] = useState<string | null>(() => {
+    if (autoExpand && event.slots && event.slots.length > 0) {
+      return event.slots[0].id
+    }
+    return null
+  })
   const [guestCount, setGuestCount] = useState<number | null>(null)
   const [largeGroupInput, setLargeGroupInput] = useState<string>("") // For 7+ groups
 

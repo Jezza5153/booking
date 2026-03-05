@@ -61,6 +61,15 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
   const widgetIncludesOpeningHours = useRef<boolean | null>(null)
   const eventsScrollerRef = useRef<HTMLDivElement | null>(null)
 
+  const [urlEventId, setUrlEventId] = useState<string | null>(null)
+
+  useEffect(() => {
+    // Read ?event=xxx from URL to auto-expand an event
+    const params = new URLSearchParams(window.location.search)
+    const ev = params.get('event')
+    if (ev) setUrlEventId(ev)
+  }, [])
+
   const fallbackEvents = propEvents ?? EVENTS_DATA
   const fallbackWijken = propWijken ?? WIJKEN_DATA
 
@@ -198,6 +207,24 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
       .filter((ev) => ev.slots.length > 0) // Only show events with future slots
   }, [events])
 
+  useEffect(() => {
+    // Auto-scroll to the requested event if it exists
+    if (urlEventId && activeEvents.length > 0 && !loading) {
+      // Small timeout ensures the DOM has rendered the EventCard elements
+      const timer = setTimeout(() => {
+        const el = document.getElementById(`event-${urlEventId}`)
+        if (el && eventsScrollerRef.current) {
+          // Calculate scroll position relative to the scroll container
+          eventsScrollerRef.current.scrollTo({
+            top: el.offsetTop - eventsScrollerRef.current.offsetTop - 16,
+            behavior: 'smooth'
+          })
+        }
+      }, 300)
+      return () => clearTimeout(timer)
+    }
+  }, [urlEventId, activeEvents, loading])
+
   // Silent refresh after booking - no spinner, no disruption
   const handleBookingComplete = useCallback(() => {
     if (useApi) {
@@ -315,11 +342,12 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
             <div className="divide-y divide-white/[0.06]">
               {activeEvents.length > 0 ? (
                 activeEvents.map((event, index) => (
-                  <div key={event.id} className="px-5 py-5 animate-fade-in-up" style={{ animationDelay: `${index * 80}ms` }}>
+                  <div key={event.id} id={`event-${event.id}`} className="px-5 py-5 animate-fade-in-up" style={{ animationDelay: `${index * 80}ms` }}>
                     <EventCard
                       event={event}
                       wijken={wijken}
                       onBookingComplete={handleBookingComplete}
+                      autoExpand={urlEventId === event.id}
                     />
                   </div>
                 ))
