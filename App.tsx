@@ -165,9 +165,28 @@ const App: React.FC = () => {
     );
   }
 
-  // Show login page if not authenticated (admin access)
-  if (!isAuthenticated) {
+  // Show login page if not authenticated
+  // Exception: Allow public access if this is a direct event link (?event=) or explicitly marked public (?public=true)
+  const isPublicLink = new URLSearchParams(window.location.search).has('event') ||
+    new URLSearchParams(window.location.search).get('public') === 'true';
+
+  if (!isAuthenticated && !isPublicLink) {
     return <LoginPage onLoginSuccess={handleLoginSuccess} />;
+  }
+
+  // If public link and not authenticated, ONLY show the widget in full screen (no navigation)
+  if (isPublicLink && !isAuthenticated) {
+    return (
+      <div className="w-screen h-[100dvh] bg-[#0b0b0b]">
+        <EventsWidget
+          events={events}
+          wijken={wijken}
+          useApi={true}
+          restaurantId={getRestaurantId()}
+          showHeader={true}
+        />
+      </div>
+    );
   }
 
   return (
