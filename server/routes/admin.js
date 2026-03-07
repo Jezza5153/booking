@@ -1894,24 +1894,25 @@ router.post('/api/admin/restaurant-settings', authMiddleware, async (req, res) =
             const existingIds = existing.rows.map(r => r.id);
             const newIds = tables.map(t => t.id);
 
-            // Delete removed tables
-            const toDelete = existingIds.filter(id => !newIds.includes(id));
-            if (toDelete.length > 0) {
+            // Soft-delete removed tables (can't hard-delete due to FK on restaurant_bookings)
+            const toDeactivate = existingIds.filter(id => !newIds.includes(id));
+            if (toDeactivate.length > 0) {
                 await client.query(
-                    'DELETE FROM restaurant_tables WHERE id = ANY($1)',
-                    [toDelete]
+                    'UPDATE restaurant_tables SET is_active = false WHERE id = ANY($1)',
+                    [toDeactivate]
                 );
             }
 
-            // Upsert tables
+            // Upsert tables (mark as active)
             for (const table of tables) {
                 await client.query(`
-                    INSERT INTO restaurant_tables (id, restaurant_id, name, seats, zone)
-                    VALUES ($1, $2, $3, $4, $5)
+                    INSERT INTO restaurant_tables (id, restaurant_id, name, seats, zone, is_active)
+                    VALUES ($1, $2, $3, $4, $5, true)
                     ON CONFLICT (id) DO UPDATE SET
                         name = EXCLUDED.name,
                         seats = EXCLUDED.seats,
-                        zone = EXCLUDED.zone
+                        zone = EXCLUDED.zone,
+                        is_active = true
                 `, [table.id, restaurantId, table.name, table.seats, table.zone || 'Binnen']);
             }
         }
