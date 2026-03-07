@@ -293,8 +293,11 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                 body: JSON.stringify({ status })
             })
             if (res.ok) {
+                // Cascade status to group siblings in UI state
+                const clickedBooking = restaurantBookings.find(b => b.id === bookingId)
+                const groupId = clickedBooking?.group_id
                 setRestaurantBookings(prev => prev.map(b =>
-                    b.id === bookingId ? { ...b, status } : b
+                    b.id === bookingId || (groupId && b.group_id === groupId) ? { ...b, status } : b
                 ))
                 // Also update the selected booking detail if open
                 setSelectedRestaurantBooking(prev => prev?.id === bookingId ? { ...prev, status } : prev)
@@ -637,13 +640,13 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                     </div>
 
                     {/* Restaurant Bookings List */}
-                    {restaurantBookings.length > 0 && (
+                    {restaurantBookings.filter(b => !b.group_id || b.is_primary).length > 0 && (
                         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                             <div className="bg-emerald-50 px-4 py-3 border-b border-emerald-200">
-                                <h4 className="font-bold text-emerald-900">Vandaag: {restaurantBookings.length} reserveringen</h4>
+                                <h4 className="font-bold text-emerald-900">Vandaag: {restaurantBookings.filter(b => !b.group_id || b.is_primary).length} reserveringen</h4>
                             </div>
                             <div className="divide-y divide-gray-100 max-h-64 overflow-y-auto">
-                                {restaurantBookings.map(booking => (
+                                {restaurantBookings.filter(b => !b.group_id || b.is_primary).map(booking => (
                                     <div key={booking.id} className={`px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors ${booking.status === 'arrived' ? 'bg-emerald-50/50' : ''}`} onClick={() => setSelectedRestaurantBooking(booking)}>
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="flex-1">

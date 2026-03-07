@@ -675,9 +675,11 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
 
     // Update booking status
     const updateBookingStatus = async (bookingId: string, status: string) => {
-        // Optimistic update - update local state immediately
+        // Optimistic update - update local state immediately, cascade to group siblings
+        const clickedBooking = bookings.find(b => b.id === bookingId)
+        const groupId = clickedBooking?.group_id
         setBookings(prev => prev.map(b =>
-            b.id === bookingId ? { ...b, status } : b
+            b.id === bookingId || (groupId && b.group_id === groupId) ? { ...b, status } : b
         ))
         try {
             const token = localStorage.getItem('events_token')
@@ -1282,11 +1284,10 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                     const dayStr = d.toISOString().split('T')[0]
                                     const isToday = dayStr === new Date().toISOString().split('T')[0]
                                     const isSelected = dayStr === date
-                                    // Simulated count for demo - in production, fetch from API
-                                    const dayBookings = bookings.filter(b =>
-                                        b.status !== 'cancelled' &&
-                                        new Date(b.start_time).toISOString().split('T')[0] === dayStr
-                                    )
+                                    // Bookings are loaded for `date` — match against it
+                                    const dayBookings = dayStr === date ? bookings.filter(b =>
+                                        b.status !== 'cancelled' && (!b.group_id || b.is_primary)
+                                    ) : []
                                     const dayCouverts = dayBookings.reduce((s, b) => s + b.guest_count, 0)
 
                                     return (

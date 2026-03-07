@@ -968,7 +968,7 @@ router.get('/api/restaurant/:restaurantId/couverts-today', async (req, res) => {
 
 // Route: /api/restaurant/book
 router.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
-    const { restaurant_id, date, time, end_time: requestedEndTime, guest_count, customer_name, customer_email, customer_phone, remarks, newsletter_opt_in } = req.body;
+    const { restaurant_id, date, time, end_time: requestedEndTime, guest_count, customer_name, customer_email, customer_phone, remarks, newsletter_opt_in, table_id, table_ids, is_walkin, status: requestedStatus } = req.body;
 
     // FIX #43: Validate restaurant_id format
     if (!restaurant_id || typeof restaurant_id !== 'string' || !/^[a-zA-Z0-9_-]{1,64}$/.test(restaurant_id)) {
@@ -1064,8 +1064,19 @@ router.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
             .map(b => ({ table_id: b.table_id, start_time: b.start_time, end_time: b.end_time }));
         const bookingsByTableId = buildBookingsMap([...bookingsQ.rows, ...timeBlocks]);
 
-        // 3) Use centralized selection (identical logic to availability endpoint)
-        const selectedTables = selectTablesForSlot({ allTables, bookingsByTableId, slotStart: time, slotEnd: endTime, guestCount: guest_count });
+        // 3) Admin callers can specify exact tables (walk-in / quick-book)
+        let selectedTables;
+        const adminTableIds = table_ids || (table_id ? [table_id] : null);
+        if (isAdmin && adminTableIds && adminTableIds.length > 0) {
+            // Use admin-specified tables, but still verify they exist and aren't blocked
+            selectedTables = allTables.filter(t => adminTableIds.includes(t.id));
+            if (selectedTables.length === 0) {
+                await client.query('ROLLBACK');
+                return res.status(409).json({ error: 'Geselecteerde tafel(s) niet beschikbaar' });
+            }
+        } else {
+            selectedTables = selectTablesForSlot({ allTables, bookingsByTableId, slotStart: time, slotEnd: endTime, guestCount: guest_count });
+        }
         if (!selectedTables) {
             await client.query('ROLLBACK');
             return res.status(409).json({ error: 'Geen tafels beschikbaar' });
@@ -1122,14 +1133,16 @@ router.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
         // 7) Insert booking rows — one per table, linked by group_id
         const groupId = crypto.randomUUID();
         const primaryBookingId = crypto.randomUUID();
+        const bookingStatus = isAdmin && requestedStatus ? requestedStatus : 'confirmed';
+        const bookingSource = is_walkin ? 'walkin' : (isAdmin ? 'admin' : 'website');
         for (let i = 0; i < selectedTables.length; i++) {
             const tbl = selectedTables[i];
             const rowId = i === 0 ? primaryBookingId : crypto.randomUUID();
             const isPrimary = i === 0;
             await client.query(
-                `INSERT INTO restaurant_bookings (id, restaurant_id, table_id, booking_date, start_time, end_time, guest_count, customer_name, customer_email, customer_phone, remarks, customer_id, group_id, is_primary, source)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'website')`,
-                [rowId, restaurant_id, tbl.id, date, time, endTime, guest_count, customer_name, customer_email, customer_phone, isPrimary ? remarks : null, customerId, groupId, isPrimary]
+                `INSERT INTO restaurant_bookings (id, restaurant_id, table_id, booking_date, start_time, end_time, guest_count, customer_name, customer_email, customer_phone, remarks, customer_id, group_id, is_primary, source, status, is_walkin)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+                [rowId, restaurant_id, tbl.id, date, time, endTime, guest_count, customer_name, customer_email, customer_phone, isPrimary ? remarks : null, customerId, groupId, isPrimary, bookingSource, bookingStatus, is_walkin || false]
             );
         }
 
