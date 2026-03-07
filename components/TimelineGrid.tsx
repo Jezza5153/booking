@@ -317,16 +317,37 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
             ])
 
             const tablesData = await tablesRes.json()
-            setTables(tablesData.tables || [])
+            const activeTables = tablesData.tables || []
+
+            if (bookingsRes.ok) {
+                const bookingsData = await bookingsRes.json()
+                const loadedBookings = bookingsData.bookings || []
+                setBookings(loadedBookings)
+
+                // Merge in stub tables for bookings on deactivated tables
+                const activeTableIds = new Set(activeTables.map((t: any) => t.id))
+                const orphanTableIds = new Set<string>()
+                for (const b of loadedBookings) {
+                    if (b.table_id && !activeTableIds.has(b.table_id)) {
+                        orphanTableIds.add(b.table_id)
+                    }
+                }
+                if (orphanTableIds.size > 0) {
+                    const orphanStubs = Array.from(orphanTableIds).map(id => {
+                        const booking = loadedBookings.find((b: any) => b.table_id === id)
+                        return { id, name: booking?.table_name || `Tafel (oud)`, seats: 0, zone: '⚠️ Inactief' }
+                    })
+                    setTables([...activeTables, ...orphanStubs])
+                } else {
+                    setTables(activeTables)
+                }
+            } else {
+                setTables(activeTables)
+            }
 
             if (hoursRes.ok) {
                 const hoursData = await hoursRes.json()
                 setOpeningHours(hoursData.openings || [])
-            }
-
-            if (bookingsRes.ok) {
-                const bookingsData = await bookingsRes.json()
-                setBookings(bookingsData.bookings || [])
             }
 
             if (notesRes.ok) {

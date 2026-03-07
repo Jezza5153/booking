@@ -1462,13 +1462,8 @@ router.patch('/api/admin/restaurant-bookings/:id/status', authMiddleware, async 
         // Invalidate cache
         invalidatePublicCacheForRestaurant(restaurantId);
 
-        // Update customer visit count if arrived
-        if (status === 'arrived' && result.rows[0].customer_id) {
-            await pool.query(
-                `UPDATE customers SET total_visits = total_visits + 1, last_visit = CURRENT_DATE WHERE id = $1`,
-                [result.rows[0].customer_id]
-            ).catch(() => { }); // silently fail if customers table doesn't exist
-        }
+        // Note: total_visits is incremented by the DB trigger in migration-service-mode.sql
+        // Do NOT manually increment here — it would double-count, especially with group cascade
 
         res.json({ success: true, booking: result.rows[0] });
     } catch (error) {

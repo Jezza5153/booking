@@ -66,7 +66,7 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
     const [tables, setTables] = useState<Table[]>([])
     const [restaurantBookings, setRestaurantBookings] = useState<RestaurantBooking[]>([])
     const [loadingTimeline, setLoadingTimeline] = useState(true)
-    const [openingHours, setOpeningHours] = useState<{ day: number; is_open: boolean }[]>([])
+    const [openingHours, setOpeningHours] = useState<{ dayOfWeek: number; open: string; close: string; isOpen: boolean }[]>([])
 
     // Modal states
     const [showEventBookingModal, setShowEventBookingModal] = useState(false)
@@ -131,11 +131,32 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
             ])
 
             const tablesData = await tablesRes.json()
-            setTables(tablesData.tables || [])
+            const activeTables = tablesData.tables || []
 
             if (bookingsRes.ok) {
                 const bookingsData = await bookingsRes.json()
-                setRestaurantBookings(bookingsData.bookings || [])
+                const loadedBookings = bookingsData.bookings || []
+                setRestaurantBookings(loadedBookings)
+
+                // Merge in stub tables for bookings on deactivated tables
+                const activeTableIds = new Set(activeTables.map((t: any) => t.id))
+                const orphanTableIds = new Set<string>()
+                for (const b of loadedBookings) {
+                    if (b.table_id && !activeTableIds.has(b.table_id)) {
+                        orphanTableIds.add(b.table_id)
+                    }
+                }
+                if (orphanTableIds.size > 0) {
+                    const orphanStubs = Array.from(orphanTableIds).map(id => {
+                        const booking = loadedBookings.find((b: any) => b.table_id === id)
+                        return { id, name: booking?.table_name || 'Tafel (oud)', seats: 0, zone: '⚠️ Inactief' }
+                    })
+                    setTables([...activeTables, ...orphanStubs])
+                } else {
+                    setTables(activeTables)
+                }
+            } else {
+                setTables(activeTables)
             }
 
             if (hoursRes.ok) {
@@ -324,14 +345,12 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
     const timeSlots = useMemo(() => {
         const d = new Date(timelineDate)
         const dayOfWeek = d.getDay()
-        const dayInfo = openingHours.find(h => h.day === dayOfWeek)
+        const dayInfo = openingHours.find(h => h.dayOfWeek === dayOfWeek)
 
         let startHour = 17, endHour = 23
-        if (dayInfo?.is_open !== false && dayInfo) {
-            const open = (dayInfo as any).open || '17:00'
-            const close = (dayInfo as any).close || '23:00'
-            startHour = parseInt(open.split(':')[0])
-            endHour = parseInt(close.split(':')[0])
+        if (dayInfo && dayInfo.isOpen !== false) {
+            startHour = parseInt(dayInfo.open?.split(':')[0] || '17')
+            endHour = parseInt(dayInfo.close?.split(':')[0] || '23')
         }
 
         const slots: string[] = []
@@ -346,8 +365,8 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
     const isOpenToday = useMemo(() => {
         const d = new Date(timelineDate)
         const dayOfWeek = d.getDay() // 0=Sunday
-        const dayInfo = openingHours.find(h => h.day === dayOfWeek)
-        return dayInfo?.is_open !== false // Default to open if not found
+        const dayInfo = openingHours.find(h => h.dayOfWeek === dayOfWeek)
+        return dayInfo?.isOpen !== false // Default to open if not found
     }, [timelineDate, openingHours])
 
     return (
@@ -607,7 +626,7 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                                                 {tableBookings.map(booking => {
                                                     const startMins = parseInt(booking.start_time.split(':')[0]) * 60 + parseInt(booking.start_time.split(':')[1])
                                                     const endMins = parseInt(booking.end_time.split(':')[0]) * 60 + parseInt(booking.end_time.split(':')[1])
-                                                    const gridStartMins = 17 * 60
+                                                    const gridStartMins = timeSlots.length > 0 ? parseInt(timeSlots[0].split(':')[0]) * 60 + parseInt(timeSlots[0].split(':')[1]) : 17 * 60
                                                     const slotWidth = 56 // w-14 = 56px
                                                     const left = ((startMins - gridStartMins) / 30) * slotWidth
                                                     const width = ((endMins - startMins) / 30) * slotWidth
