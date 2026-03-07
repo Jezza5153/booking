@@ -478,13 +478,41 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
             if (b.status === 'cancelled') continue
             const startMins = parseInt(b.start_time.split(':')[0]) * 60 + parseInt(b.start_time.split(':')[1])
             const endMins = parseInt(b.end_time.split(':')[0]) * 60 + parseInt(b.end_time.split(':')[1])
-            // Mark every slot minute this booking covers
-            for (let m = startMins; m < endMins; m += slotDuration) {
-                set.add(`${b.table_id}:${m}`)
+            // Mark every grid-aligned slot that this booking overlaps
+            // Floor start to nearest grid step, then iterate in grid steps
+            const gridStart = Math.floor(startMins / slotDuration) * slotDuration
+            for (let m = gridStart; m < endMins; m += slotDuration) {
+                // Only mark if this grid slot actually overlaps the booking
+                if (m + slotDuration > startMins) {
+                    set.add(`${b.table_id}:${m}`)
+                }
+            }
+        }
+        // Also mark blocked tables
+        for (const block of tableBlocks) {
+            if (!block.start_time) {
+                // Full-day block — mark all slots
+                const table = tables.find(t => t.id === block.table_id)
+                if (table) {
+                    for (const slot of timeSlots) {
+                        const mins = parseInt(slot.split(':')[0]) * 60 + parseInt(slot.split(':')[1])
+                        set.add(`${block.table_id}:${mins}`)
+                    }
+                }
+            } else if (block.start_time && block.end_time) {
+                // Timed block — mark overlapping slots
+                const bStart = parseInt(block.start_time.split(':')[0]) * 60 + parseInt(block.start_time.split(':')[1])
+                const bEnd = parseInt(block.end_time.split(':')[0]) * 60 + parseInt(block.end_time.split(':')[1])
+                const gridStart = Math.floor(bStart / slotDuration) * slotDuration
+                for (let m = gridStart; m < bEnd; m += slotDuration) {
+                    if (m + slotDuration > bStart) {
+                        set.add(`${block.table_id}:${m}`)
+                    }
+                }
             }
         }
         return set
-    }, [bookings, slotDuration])
+    }, [bookings, slotDuration, tableBlocks, tables, timeSlots])
 
     // Check if a slot is available for a table (O(1) lookup)
     const isSlotAvailable = (table: Table, timeSlot: string) => {
@@ -1061,7 +1089,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                 <div className="grid grid-cols-4 gap-3 mb-4">
                     <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200 p-3 text-center">
                         <div className="text-2xl font-black text-amber-900">
-                            {bookings.filter(b => b.status !== 'arrived' && b.status !== 'cancelled' && b.status !== 'walkin' && (!b.group_id || b.is_primary)).reduce((sum, b) => sum + (b.guest_count || 0), 0)}
+                            {bookings.filter(b => b.status !== 'arrived' && b.status !== 'cancelled' && b.status !== 'walkin' && b.status !== 'no_show' && (!b.group_id || b.is_primary)).reduce((sum, b) => sum + (b.guest_count || 0), 0)}
                         </div>
                         <div className="text-[10px] font-bold text-amber-600 uppercase">Verwacht</div>
                     </div>

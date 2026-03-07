@@ -1808,6 +1808,19 @@ router.patch('/api/admin/restaurant-bookings/:id', authMiddleware, async (req, r
                 updatedDate, updatedTime, updatedEndTime, newTableId, id, restaurantId]
         );
 
+        // Cascade shared fields to group siblings (time, date, name, guest_count — not table_id)
+        const editedBooking = result.rows[0];
+        if (editedBooking && editedBooking.group_id) {
+            await client.query(
+                `UPDATE restaurant_bookings
+                 SET customer_name = $1, customer_email = $2, customer_phone = $3,
+                     guest_count = $4, booking_date = $5, start_time = $6, end_time = $7, updated_at = NOW()
+                 WHERE group_id = $8 AND id != $9 AND restaurant_id = $10`,
+                [updatedName, updatedEmail, updatedPhone, updatedGuests,
+                    updatedDate, updatedTime, updatedEndTime, editedBooking.group_id, id, restaurantId]
+            );
+        }
+
         await client.query('COMMIT');
         invalidatePublicCacheForRestaurant(restaurantId);
 
