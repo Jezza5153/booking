@@ -628,8 +628,10 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                                                     const endMins = parseInt(booking.end_time.split(':')[0]) * 60 + parseInt(booking.end_time.split(':')[1])
                                                     const gridStartMins = timeSlots.length > 0 ? parseInt(timeSlots[0].split(':')[0]) * 60 + parseInt(timeSlots[0].split(':')[1]) : 17 * 60
                                                     const slotWidth = 56 // w-14 = 56px
-                                                    const left = ((startMins - gridStartMins) / 30) * slotWidth
-                                                    const width = ((endMins - startMins) / 30) * slotWidth
+                                                    // Clamp to grid bounds — bookings before grid start still show at position 0
+                                                    const effectiveStart = Math.max(startMins, gridStartMins)
+                                                    const left = ((effectiveStart - gridStartMins) / 30) * slotWidth
+                                                    const width = ((endMins - effectiveStart) / 30) * slotWidth
                                                     const isSecondary = booking.group_id && !booking.is_primary
                                                     const isGroup = !!booking.group_id
 

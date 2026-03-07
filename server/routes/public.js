@@ -603,7 +603,7 @@ router.get('/api/restaurant/:restaurantId/tables', async (req, res) => {
             staleMs: 600_000,
             loader: async () => {
                 const result = await pool.query(
-                    `SELECT id, name, seats, zone FROM restaurant_tables
+                    `SELECT id, name, seats, zone, can_combine FROM restaurant_tables
                      WHERE restaurant_id = $1 AND is_active = true
                      ORDER BY zone, name`,
                     [restaurantId]

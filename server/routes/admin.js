@@ -2159,7 +2159,18 @@ router.post('/api/admin/restaurant-settings', authMiddleware, async (req, res) =
             }
         }
 
-        // TODO: Save settings (slotDuration, maxPartySize, bufferTime) to a restaurant_settings table
+        // Save settings (slotDuration, maxPartySize, bufferTime)
+        if (settings) {
+            await client.query(`
+                INSERT INTO restaurant_settings (restaurant_id, slot_duration, max_party_size, buffer_time, updated_at)
+                VALUES ($1, $2, $3, $4, NOW())
+                ON CONFLICT (restaurant_id) DO UPDATE SET
+                    slot_duration = COALESCE($2, restaurant_settings.slot_duration),
+                    max_party_size = COALESCE($3, restaurant_settings.max_party_size),
+                    buffer_time = COALESCE($4, restaurant_settings.buffer_time),
+                    updated_at = NOW()
+            `, [restaurantId, settings.slotDuration || 30, settings.maxPartySize || 12, settings.bufferTime || 15]);
+        }
 
         await client.query('COMMIT');
         invalidatePublicCacheForRestaurant(restaurantId);

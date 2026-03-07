@@ -128,7 +128,9 @@ CREATE TABLE IF NOT EXISTS restaurant_settings (
 CREATE OR REPLACE FUNCTION update_customer_visits()
 RETURNS TRIGGER AS $$
 BEGIN
-    IF NEW.customer_id IS NOT NULL AND NEW.status = 'arrived' AND OLD.status != 'arrived' THEN
+    -- Only count visits for primary rows (or non-grouped bookings) to avoid inflating visits on group cascade
+    IF NEW.customer_id IS NOT NULL AND NEW.status = 'arrived' AND OLD.status != 'arrived'
+       AND (NEW.group_id IS NULL OR NEW.is_primary = true) THEN
         UPDATE customers 
         SET total_visits = total_visits + 1,
             last_visit = CURRENT_DATE,

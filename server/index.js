@@ -311,6 +311,54 @@ async function runMigrations() {
         console.warn('⚠️ Table blocks migration skipped:', e.message);
     }
 
+    // Auto-migration: update visit trigger to only count primary rows
+    try {
+        await pool.query(`
+            CREATE OR REPLACE FUNCTION update_customer_visits()
+            RETURNS TRIGGER AS $$
+            BEGIN
+                IF NEW.customer_id IS NOT NULL AND NEW.status = 'arrived' AND OLD.status != 'arrived'
+                   AND (NEW.group_id IS NULL OR NEW.is_primary = true) THEN
+                    UPDATE customers
+                    SET total_visits = total_visits + 1,
+                        last_visit = CURRENT_DATE,
+                        updated_at = NOW()
+                    WHERE id = NEW.customer_id;
+                END IF;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql
+        `);
+        console.log('✅ Visit trigger updated (primary-only)');
+    } catch (e) {
+        console.warn('⚠️ Visit trigger migration skipped:', e.message);
+    }
+
+    // Auto-migration: restaurant_settings table
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS restaurant_settings (
+                restaurant_id TEXT PRIMARY KEY,
+                slot_duration INTEGER DEFAULT 30,
+                max_party_size INTEGER DEFAULT 12,
+                buffer_time INTEGER DEFAULT 15,
+                max_covers_per_night INTEGER,
+                updated_at TIMESTAMPTZ DEFAULT NOW()
+            )
+        `);
+        console.log('✅ Restaurant settings migration applied');
+    } catch (e) {
+        console.warn('⚠️ Restaurant settings migration skipped:', e.message);
+    }
+
+    // Auto-migration: can_combine column on tables
+    try {
+        await pool.query('ALTER TABLE restaurant_tables ADD COLUMN IF NOT EXISTS can_combine BOOLEAN DEFAULT true');
+        console.log('✅ can_combine column migration applied');
+    } catch (e) {
+        console.warn('⚠️ can_combine migration skipped:', e.message);
+    }
+
     // Daily revenue table for manual revenue input
     try {
         await pool.query(`
