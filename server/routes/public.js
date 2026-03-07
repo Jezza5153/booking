@@ -1013,11 +1013,39 @@ router.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
         // P1 FIX #11: Parse date parts manually to avoid UTC timezone shift (same as availability endpoint)
         const [yr, mo, dy] = date.split('-').map(Number);
         const dayOfWeek = new Date(yr, mo - 1, dy).getDay();
-        const openingQ = await client.query(
-            `SELECT close_time FROM restaurant_openings WHERE restaurant_id = $1 AND day_of_week = $2 LIMIT 1`,
-            [restaurant_id, dayOfWeek]
-        );
-        const closeTime = openingQ.rows[0]?.close_time || '23:59';
+
+        // Fetch both weekday schedule AND specific-date override
+        const [weekdayQ, specificQ] = await Promise.all([
+            client.query(
+                `SELECT open_time, close_time, is_closed FROM restaurant_openings
+                 WHERE restaurant_id = $1 AND day_of_week = $2 AND specific_date IS NULL LIMIT 1`,
+                [restaurant_id, dayOfWeek]
+            ),
+            client.query(
+                `SELECT open_time, close_time, is_closed FROM restaurant_openings
+                 WHERE restaurant_id = $1 AND specific_date = $2 LIMIT 1`,
+                [restaurant_id, date]
+            )
+        ]);
+
+        // Specific date overrides weekday schedule
+        const hours = specificQ.rows[0] || weekdayQ.rows[0];
+        const isClosed = hours?.is_closed === true;
+        const openTime = hours?.open_time ? hours.open_time.substring(0, 5) : '17:00';
+        const closeTime = hours?.close_time ? hours.close_time.substring(0, 5) : '23:59';
+
+        // Reject bookings on closed days (admin can override)
+        if (isClosed && !isAdmin) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ error: 'Restaurant is gesloten op deze dag' });
+        }
+
+        // Reject bookings before opening time (admin can override)
+        if (!isAdmin && timeToMins(time) < timeToMins(openTime)) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ error: `Boekingen pas mogelijk vanaf ${openTime}` });
+        }
+
         // Use frontend-supplied end_time when provided (quick-book with custom duration);
         // otherwise compute from default duration, always capped at closing time.
         let endTime;
@@ -1068,11 +1096,30 @@ router.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
         let selectedTables;
         const adminTableIds = table_ids || (table_id ? [table_id] : null);
         if (isAdmin && adminTableIds && adminTableIds.length > 0) {
-            // Use admin-specified tables, but still verify they exist and aren't blocked
+            // Use admin-specified tables, but validate they exist, aren't blocked, and have capacity
             selectedTables = allTables.filter(t => adminTableIds.includes(t.id));
             if (selectedTables.length === 0) {
                 await client.query('ROLLBACK');
                 return res.status(409).json({ error: 'Geselecteerde tafel(s) niet beschikbaar' });
+            }
+            // Validate total seat capacity
+            const totalSeats = selectedTables.reduce((s, t) => s + (t.seats || 0), 0);
+            if (totalSeats > 0 && guest_count > totalSeats * 1.5) {
+                await client.query('ROLLBACK');
+                return res.status(409).json({ error: `Te veel gasten (${guest_count}) voor geselecteerde tafels (max ~${totalSeats})` });
+            }
+            // Check for timed block and booking overlaps on selected tables
+            for (const tbl of selectedTables) {
+                const tableBookings = bookingsByTableId[tbl.id] || [];
+                const hasOverlap = tableBookings.some(b => {
+                    const bStart = timeToMins(b.start_time);
+                    const bEnd = timeToMins(b.end_time);
+                    return timeToMins(time) < bEnd && timeToMins(endTime) > bStart;
+                });
+                if (hasOverlap) {
+                    await client.query('ROLLBACK');
+                    return res.status(409).json({ error: `Tafel ${tbl.name} is al bezet op dit tijdstip` });
+                }
             }
         } else {
             selectedTables = selectTablesForSlot({ allTables, bookingsByTableId, slotStart: time, slotEnd: endTime, guestCount: guest_count });

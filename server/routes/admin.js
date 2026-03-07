@@ -1766,11 +1766,21 @@ router.patch('/api/admin/restaurant-bookings/:id', authMiddleware, async (req, r
             );
             const fullyBlockedIds = new Set(blocksQ.rows.filter(b => !b.start_time).map(b => b.table_id));
             const allTables = allTablesQ.rows.filter(t => !fullyBlockedIds.has(t.id));
+
+            // Exclude ALL sibling rows from availability (not just the clicked one)
+            let excludeIds = [id];
+            if (current.group_id) {
+                const siblingsQ = await client.query(
+                    `SELECT id FROM restaurant_bookings WHERE group_id = $1 AND restaurant_id = $2`,
+                    [current.group_id, restaurantId]
+                );
+                excludeIds = siblingsQ.rows.map(r => r.id);
+            }
             const bookingsQ = await client.query(
                 `SELECT table_id, to_char(start_time, 'HH24:MI') AS start_time, to_char(end_time, 'HH24:MI') AS end_time
                  FROM restaurant_bookings
-                 WHERE restaurant_id = $1 AND booking_date = $2 AND lower(status) != 'cancelled' AND id != $3`,
-                [restaurantId, updatedDate, id]
+                 WHERE restaurant_id = $1 AND booking_date = $2 AND lower(status) != 'cancelled' AND id != ALL($3::text[])`,
+                [restaurantId, updatedDate, excludeIds]
             );
             const timeBlocks = blocksQ.rows
                 .filter(b => b.start_time && b.end_time)
@@ -1789,9 +1799,58 @@ router.patch('/api/admin/restaurant-bookings/:id', authMiddleware, async (req, r
                 return res.status(409).json({ error: 'Geen tafels beschikbaar voor deze wijziging' });
             }
             newTableId = selectedTables[0].id;
+
+            // For grouped bookings: reassign ALL tables across the group
+            if (current.group_id && selectedTables.length > 0) {
+                const groupId = current.group_id;
+                // Get all current sibling IDs
+                const allSiblings = await client.query(
+                    `SELECT id FROM restaurant_bookings WHERE group_id = $1 AND restaurant_id = $2 ORDER BY is_primary DESC`,
+                    [groupId, restaurantId]
+                );
+                const siblingIds = allSiblings.rows.map(r => r.id);
+
+                // Update existing rows with new tables, delete surplus, insert new if needed
+                for (let i = 0; i < Math.max(selectedTables.length, siblingIds.length); i++) {
+                    if (i < selectedTables.length && i < siblingIds.length) {
+                        // Update existing row
+                        await client.query(
+                            `UPDATE restaurant_bookings
+                             SET customer_name = $1, customer_email = $2, customer_phone = $3, remarks = $4,
+                                 guest_count = $5, booking_date = $6, start_time = $7, end_time = $8,
+                                 table_id = $9, is_primary = $10, updated_at = NOW()
+                             WHERE id = $11`,
+                            [updatedName, updatedEmail, updatedPhone, i === 0 ? updatedRemarks : null,
+                                updatedGuests, updatedDate, updatedTime, updatedEndTime,
+                                selectedTables[i].id, i === 0, siblingIds[i]]
+                        );
+                    } else if (i < selectedTables.length) {
+                        // Need more rows — insert
+                        const newId = require('crypto').randomUUID();
+                        await client.query(
+                            `INSERT INTO restaurant_bookings (id, restaurant_id, table_id, booking_date, start_time, end_time,
+                                guest_count, customer_name, customer_email, customer_phone, remarks, group_id, is_primary, source)
+                             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, false, 'admin')`,
+                            [newId, restaurantId, selectedTables[i].id, updatedDate, updatedTime, updatedEndTime,
+                                updatedGuests, updatedName, updatedEmail, updatedPhone, null, groupId]
+                        );
+                    } else {
+                        // Surplus rows — delete
+                        await client.query('DELETE FROM restaurant_bookings WHERE id = $1', [siblingIds[i]]);
+                    }
+                }
+
+                await client.query('COMMIT');
+                invalidatePublicCacheForRestaurant(restaurantId);
+
+                const tableNames = selectedTables.map(t => t.name).join(' + ');
+                const updatedBooking = await pool.query('SELECT * FROM restaurant_bookings WHERE id = $1', [siblingIds[0] || id]);
+                res.json({ success: true, booking: { ...updatedBooking.rows[0], table_name: tableNames } });
+                return;
+            }
         }
 
-        // Update the booking
+        // Update the booking (non-grouped or no time change)
         const result = await client.query(
             `UPDATE restaurant_bookings
              SET customer_name = $1, customer_email = $2, customer_phone = $3, remarks = $4,
