@@ -1042,16 +1042,27 @@ router.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
              ORDER BY seats DESC`,
             [restaurant_id]
         );
-        const allTables = allTablesQ.rows;
 
-        // 2) Fetch existing bookings for this date, build map
+        // 1b) Fetch blocks for this date and filter out blocked tables
+        const blocksQ = await client.query(
+            `SELECT table_id, to_char(start_time, 'HH24:MI') AS start_time, to_char(end_time, 'HH24:MI') AS end_time
+             FROM table_blocks WHERE restaurant_id = $1 AND block_date = $2`,
+            [restaurant_id, date]
+        );
+        const fullyBlockedIds = new Set(blocksQ.rows.filter(b => !b.start_time).map(b => b.table_id));
+        const allTables = allTablesQ.rows.filter(t => !fullyBlockedIds.has(t.id));
+
+        // 2) Fetch existing bookings + merge time-specific blocks as synthetic bookings
         const bookingsQ = await client.query(
             `SELECT table_id, to_char(start_time, 'HH24:MI') AS start_time, to_char(end_time, 'HH24:MI') AS end_time
              FROM restaurant_bookings
              WHERE restaurant_id = $1 AND booking_date = $2 AND lower(status) != 'cancelled'`,
             [restaurant_id, date]
         );
-        const bookingsByTableId = buildBookingsMap(bookingsQ.rows);
+        const timeBlocks = blocksQ.rows
+            .filter(b => b.start_time && b.end_time)
+            .map(b => ({ table_id: b.table_id, start_time: b.start_time, end_time: b.end_time }));
+        const bookingsByTableId = buildBookingsMap([...bookingsQ.rows, ...timeBlocks]);
 
         // 3) Use centralized selection (identical logic to availability endpoint)
         const selectedTables = selectTablesForSlot({ allTables, bookingsByTableId, slotStart: time, slotEnd: endTime, guestCount: guest_count });
