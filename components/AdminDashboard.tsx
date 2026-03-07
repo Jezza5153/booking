@@ -63,10 +63,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
   useEffect(() => {
     const loadRestaurantSettings = async () => {
       try {
-        // Fetch tables and opening hours in parallel
-        const [tablesRes, hoursRes] = await Promise.all([
+        const token = localStorage.getItem('events_token');
+        // Fetch tables, opening hours, and saved settings in parallel
+        const [tablesRes, hoursRes, settingsRes] = await Promise.all([
           fetch(`${API_BASE_URL}/api/restaurant/${RESTAURANT_ID}/tables`),
-          fetch(`${API_BASE_URL}/api/restaurant/${RESTAURANT_ID}/opening-hours`)
+          fetch(`${API_BASE_URL}/api/restaurant/${RESTAURANT_ID}/opening-hours`),
+          fetch(`${API_BASE_URL}/api/admin/restaurant-settings?restaurantId=${RESTAURANT_ID}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
         ]);
 
         if (tablesRes.ok) {
@@ -85,6 +89,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
               return saved || { dayOfWeek: day, open: '17:00', close: '23:00', isOpen: true };
             });
             setOpeningHours(merged);
+          }
+        }
+
+        // Load saved settings (slotDuration, maxPartySize, bufferTime)
+        if (settingsRes.ok) {
+          const data = await settingsRes.json();
+          if (data.settings) {
+            if (data.settings.slotDuration !== undefined) setSlotDuration(data.settings.slotDuration);
+            if (data.settings.maxPartySize !== undefined) setMaxPartySize(data.settings.maxPartySize);
+            if (data.settings.bufferTime !== undefined) setBufferTime(data.settings.bufferTime);
           }
         }
       } catch (e) {

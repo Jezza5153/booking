@@ -1266,7 +1266,7 @@ router.get('/api/restaurant/:id/openings', async (req, res) => {
                     `SELECT day_of_week as day, NOT is_closed as is_open,
                             open_time::text as open_time, close_time::text as close_time
                      FROM restaurant_openings
-                     WHERE restaurant_id = $1
+                     WHERE restaurant_id = $1 AND specific_date IS NULL
                      ORDER BY day_of_week`,
                     [id]
                 );

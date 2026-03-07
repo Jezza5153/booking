@@ -2132,7 +2132,28 @@ router.post('/api/admin/table-blocks/bulk', authMiddleware, async (req, res) => 
     }
 });
 
-// Route: /api/admin/restaurant-settings
+// Route: GET /api/admin/restaurant-settings
+router.get('/api/admin/restaurant-settings', authMiddleware, async (req, res) => {
+    const restaurantId = req.query.restaurantId;
+    if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' });
+    try {
+        const result = await pool.query(
+            'SELECT slot_duration, max_party_size, buffer_time, max_covers_per_night FROM restaurant_settings WHERE restaurant_id = $1',
+            [restaurantId]
+        );
+        if (result.rows.length > 0) {
+            const s = result.rows[0];
+            res.json({ settings: { slotDuration: s.slot_duration, maxPartySize: s.max_party_size, bufferTime: s.buffer_time, maxCoversPerNight: s.max_covers_per_night } });
+        } else {
+            res.json({ settings: null });
+        }
+    } catch (error) {
+        console.error('Load settings error:', error);
+        res.status(500).json({ error: 'Failed to load settings' });
+    }
+});
+
+// Route: POST /api/admin/restaurant-settings
 router.post('/api/admin/restaurant-settings', authMiddleware, async (req, res) => {
     const { restaurantId, tables, openingHours, settings } = req.body;
     // DEBUG log removed (audit fix #27)
@@ -2213,7 +2234,7 @@ router.post('/api/admin/restaurant-settings', authMiddleware, async (req, res) =
                     max_party_size = COALESCE($3, restaurant_settings.max_party_size),
                     buffer_time = COALESCE($4, restaurant_settings.buffer_time),
                     updated_at = NOW()
-            `, [restaurantId, settings.slotDuration || 30, settings.maxPartySize || 12, settings.bufferTime || 15]);
+            `, [restaurantId, settings.slotDuration ?? 30, settings.maxPartySize ?? 12, settings.bufferTime ?? 15]);
         }
 
         await client.query('COMMIT');
