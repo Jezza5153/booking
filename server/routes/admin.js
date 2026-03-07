@@ -1739,11 +1739,21 @@ router.patch('/api/admin/restaurant-bookings/:id', authMiddleware, async (req, r
         } else if (time || duration || date) {
             const [yr, mo, dy] = updatedDate.split('-').map(Number);
             const dayOfWeek = new Date(yr, mo - 1, dy).getDay();
-            const openingQ = await client.query(
-                `SELECT close_time FROM restaurant_openings WHERE restaurant_id = $1 AND day_of_week = $2 LIMIT 1`,
-                [restaurantId, dayOfWeek]
-            );
-            const closeTime = openingQ.rows[0]?.close_time || '23:59';
+            // Fetch weekday + specific-date override (same as public booking route)
+            const [weekdayQ, specificQ] = await Promise.all([
+                client.query(
+                    `SELECT open_time, close_time, is_closed FROM restaurant_openings
+                     WHERE restaurant_id = $1 AND day_of_week = $2 AND specific_date IS NULL LIMIT 1`,
+                    [restaurantId, dayOfWeek]
+                ),
+                client.query(
+                    `SELECT open_time, close_time, is_closed FROM restaurant_openings
+                     WHERE restaurant_id = $1 AND specific_date = $2 LIMIT 1`,
+                    [restaurantId, updatedDate]
+                )
+            ]);
+            const hours = specificQ.rows[0] || weekdayQ.rows[0];
+            const closeTime = hours?.close_time ? hours.close_time.substring(0, 5) : '23:59';
             updatedEndTime = computeEndTime(updatedTime, closeTime, duration || undefined);
         } else {
             updatedEndTime = typeof current.end_time === 'string' ? current.end_time.substring(0, 5) : current.end_time;
