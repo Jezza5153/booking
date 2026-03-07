@@ -384,7 +384,8 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                 const token = localStorage.getItem('events_token')
                 const d = new Date(date)
                 const monday = new Date(d)
-                monday.setDate(d.getDate() - d.getDay() + 1)
+                const dayOfWeek = d.getDay() // 0=Sun, 1=Mon...
+                monday.setDate(d.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1))
                 const sunday = new Date(monday)
                 sunday.setDate(monday.getDate() + 6)
                 const startDate = monday.toISOString().split('T')[0]
@@ -1362,7 +1363,8 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                             <div className="grid grid-cols-7 gap-2">
                                 {Array.from({ length: 7 }).map((_, i) => {
                                     const d = new Date(date)
-                                    d.setDate(d.getDate() - d.getDay() + i + 1) // Start from Monday
+                                    const dayOfWeekForWeek = d.getDay()
+                                    d.setDate(d.getDate() - (dayOfWeekForWeek === 0 ? 6 : dayOfWeekForWeek - 1) + i) // i=0 → Monday
                                     const dayStr = d.toISOString().split('T')[0]
                                     const isToday = dayStr === new Date().toISOString().split('T')[0]
                                     const isSelected = dayStr === date
@@ -1767,7 +1769,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                 })()}
 
                                 <div>
-                                    <label className="text-xs text-gray-500">Naam (optioneel)</label>
+                                    <label className="text-xs text-gray-500">Naam</label>
                                     <input
                                         type="text"
                                         value={walkinForm.customer_name}

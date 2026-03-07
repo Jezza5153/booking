@@ -1,6 +1,7 @@
 import express from 'express';
 import pool from '../db-postgres.js';
 import { authMiddleware } from '../auth.js';
+import jwt from 'jsonwebtoken';
 import { bookingRateLimiter, widgetRateLimiter, calendarRateLimiter } from '../ratelimit.js';
 import { captureException } from '../sentry.js';
 import { sendBookingConfirmation, sendLargeGroupNotification, sendRestaurantBookingConfirmation, sendChefsChoiceNotification } from '../email.js';
@@ -975,8 +976,19 @@ router.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
         return res.status(400).json({ error: 'Invalid restaurant ID' });
     }
 
-    // Admin (authenticated) requests can skip email — phone bookings, walk-ins, etc.
-    const isAdmin = !!req.headers.authorization;
+    // Admin detection: actually verify the JWT, not just header presence
+    let isAdmin = false;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        try {
+            const token = authHeader.split(' ')[1];
+            jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
+            isAdmin = true;
+        } catch (_) {
+            // Invalid token — treat as public request
+            isAdmin = false;
+        }
+    }
 
     if (!date || !time || !guest_count || !customer_name) {
         return res.status(400).json({ error: 'Vul datum, tijd, aantal gasten en naam in' });
@@ -1110,7 +1122,7 @@ router.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
             }
             // Check for timed block and booking overlaps on selected tables
             for (const tbl of selectedTables) {
-                const tableBookings = bookingsByTableId[tbl.id] || [];
+                const tableBookings = bookingsByTableId.get(tbl.id) || [];
                 const hasOverlap = tableBookings.some(b => {
                     const bStart = timeToMins(b.start_time);
                     const bEnd = timeToMins(b.end_time);

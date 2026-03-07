@@ -345,7 +345,10 @@ router.get('/api/admin/stats', authMiddleware, async (req, res) => {
     const periodDays = Math.round((toDate - fromDate) / 86400000);
     const prevFrom = new Date(fromDate);
     prevFrom.setDate(prevFrom.getDate() - periodDays);
-    const prevTo = from; // previous period ends where current starts
+    // Previous period ends one day before current starts (avoid BETWEEN overlap)
+    const prevToDate = new Date(fromDate);
+    prevToDate.setDate(prevToDate.getDate() - 1);
+    const prevTo = prevToDate.toISOString().split('T')[0];
 
     // YoY: same period last year
     const yoyFrom = new Date(fromDate); yoyFrom.setFullYear(yoyFrom.getFullYear() - 1);
@@ -1836,10 +1839,22 @@ router.patch('/api/admin/restaurant-bookings/:id', authMiddleware, async (req, r
             }
             newTableId = selectedTables[0].id;
 
-            // For grouped bookings: reassign ALL tables across the group
-            if (current.group_id && selectedTables.length > 0) {
-                const groupId = current.group_id;
-                // Get all current sibling IDs
+            // Handle multi-table: either reassign existing group or promote single → group
+            if (selectedTables.length > 1) {
+                const crypto = require('crypto');
+                let groupId = current.group_id;
+
+                // Promote single-table booking to a group if needed
+                if (!groupId) {
+                    groupId = crypto.randomUUID();
+                    // Mark the current booking as primary in the new group
+                    await client.query(
+                        `UPDATE restaurant_bookings SET group_id = $1, is_primary = true WHERE id = $2`,
+                        [groupId, id]
+                    );
+                }
+
+                // Get all current sibling IDs (includes the original after group_id set)
                 const allSiblings = await client.query(
                     `SELECT id FROM restaurant_bookings WHERE group_id = $1 AND restaurant_id = $2 ORDER BY is_primary DESC`,
                     [groupId, restaurantId]
@@ -1861,14 +1876,17 @@ router.patch('/api/admin/restaurant-bookings/:id', authMiddleware, async (req, r
                                 selectedTables[i].id, i === 0, siblingIds[i]]
                         );
                     } else if (i < selectedTables.length) {
-                        // Need more rows — insert
-                        const newId = require('crypto').randomUUID();
+                        // Need more rows — insert with full metadata from original
+                        const newId = crypto.randomUUID();
                         await client.query(
                             `INSERT INTO restaurant_bookings (id, restaurant_id, table_id, booking_date, start_time, end_time,
-                                guest_count, customer_name, customer_email, customer_phone, remarks, group_id, is_primary, source)
-                             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, false, 'admin')`,
+                                guest_count, customer_name, customer_email, customer_phone, remarks,
+                                group_id, is_primary, source, status, is_walkin, customer_id)
+                             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, false, $13, $14, $15, $16)`,
                             [newId, restaurantId, selectedTables[i].id, updatedDate, updatedTime, updatedEndTime,
-                                updatedGuests, updatedName, updatedEmail, updatedPhone, null, groupId]
+                                updatedGuests, updatedName, updatedEmail, updatedPhone, null,
+                                groupId, current.source || 'admin', current.status || 'confirmed',
+                                current.is_walkin || false, current.customer_id || null]
                         );
                     } else {
                         // Surplus rows — delete
@@ -2162,9 +2180,9 @@ router.post('/api/admin/restaurant-settings', authMiddleware, async (req, res) =
 
         // Upsert opening hours
         if (openingHours && Array.isArray(openingHours)) {
-            // Delete existing and re-insert
+            // Delete only weekday schedule rows — preserve specific_date overrides
             await client.query(
-                'DELETE FROM restaurant_openings WHERE restaurant_id = $1',
+                'DELETE FROM restaurant_openings WHERE restaurant_id = $1 AND specific_date IS NULL',
                 [restaurantId]
             );
 
