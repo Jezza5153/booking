@@ -1871,6 +1871,112 @@ router.get('/api/admin/customers/search', authMiddleware, async (req, res) => {
     }
 });
 
+// =====================================================
+// TABLE BLOCKS — per-table, per-date blocking
+// =====================================================
+
+// GET blocks for a date
+router.get('/api/admin/table-blocks', authMiddleware, async (req, res) => {
+    const restaurantId = req.query.restaurantId || 'demo-restaurant';
+    const date = req.query.date;
+    if (!date) return res.status(400).json({ error: 'date required' });
+
+    try {
+        const result = await pool.query(
+            `SELECT tb.id, tb.table_id, tb.block_date, 
+                    to_char(tb.start_time, 'HH24:MI') AS start_time, 
+                    to_char(tb.end_time, 'HH24:MI') AS end_time, 
+                    tb.reason, tb.created_at
+             FROM table_blocks tb
+             WHERE tb.restaurant_id = $1 AND tb.block_date = $2
+             ORDER BY tb.table_id, tb.start_time`,
+            [restaurantId, date]
+        );
+        res.json({ blocks: result.rows });
+    } catch (error) {
+        console.error('Get table blocks error:', error);
+        res.status(500).json({ error: 'Failed to fetch table blocks' });
+    }
+});
+
+// POST create a block
+router.post('/api/admin/table-block', authMiddleware, async (req, res) => {
+    const { restaurantId = 'demo-restaurant', table_id, block_date, start_time, end_time, reason } = req.body;
+    if (!table_id || !block_date) return res.status(400).json({ error: 'table_id and block_date required' });
+
+    try {
+        const result = await pool.query(
+            `INSERT INTO table_blocks (restaurant_id, table_id, block_date, start_time, end_time, reason)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             ON CONFLICT (table_id, block_date, COALESCE(start_time, '00:00:00')) DO UPDATE SET
+                end_time = EXCLUDED.end_time,
+                reason = EXCLUDED.reason
+             RETURNING id`,
+            [restaurantId, table_id, block_date, start_time || null, end_time || null, reason || null]
+        );
+        invalidatePublicCacheForRestaurant(restaurantId);
+        res.json({ success: true, block_id: result.rows[0].id });
+    } catch (error) {
+        console.error('Create table block error:', error);
+        res.status(500).json({ error: 'Failed to create table block' });
+    }
+});
+
+// DELETE remove a block
+router.delete('/api/admin/table-block/:id', authMiddleware, async (req, res) => {
+    const blockId = req.params.id;
+    const restaurantId = req.query.restaurantId || req.body?.restaurantId || 'demo-restaurant';
+
+    try {
+        await pool.query('DELETE FROM table_blocks WHERE id = $1 AND restaurant_id = $2', [blockId, restaurantId]);
+        invalidatePublicCacheForRestaurant(restaurantId);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Delete table block error:', error);
+        res.status(500).json({ error: 'Failed to remove table block' });
+    }
+});
+
+// Bulk block: block all empty tables for a date
+router.post('/api/admin/table-blocks/bulk', authMiddleware, async (req, res) => {
+    const { restaurantId = 'demo-restaurant', block_date, reason } = req.body;
+    if (!block_date) return res.status(400).json({ error: 'block_date required' });
+
+    try {
+        // Find tables with NO bookings for this date
+        const result = await pool.query(
+            `SELECT rt.id FROM restaurant_tables rt
+             WHERE rt.restaurant_id = $1 AND rt.is_active = true
+             AND rt.id NOT IN (
+                SELECT DISTINCT table_id FROM restaurant_bookings
+                WHERE restaurant_id = $1 AND booking_date = $2 AND status != 'cancelled'
+             )
+             AND rt.id NOT IN (
+                SELECT DISTINCT table_id FROM table_blocks
+                WHERE restaurant_id = $1 AND block_date = $2
+             )`,
+            [restaurantId, block_date]
+        );
+
+        let blocked = 0;
+        for (const row of result.rows) {
+            await pool.query(
+                `INSERT INTO table_blocks (restaurant_id, table_id, block_date, reason)
+                 VALUES ($1, $2, $3, $4)
+                 ON CONFLICT (table_id, block_date, COALESCE(start_time, '00:00:00')) DO NOTHING`,
+                [restaurantId, row.id, block_date, reason || 'Bulk block']
+            );
+            blocked++;
+        }
+
+        invalidatePublicCacheForRestaurant(restaurantId);
+        res.json({ success: true, blocked_count: blocked });
+    } catch (error) {
+        console.error('Bulk block error:', error);
+        res.status(500).json({ error: 'Failed to bulk block tables' });
+    }
+});
+
 // Route: /api/admin/restaurant-settings
 router.post('/api/admin/restaurant-settings', authMiddleware, async (req, res) => {
     const { restaurantId, tables, openingHours, settings } = req.body;

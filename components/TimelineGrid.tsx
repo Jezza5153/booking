@@ -43,6 +43,15 @@ interface Booking {
     linked_tables?: string | null
 }
 
+interface TableBlock {
+    id: string
+    table_id: string
+    block_date: string
+    start_time?: string | null
+    end_time?: string | null
+    reason?: string | null
+}
+
 interface Customer {
     id: string
     name: string
@@ -149,6 +158,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
     const [dayNotes, setDayNotes] = useState<DayNote[]>([])
     const [newNoteText, setNewNoteText] = useState('')
     const [showDayNotes, setShowDayNotes] = useState(false)
+    const [tableBlocks, setTableBlocks] = useState<TableBlock[]>([])
 
     // Modal states
     const [showNewBookingModal, setShowNewBookingModal] = useState(false)
@@ -297,12 +307,13 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
             const token = localStorage.getItem('events_token')
             const headers = { 'Authorization': `Bearer ${token}` }
 
-            const [tablesRes, hoursRes, bookingsRes, notesRes, waitlistRes] = await Promise.all([
+            const [tablesRes, hoursRes, bookingsRes, notesRes, waitlistRes, blocksRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/tables`),
                 fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/openings`),
                 fetch(`${API_BASE_URL}/api/admin/restaurant-bookings?restaurantId=${restaurantId}&date=${date}`, { headers }),
                 fetch(`${API_BASE_URL}/api/admin/day-notes?restaurantId=${restaurantId}&date=${date}`, { headers }),
-                fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/waitlist?date=${date}`, { headers })
+                fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/waitlist?date=${date}`, { headers }),
+                fetch(`${API_BASE_URL}/api/admin/table-blocks?restaurantId=${restaurantId}&date=${date}`, { headers })
             ])
 
             const tablesData = await tablesRes.json()
@@ -327,6 +338,11 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                 const waitlistData = await waitlistRes.json()
                 setWaitlist(waitlistData.waitlist || [])
             }
+
+            if (blocksRes.ok) {
+                const blocksData = await blocksRes.json()
+                setTableBlocks(blocksData.blocks || [])
+            }
         } catch (e) {
             console.error('Failed to load timeline data:', e)
         } finally {
@@ -343,6 +359,78 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
         setToast({ message, type })
         setTimeout(() => setToast(null), 3000)
     }
+
+    // Table block helpers
+    const isTableBlocked = useCallback((tableId: string) => {
+        return tableBlocks.some(b => b.table_id === tableId && !b.start_time)
+    }, [tableBlocks])
+
+    const getBlockForTable = useCallback((tableId: string) => {
+        return tableBlocks.find(b => b.table_id === tableId && !b.start_time)
+    }, [tableBlocks])
+
+    const toggleTableBlock = useCallback(async (tableId: string) => {
+        const token = localStorage.getItem('events_token')
+        const existingBlock = getBlockForTable(tableId)
+
+        try {
+            if (existingBlock) {
+                // Unblock
+                await fetch(`${API_BASE_URL}/api/admin/table-block/${existingBlock.id}?restaurantId=${restaurantId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+                setTableBlocks(prev => prev.filter(b => b.id !== existingBlock.id))
+                showToast('Tafel gedeblokkeerd')
+            } else {
+                // Block
+                const res = await fetch(`${API_BASE_URL}/api/admin/table-block`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ restaurantId, table_id: tableId, block_date: date, reason: 'Handmatig geblokkeerd' })
+                })
+                const data = await res.json()
+                if (data.success) {
+                    setTableBlocks(prev => [...prev, { id: data.block_id, table_id: tableId, block_date: date, reason: 'Handmatig geblokkeerd' }])
+                    showToast('Tafel geblokkeerd 🚫')
+                }
+            }
+        } catch (e) {
+            showToast('Blokkeren mislukt', 'error')
+        }
+    }, [restaurantId, date, getBlockForTable, showToast])
+
+    const bulkBlockRemaining = useCallback(async () => {
+        const token = localStorage.getItem('events_token')
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/admin/table-blocks/bulk`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ restaurantId, block_date: date, reason: 'Vol vanavond' })
+            })
+            const data = await res.json()
+            if (data.success) {
+                showToast(`${data.blocked_count} tafels geblokkeerd 🚫`)
+                fetchData() // Refresh to get new block IDs
+            }
+        } catch (e) {
+            showToast('Bulk blokkeren mislukt', 'error')
+        }
+    }, [restaurantId, date, fetchData, showToast])
+
+    // Group color palette for multi-table bookings
+    const GROUP_COLORS = ['border-l-purple-500', 'border-l-orange-500', 'border-l-pink-500', 'border-l-cyan-500', 'border-l-yellow-500', 'border-l-red-500']
+    const groupColorMap = useMemo(() => {
+        const map = new Map<string, string>()
+        const usedGroups = new Set<string>()
+        bookings.forEach(b => { if (b.group_id) usedGroups.add(b.group_id) })
+        let idx = 0
+        usedGroups.forEach(gid => {
+            map.set(gid, GROUP_COLORS[idx % GROUP_COLORS.length])
+            idx++
+        })
+        return map
+    }, [bookings])
 
     // Check for newBooking query param to auto-open modal
     useEffect(() => {
@@ -948,6 +1036,13 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                 </button>
 
                                 <button
+                                    onClick={bulkBlockRemaining}
+                                    className="hidden sm:flex items-center gap-2 text-red-600 bg-red-50 border border-red-200 hover:bg-red-100 px-4 py-2 rounded-xl transition-all font-medium text-sm shadow-sm"
+                                    title="Blokkeer alle lege tafels voor vanavond"
+                                >
+                                    🚫 Vol vanavond
+                                </button>
+                                <button
                                     onClick={() => setShowNewBookingModal(true)}
                                     className="flex items-center gap-2 bg-[#0F172A] text-white px-5 py-2.5 rounded-xl hover:bg-black transition-all font-medium text-sm shadow-lg shadow-gray-200 active:transform active:scale-95"
                                 >
@@ -1283,10 +1378,15 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                                 {tables.map((table) => {
                                                     const tableBookings = bookings.filter(b => b.table_id === table.id && b.status !== 'cancelled')
                                                     return (
-                                                        <div key={table.id} className="flex border-b border-gray-200 bg-white">
+                                                        <div key={table.id} className={`flex border-b border-gray-200 ${isTableBlocked(table.id) ? 'bg-red-50/30' : 'bg-white'}`}>
                                                             {/* Table label */}
-                                                            <div className="w-28 shrink-0 px-2 py-1 flex items-center gap-1 border-r border-gray-300 sticky left-0 bg-white z-10">
-                                                                <span className="font-medium text-xs text-gray-800 truncate">{table.name}</span>
+                                                            <div
+                                                                className={`w-28 shrink-0 px-2 py-1 flex items-center gap-1 border-r border-gray-300 sticky left-0 z-10 cursor-pointer ${isTableBlocked(table.id) ? 'bg-red-50' : 'bg-white'}`}
+                                                                onContextMenu={(e) => { e.preventDefault(); toggleTableBlock(table.id) }}
+                                                                title="Rechts-klik om te blokkeren/deblokkeren"
+                                                            >
+                                                                {isTableBlocked(table.id) && <span className="text-[10px]">🚫</span>}
+                                                                <span className={`font-medium text-xs truncate ${isTableBlocked(table.id) ? 'text-red-500 line-through' : 'text-gray-800'}`}>{table.name}</span>
                                                                 <span className="text-[9px] text-gray-400 ml-0.5">{table.seats}</span>
                                                             </div>
 
@@ -1297,15 +1397,25 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                                                     {timeSlots.map((slot, i) => {
                                                                         const available = isSlotAvailable(table, slot.label)
                                                                         const isClosed = slot.mins >= closeMins
+                                                                        const blocked = isTableBlocked(table.id)
                                                                         return (
                                                                             <div
                                                                                 key={i}
-                                                                                onClick={() => !isClosed && available && handleCellClick(table, slot.label)}
-                                                                                className={`shrink-0 border-l border-gray-300 ${isClosed ? 'bg-gray-100 cursor-default'
-                                                                                    : available ? 'hover:bg-blue-50 cursor-pointer'
-                                                                                        : 'bg-red-50/20 cursor-not-allowed'
+                                                                                onClick={() => !isClosed && !blocked && available && handleCellClick(table, slot.label)}
+                                                                                onContextMenu={(e) => { e.preventDefault(); toggleTableBlock(table.id) }}
+                                                                                className={`shrink-0 border-l border-gray-300 ${blocked ? 'cursor-pointer'
+                                                                                    : isClosed ? 'bg-gray-100 cursor-default'
+                                                                                        : available ? 'hover:bg-blue-50 cursor-pointer'
+                                                                                            : 'bg-red-50/20 cursor-not-allowed'
                                                                                     }`}
-                                                                                style={{ width: `${COL}px` }}
+                                                                                style={{
+                                                                                    width: `${COL}px`,
+                                                                                    ...(blocked ? {
+                                                                                        background: 'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(239,68,68,0.12) 4px, rgba(239,68,68,0.12) 8px)',
+                                                                                        backgroundColor: 'rgba(239,68,68,0.06)'
+                                                                                    } : {})
+                                                                                }}
+                                                                                title={blocked ? '🚫 Geblokkeerd — rechts-klik om te deblokkeren' : ''}
                                                                             />
                                                                         )
                                                                     })}
@@ -1317,6 +1427,8 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                                                     const isGrouped = booking.group_id && bookings.filter(b => b.group_id === booking.group_id).length > 1
                                                                     const groupSiblings = isGrouped ? bookings.filter(b => b.group_id === booking.group_id) : []
                                                                     const totalGroupGuests = isGrouped ? groupSiblings[0]?.guest_count || booking.guest_count : booking.guest_count
+                                                                    const groupColor = booking.group_id ? groupColorMap.get(booking.group_id) : ''
+                                                                    const tablesInGroup = isGrouped ? groupSiblings.length : 1
 
                                                                     const startM = parseInt(booking.start_time.split(':')[0]) * 60 + parseInt(booking.start_time.split(':')[1])
                                                                     const endM = parseInt(booking.end_time.split(':')[0]) * 60 + parseInt(booking.end_time.split(':')[1])
@@ -1328,12 +1440,13 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                                                             key={booking.id}
                                                                             style={{ left: `${l}px`, width: `${Math.max(w, COL)}px` }}
                                                                             onClick={() => setShowBookingDetail(booking)}
-                                                                            className={`absolute top-0.5 bottom-0.5 ${statusConfig.bg} ${statusConfig.hover} rounded-sm px-1.5 cursor-pointer hover:shadow-md overflow-hidden z-10 flex items-center`}
-                                                                            title={`${booking.customer_name} - ${totalGroupGuests} pers.`}
+                                                                            className={`absolute top-0.5 bottom-0.5 ${statusConfig.bg} ${statusConfig.hover} rounded-sm px-1.5 cursor-pointer hover:shadow-md overflow-hidden z-10 flex items-center ${isGrouped ? `border-l-[3px] ${groupColor}` : ''}`}
+                                                                            title={`${booking.customer_name} - ${totalGroupGuests} pers.${isGrouped ? ` (${tablesInGroup} tafels)` : ''}`}
                                                                         >
                                                                             <div className="flex items-center gap-0.5 text-white text-[11px] font-medium leading-none whitespace-nowrap">
+                                                                                {isGrouped && <span className="text-[10px]">🔗</span>}
                                                                                 <StatusIcon status={booking.status} />
-                                                                                <span className="truncate">{totalGroupGuests} &nbsp;{booking.customer_name}</span>
+                                                                                <span className="truncate">{totalGroupGuests}p{isGrouped ? `·${tablesInGroup}t` : ''} {booking.customer_name}</span>
                                                                                 {Number(booking.visit_count) > 0 && <span>⭐</span>}
                                                                             </div>
                                                                         </div>

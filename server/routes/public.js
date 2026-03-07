@@ -794,8 +794,8 @@ router.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
             ttlMs: 10_000,
             staleMs: 60_000,
             loader: async () => {
-                // PERF P0: Run all 3 queries in parallel instead of sequentially
-                const [openingResult, tablesResult, bookingsResult] = await Promise.all([
+                // PERF P0: Run all 4 queries in parallel
+                const [openingResult, tablesResult, bookingsResult, blocksResult] = await Promise.all([
                     pool.query(
                         `SELECT open_time, close_time, slot_duration_minutes, is_closed 
                          FROM restaurant_openings 
@@ -815,6 +815,12 @@ router.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
                          WHERE restaurant_id = $1 AND booking_date = $2 AND lower(status) != 'cancelled'`,
                         [restaurantId, date]
                     ),
+                    pool.query(
+                        `SELECT table_id, to_char(start_time, 'HH24:MI') AS start_time, to_char(end_time, 'HH24:MI') AS end_time
+                         FROM table_blocks
+                         WHERE restaurant_id = $1 AND block_date = $2`,
+                        [restaurantId, date]
+                    ),
                 ]);
 
                 if (openingResult.rowCount === 0) {
@@ -826,8 +832,20 @@ router.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
 
                 const { open_time, close_time } = openingResult.rows[0];
 
-                // PERF P0: Pre-convert booking times to minutes once (avoids repeated parsing in hot loop)
-                const bookingsMins = bookingsResult.rows.map(b => ({
+                // Filter out fully-blocked tables (start_time IS NULL = entire day block)
+                const fullyBlockedTableIds = new Set(
+                    blocksResult.rows.filter(b => !b.start_time).map(b => b.table_id)
+                );
+                const availableTables = tablesResult.rows.filter(t => !fullyBlockedTableIds.has(t.id));
+
+                // Time-specific blocks: treat as synthetic bookings so they block slots
+                const timeBlocks = blocksResult.rows
+                    .filter(b => b.start_time && b.end_time)
+                    .map(b => ({ table_id: b.table_id, start_time: b.start_time, end_time: b.end_time }));
+                const allBookingRows = [...bookingsResult.rows, ...timeBlocks];
+
+                // PERF P0: Pre-convert booking times to minutes once
+                const bookingsMins = allBookingRows.map(b => ({
                     table_id: b.table_id,
                     start: timeToMins(b.start_time),
                     end: timeToMins(b.end_time),
@@ -842,10 +860,9 @@ router.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
                     closed: false,
                     open_time,
                     close_time,
-                    allTables: tablesResult.rows,
+                    allTables: availableTables,
                     bookingsByTableIdMins,
-                    // Keep original string-based map for selectTablesForSlot compatibility
-                    bookingsByTableId: buildBookingsMap(bookingsResult.rows),
+                    bookingsByTableId: buildBookingsMap(allBookingRows),
                 };
             },
         });
