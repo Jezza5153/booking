@@ -374,7 +374,7 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                         <span className="text-xs font-medium text-amber-700 uppercase">Verwacht</span>
                     </div>
                     <div className="text-2xl font-bold text-amber-900">
-                        {restaurantBookings.filter(b => b.status !== 'arrived' && b.status !== 'cancelled').reduce((sum, b) => sum + (b.guest_count || 0), 0)}
+                        {restaurantBookings.filter(b => b.status !== 'arrived' && b.status !== 'cancelled' && (!b.group_id || b.is_primary)).reduce((sum, b) => sum + (b.guest_count || 0), 0)}
                     </div>
                     <div className="text-xs text-amber-600">couverts nog niet binnen</div>
                 </div>
@@ -384,7 +384,7 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                         <span className="text-xs font-medium text-emerald-700 uppercase">Binnen</span>
                     </div>
                     <div className="text-2xl font-bold text-emerald-900">
-                        {restaurantBookings.filter(b => b.status === 'arrived').reduce((sum, b) => sum + (b.guest_count || 0), 0)}
+                        {restaurantBookings.filter(b => b.status === 'arrived' && (!b.group_id || b.is_primary)).reduce((sum, b) => sum + (b.guest_count || 0), 0)}
                     </div>
                     <div className="text-xs text-emerald-600">couverts gearriveerd</div>
                 </div>
@@ -394,7 +394,7 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                         <span className="text-xs font-medium text-blue-700 uppercase">Walk-in</span>
                     </div>
                     <div className="text-2xl font-bold text-blue-900">
-                        {restaurantBookings.filter(b => b.status === 'walkin' || (b as any).is_walkin).reduce((sum, b) => sum + (b.guest_count || 0), 0)}
+                        {restaurantBookings.filter(b => (b.status === 'walkin' || (b as any).is_walkin) && (!b.group_id || b.is_primary)).reduce((sum, b) => sum + (b.guest_count || 0), 0)}
                     </div>
                     <div className="text-xs text-blue-600">couverts ingelopen</div>
                 </div>
@@ -404,7 +404,7 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                         <span className="text-xs font-medium text-purple-700 uppercase">Totaal Binnen</span>
                     </div>
                     <div className="text-2xl font-bold text-purple-900">
-                        {restaurantBookings.filter(b => b.status === 'arrived' || b.status === 'walkin' || (b as any).is_walkin).reduce((sum, b) => sum + (b.guest_count || 0), 0)}
+                        {restaurantBookings.filter(b => (b.status === 'arrived' || b.status === 'walkin' || (b as any).is_walkin) && (!b.group_id || b.is_primary)).reduce((sum, b) => sum + (b.guest_count || 0), 0)}
                     </div>
                     <div className="text-xs text-purple-600">binnen + walk-in</div>
                 </div>
