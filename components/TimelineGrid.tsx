@@ -217,6 +217,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
 
     // View mode: day or week
     const [viewMode, setViewMode] = useState<'day' | 'week'>('day')
+    const [weekSummary, setWeekSummary] = useState<Record<string, { booking_count: number; total_couverts: number; arrived_couverts: number }>>({})
 
     // Helper: strip seconds from time strings (e.g. "17:30:00" → "17:30")
     const fmtTime = (t: string) => t?.slice(0, 5) || t
@@ -374,6 +375,38 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
     useEffect(() => {
         fetchData()
     }, [fetchData])
+
+    // Fetch week summary when entering week view
+    useEffect(() => {
+        if (viewMode !== 'week') return
+        const fetchWeek = async () => {
+            try {
+                const token = localStorage.getItem('events_token')
+                const d = new Date(date)
+                const monday = new Date(d)
+                monday.setDate(d.getDate() - d.getDay() + 1)
+                const sunday = new Date(monday)
+                sunday.setDate(monday.getDate() + 6)
+                const startDate = monday.toISOString().split('T')[0]
+                const endDate = sunday.toISOString().split('T')[0]
+                const res = await fetch(
+                    `${API_BASE_URL}/api/admin/restaurant-bookings/week-summary?restaurantId=${restaurantId}&startDate=${startDate}&endDate=${endDate}`,
+                    { headers: { 'Authorization': `Bearer ${token}` } }
+                )
+                if (res.ok) {
+                    const data = await res.json()
+                    const map: Record<string, any> = {}
+                    for (const day of data.days || []) {
+                        map[day.date] = day
+                    }
+                    setWeekSummary(map)
+                }
+            } catch (e) {
+                console.error('Failed to load week summary:', e)
+            }
+        }
+        fetchWeek()
+    }, [viewMode, date, restaurantId])
 
     // Toast helper
     const showToast = (message: string, type: 'success' | 'error' = 'success') => {
@@ -1333,11 +1366,14 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                     const dayStr = d.toISOString().split('T')[0]
                                     const isToday = dayStr === new Date().toISOString().split('T')[0]
                                     const isSelected = dayStr === date
-                                    // Bookings are loaded for `date` — match against it
-                                    const dayBookings = dayStr === date ? bookings.filter(b =>
-                                        b.status !== 'cancelled' && (!b.group_id || b.is_primary)
-                                    ) : []
-                                    const dayCouverts = dayBookings.reduce((s, b) => s + b.guest_count, 0)
+                                    // Use week summary data (fetched from API) for all days
+                                    const weekDay = weekSummary[dayStr]
+                                    const dayBookingCount = dayStr === date
+                                        ? bookings.filter(b => b.status !== 'cancelled' && (!b.group_id || b.is_primary)).length
+                                        : (weekDay ? Number(weekDay.booking_count) : 0)
+                                    const dayCouverts = dayStr === date
+                                        ? bookings.filter(b => b.status !== 'cancelled' && (!b.group_id || b.is_primary)).reduce((s, b) => s + b.guest_count, 0)
+                                        : (weekDay ? Number(weekDay.total_couverts) : 0)
 
                                     return (
                                         <div
@@ -1360,7 +1396,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                             <div className="mt-2 space-y-1">
                                                 <div className="flex items-center justify-between">
                                                     <span className="text-xs text-gray-500">Boekingen</span>
-                                                    <span className="text-sm font-bold text-emerald-600">{dayBookings.length || '-'}</span>
+                                                    <span className="text-sm font-bold text-emerald-600">{dayBookingCount || '-'}</span>
                                                 </div>
                                                 <div className="flex items-center justify-between">
                                                     <span className="text-xs text-gray-500">Couverts</span>

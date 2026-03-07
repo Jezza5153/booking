@@ -1472,6 +1472,32 @@ router.patch('/api/admin/restaurant-bookings/:id/status', authMiddleware, async 
     }
 });
 
+// Route: /api/admin/restaurant-bookings/week-summary
+// Lightweight endpoint: returns booking count + couvert totals per day for a date range
+router.get('/api/admin/restaurant-bookings/week-summary', authMiddleware, async (req, res) => {
+    const { restaurantId, startDate, endDate } = req.query;
+    if (!restaurantId || !startDate || !endDate) {
+        return res.status(400).json({ error: 'restaurantId, startDate, endDate required' });
+    }
+    try {
+        const result = await pool.query(
+            `SELECT booking_date::text AS date,
+                    COUNT(*) FILTER (WHERE (group_id IS NULL OR is_primary = true)) AS booking_count,
+                    COALESCE(SUM(guest_count) FILTER (WHERE (group_id IS NULL OR is_primary = true)), 0) AS total_couverts,
+                    COALESCE(SUM(guest_count) FILTER (WHERE status = 'arrived' AND (group_id IS NULL OR is_primary = true)), 0) AS arrived_couverts
+             FROM restaurant_bookings
+             WHERE restaurant_id = $1 AND booking_date BETWEEN $2 AND $3 AND lower(status) != 'cancelled'
+             GROUP BY booking_date
+             ORDER BY booking_date`,
+            [restaurantId, startDate, endDate]
+        );
+        res.json({ days: result.rows });
+    } catch (error) {
+        console.error('Week summary error:', error);
+        res.status(500).json({ error: 'Failed to fetch week summary' });
+    }
+});
+
 // Route: /api/admin/bookings
 router.post('/api/admin/bookings', authMiddleware, async (req, res) => {
     try {
