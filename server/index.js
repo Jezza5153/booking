@@ -289,6 +289,28 @@ async function runMigrations() {
         console.warn('⚠️ Service-mode migration skipped:', e.message);
     }
 
+    // Auto-migration: table_blocks for per-table per-date blocking
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS table_blocks (
+                id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+                restaurant_id TEXT NOT NULL,
+                table_id TEXT NOT NULL REFERENCES restaurant_tables(id),
+                block_date DATE NOT NULL,
+                start_time TIME,
+                end_time TIME,
+                reason TEXT,
+                created_by TEXT,
+                created_at TIMESTAMPTZ DEFAULT NOW()
+            )
+        `);
+        await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_table_blocks_unique ON table_blocks(table_id, block_date, COALESCE(start_time, \'00:00:00\'))');
+        await pool.query('CREATE INDEX IF NOT EXISTS idx_table_blocks_restaurant_date ON table_blocks(restaurant_id, block_date)');
+        console.log('✅ Table blocks migration applied');
+    } catch (e) {
+        console.warn('⚠️ Table blocks migration skipped:', e.message);
+    }
+
     // Daily revenue table for manual revenue input
     try {
         await pool.query(`

@@ -1449,6 +1449,19 @@ router.patch('/api/admin/restaurant-bookings/:id/status', authMiddleware, async 
             return res.status(404).json({ error: 'Booking not found' });
         }
 
+        // Cascade status to group siblings (so all tables in a group move together)
+        const booking = result.rows[0];
+        if (booking.group_id) {
+            await pool.query(
+                `UPDATE restaurant_bookings SET status = $1, arrived_at = ${status === 'arrived' ? 'NOW()' : 'NULL'}, updated_at = NOW()
+                 WHERE group_id = $2 AND id != $3 AND restaurant_id = $4`,
+                [status, booking.group_id, id, restaurantId]
+            );
+        }
+
+        // Invalidate cache
+        invalidatePublicCacheForRestaurant(restaurantId);
+
         // Update customer visit count if arrived
         if (status === 'arrived' && result.rows[0].customer_id) {
             await pool.query(
@@ -1750,15 +1763,26 @@ router.patch('/api/admin/restaurant-bookings/:id', authMiddleware, async (req, r
                 `SELECT id, name, seats, zone FROM restaurant_tables WHERE restaurant_id = $1 AND is_active = true ORDER BY seats DESC`,
                 [restaurantId]
             );
+            // Enforce table blocks on edit
+            const blocksQ = await client.query(
+                `SELECT table_id, to_char(start_time, 'HH24:MI') AS start_time, to_char(end_time, 'HH24:MI') AS end_time
+                 FROM table_blocks WHERE restaurant_id = $1 AND block_date = $2`,
+                [restaurantId, updatedDate]
+            );
+            const fullyBlockedIds = new Set(blocksQ.rows.filter(b => !b.start_time).map(b => b.table_id));
+            const allTables = allTablesQ.rows.filter(t => !fullyBlockedIds.has(t.id));
             const bookingsQ = await client.query(
                 `SELECT table_id, to_char(start_time, 'HH24:MI') AS start_time, to_char(end_time, 'HH24:MI') AS end_time
                  FROM restaurant_bookings
                  WHERE restaurant_id = $1 AND booking_date = $2 AND lower(status) != 'cancelled' AND id != $3`,
                 [restaurantId, updatedDate, id]
             );
-            const bookingsByTableId = buildBookingsMap(bookingsQ.rows);
+            const timeBlocks = blocksQ.rows
+                .filter(b => b.start_time && b.end_time)
+                .map(b => ({ table_id: b.table_id, start_time: b.start_time, end_time: b.end_time }));
+            const bookingsByTableId = buildBookingsMap([...bookingsQ.rows, ...timeBlocks]);
             const selectedTables = selectTablesForSlot({
-                allTables: allTablesQ.rows,
+                allTables,
                 bookingsByTableId,
                 slotStart: updatedTime,
                 slotEnd: updatedEndTime,
