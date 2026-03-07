@@ -1351,6 +1351,7 @@ router.get('/api/admin/restaurant-bookings', authMiddleware, async (req, res) =>
                 SELECT customer_id, COUNT(DISTINCT id) as visit_count
                 FROM restaurant_bookings
                 WHERE restaurant_id = $1 AND customer_id IS NOT NULL AND status = 'arrived' AND booking_date < $2
+                  AND (group_id IS NULL OR is_primary = true)
                 GROUP BY customer_id
             ),
             linked AS (
@@ -1589,15 +1590,25 @@ router.post('/api/admin/restaurant-bookings', authMiddleware, async (req, res) =
     try {
         await client.query('BEGIN');
 
-        // Get closing time
-        // FIX #42: Parse date parts manually (same as #11 fix for public booking)
+        // Get opening hours — same pattern as public booking route
         const [yr2, mo2, dy2] = date.split('-').map(Number);
         const dayOfWeek = new Date(yr2, mo2 - 1, dy2).getDay();
-        const openingQ = await client.query(
-            `SELECT close_time FROM restaurant_openings WHERE restaurant_id = $1 AND day_of_week = $2 LIMIT 1`,
-            [restaurantId, dayOfWeek]
-        );
-        const closeTime = openingQ.rows[0]?.close_time || '23:59';
+        const [weekdayQ, specificQ] = await Promise.all([
+            client.query(
+                `SELECT open_time, close_time, is_closed FROM restaurant_openings
+                 WHERE restaurant_id = $1 AND day_of_week = $2 AND specific_date IS NULL LIMIT 1`,
+                [restaurantId, dayOfWeek]
+            ),
+            client.query(
+                `SELECT open_time, close_time, is_closed FROM restaurant_openings
+                 WHERE restaurant_id = $1 AND specific_date = $2 LIMIT 1`,
+                [restaurantId, date]
+            )
+        ]);
+        const hours = specificQ.rows[0] || weekdayQ.rows[0];
+        const openTime = hours?.open_time ? hours.open_time.substring(0, 5) : '17:00';
+        const closeTime = hours?.close_time ? hours.close_time.substring(0, 5) : '23:59';
+
         // Accept optional end_time or duration from frontend
         const reqEndTime = req.body.end_time;
         const reqDuration = req.body.duration; // in minutes
@@ -1782,7 +1793,20 @@ router.patch('/api/admin/restaurant-bookings/:id', authMiddleware, async (req, r
                 )
             ]);
             const hours = specificQ.rows[0] || weekdayQ.rows[0];
+            const openTime = hours?.open_time ? hours.open_time.substring(0, 5) : '17:00';
             const closeTime = hours?.close_time ? hours.close_time.substring(0, 5) : '23:59';
+            const isClosed = hours?.is_closed === true;
+
+            // Reject edits to closed days
+            if (isClosed) {
+                await client.query('ROLLBACK');
+                return res.status(400).json({ error: 'Restaurant is gesloten op deze datum' });
+            }
+            // Reject edits before open_time
+            if (timeToMins(updatedTime) < timeToMins(openTime)) {
+                await client.query('ROLLBACK');
+                return res.status(400).json({ error: `Boeking valt voor openingstijd (${openTime})` });
+            }
             updatedEndTime = computeEndTime(updatedTime, closeTime, duration || undefined);
         } else {
             updatedEndTime = typeof current.end_time === 'string' ? current.end_time.substring(0, 5) : current.end_time;
@@ -2188,14 +2212,15 @@ router.post('/api/admin/restaurant-settings', authMiddleware, async (req, res) =
             // Upsert tables (mark as active)
             for (const table of tables) {
                 await client.query(`
-                    INSERT INTO restaurant_tables (id, restaurant_id, name, seats, zone, is_active)
-                    VALUES ($1, $2, $3, $4, $5, true)
+                    INSERT INTO restaurant_tables (id, restaurant_id, name, seats, zone, is_active, can_combine)
+                    VALUES ($1, $2, $3, $4, $5, true, $6)
                     ON CONFLICT (id) DO UPDATE SET
                         name = EXCLUDED.name,
                         seats = EXCLUDED.seats,
                         zone = EXCLUDED.zone,
-                        is_active = true
-                `, [table.id, restaurantId, table.name, table.seats, table.zone || 'Binnen']);
+                        is_active = true,
+                        can_combine = EXCLUDED.can_combine
+                `, [table.id, restaurantId, table.name, table.seats, table.zone || 'Binnen', table.can_combine !== false]);
             }
         }
 

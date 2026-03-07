@@ -1024,7 +1024,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                 </div>
                                 <div className="flex flex-col">
                                     <span className="text-lg font-bold leading-none">
-                                        {bookings.filter(b => b.status !== 'cancelled').length}
+                                        {bookings.filter(b => b.status !== 'cancelled' && (!b.group_id || b.is_primary)).length}
                                     </span>
                                     <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Boekingen</span>
                                 </div>
@@ -1034,7 +1034,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                 <Users className="w-4 h-4 text-blue-400" />
                                 <div className="flex flex-col">
                                     <span className="text-lg font-bold leading-none">
-                                        {bookings.filter(b => b.status !== 'cancelled').reduce((sum, b) => sum + b.guest_count, 0)}
+                                        {bookings.filter(b => b.status !== 'cancelled' && (!b.group_id || b.is_primary)).reduce((sum, b) => sum + b.guest_count, 0)}
                                     </span>
                                     <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Gasten</span>
                                 </div>
@@ -1241,6 +1241,12 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                                             remarks: entry.notes || ''
                                                         })
                                                         setShowNewBookingModal(true)
+                                                        // Delete from backend + local state
+                                                        const token = localStorage.getItem('events_token')
+                                                        fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/waitlist/${entry.id}`, {
+                                                            method: 'DELETE',
+                                                            headers: { 'Authorization': `Bearer ${token}` }
+                                                        }).catch(() => { }) // best-effort
                                                         setWaitlist(prev => prev.filter(w => w.id !== entry.id))
                                                     }}
                                                     className="px-2 py-1 text-xs bg-emerald-500 text-white rounded hover:bg-emerald-600"

@@ -1110,15 +1110,20 @@ router.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
         if (isAdmin && adminTableIds && adminTableIds.length > 0) {
             // Use admin-specified tables, but validate they exist, aren't blocked, and have capacity
             selectedTables = allTables.filter(t => adminTableIds.includes(t.id));
+            // Reject if not ALL requested tables survived filtering (no partial match)
+            if (selectedTables.length !== adminTableIds.length) {
+                await client.query('ROLLBACK');
+                return res.status(409).json({ error: `${adminTableIds.length - selectedTables.length} van de geselecteerde tafels zijn geblokkeerd of inactief` });
+            }
             if (selectedTables.length === 0) {
                 await client.query('ROLLBACK');
                 return res.status(409).json({ error: 'Geselecteerde tafel(s) niet beschikbaar' });
             }
-            // Validate total seat capacity
+            // Validate total seat capacity (exact match, no 1.5x)
             const totalSeats = selectedTables.reduce((s, t) => s + (t.seats || 0), 0);
-            if (totalSeats > 0 && guest_count > totalSeats * 1.5) {
+            if (totalSeats > 0 && guest_count > totalSeats) {
                 await client.query('ROLLBACK');
-                return res.status(409).json({ error: `Te veel gasten (${guest_count}) voor geselecteerde tafels (max ~${totalSeats})` });
+                return res.status(409).json({ error: `Te veel gasten (${guest_count}) voor geselecteerde tafels (max ${totalSeats})` });
             }
             // Check for timed block and booking overlaps on selected tables
             for (const tbl of selectedTables) {
