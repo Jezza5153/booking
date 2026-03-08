@@ -215,11 +215,13 @@ export function minsToTime(m) {
 }
 
 /** Compute booking end time, capped at closing. Optional durationMins overrides default. */
-export function computeEndTime(startTime, closeTime, durationMins) {
+export function computeEndTime(startTime, closeTime, durationMins, bufferTimeMins = 0) {
     const startMins = timeToMins(startTime);
     const closeMins = timeToMins(closeTime);
     const duration = durationMins || BOOKING_DURATION_MINS;
-    return minsToTime(Math.min(startMins + duration, closeMins));
+    // Buffer creates a gap between consecutive bookings
+    const effectiveEnd = Math.min(startMins + duration, closeMins);
+    return minsToTime(effectiveEnd);
 }
 
 /** Check if two time intervals overlap. Compares as minutes to avoid format bugs. */
@@ -247,11 +249,15 @@ export function pickTablesGreedy(freeTables, guestCount) {
  * Single source of truth for table selection.
  * Prefer single table → same-zone combo → cross-zone combo.
  */
-export function selectTablesForSlot({ allTables, bookingsByTableId, slotStart, slotEnd, guestCount }) {
+export function selectTablesForSlot({ allTables, bookingsByTableId, slotStart, slotEnd, guestCount, bufferTimeMins = 0 }) {
+    const slotStartMins = timeToMins(slotStart);
+    const slotEndMins = timeToMins(slotEnd) + bufferTimeMins; // extend check window by buffer
+    const bufferedEnd = minsToTime(slotEndMins);
+
     const isFree = (t) => {
         const intervals = bookingsByTableId.get(t.id) || [];
         for (const b of intervals) {
-            if (overlaps(b.start_time, b.end_time, slotStart, slotEnd)) return false;
+            if (overlaps(b.start_time, b.end_time, slotStart, bufferedEnd)) return false;
         }
         return true;
     };
@@ -263,9 +269,12 @@ export function selectTablesForSlot({ allTables, bookingsByTableId, slotStart, s
     const single = freeBySeatsAsc.find(t => t.seats >= guestCount);
     if (single) return [single];
 
+    // For multi-table combos, only use tables where can_combine is true
+    const combinableTables = freeTables.filter(t => t.can_combine !== false);
+
     // 2) Combine within a zone first (less operational fragmentation)
     const byZone = new Map();
-    for (const t of freeTables) {
+    for (const t of combinableTables) {
         const z = t.zone || '__NO_ZONE__';
         if (!byZone.has(z)) byZone.set(z, []);
         byZone.get(z).push(t);
@@ -277,8 +286,8 @@ export function selectTablesForSlot({ allTables, bookingsByTableId, slotStart, s
     }
 
     // 3) Combine across zones
-    freeTables.sort((a, b) => b.seats - a.seats);
-    return pickTablesGreedy(freeTables, guestCount);
+    combinableTables.sort((a, b) => b.seats - a.seats);
+    return pickTablesGreedy(combinableTables, guestCount);
 }
 
 // ============================================

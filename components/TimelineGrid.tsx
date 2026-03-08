@@ -1338,6 +1338,20 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                         <option key={n} value={n}>{n} pers.</option>
                                     ))}
                                 </select>
+                                <input
+                                    type="time"
+                                    value={waitlistForm.preferred_time}
+                                    onChange={e => setWaitlistForm(p => ({ ...p, preferred_time: e.target.value }))}
+                                    className="px-2 py-1 text-sm border border-purple-300 rounded"
+                                    placeholder="Voorkeur"
+                                />
+                                <input
+                                    type="text"
+                                    value={waitlistForm.notes || ''}
+                                    onChange={e => setWaitlistForm(p => ({ ...p, notes: e.target.value }))}
+                                    placeholder="Opmerkingen"
+                                    className="col-span-2 px-2 py-1 text-sm border border-purple-300 rounded"
+                                />
                                 <button
                                     onClick={async () => {
                                         if (waitlistForm.customer_name) {

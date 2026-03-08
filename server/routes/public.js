@@ -919,7 +919,7 @@ router.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
             const slotEndMins = Math.min(m + effectiveDuration, closeMins);
             const slotEnd = minsToTime(slotEndMins);
 
-            const picked = selectTablesForSlot({ allTables, bookingsByTableId, slotStart, slotEnd, guestCount });
+            const picked = selectTablesForSlot({ allTables, bookingsByTableId, slotStart, slotEnd, guestCount, bufferTimeMins: bufferTimeMins || 0 });
             if (picked) {
                 const seatsTotal = picked.reduce((s, t) => s + t.seats, 0);
                 slots.push({ time: slotStart, end_time: slotEnd, available: 1, tables_needed: picked.length, seats_total: seatsTotal });
