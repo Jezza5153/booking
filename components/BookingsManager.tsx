@@ -347,16 +347,21 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
         const dayOfWeek = d.getDay()
         const dayInfo = openingHours.find(h => h.dayOfWeek === dayOfWeek)
 
-        let startHour = 17, endHour = 23
+        // Parse actual open/close times with minutes (not just whole hours)
+        let startMins = 17 * 60, endMins = 23 * 60
         if (dayInfo && dayInfo.isOpen !== false) {
-            startHour = parseInt(dayInfo.open?.split(':')[0] || '17')
-            endHour = parseInt(dayInfo.close?.split(':')[0] || '23')
+            const openParts = (dayInfo.open || '17:00').split(':')
+            const closeParts = (dayInfo.close || '23:00').split(':')
+            startMins = parseInt(openParts[0]) * 60 + parseInt(openParts[1] || '0')
+            endMins = parseInt(closeParts[0]) * 60 + parseInt(closeParts[1] || '0')
         }
 
+        const STEP = 30 // 30-min grid resolution
         const slots: string[] = []
-        for (let h = startHour; h <= endHour; h++) {
-            slots.push(`${h.toString().padStart(2, '0')}:00`)
-            if (h < endHour) slots.push(`${h.toString().padStart(2, '0')}:30`)
+        for (let m = startMins; m <= endMins; m += STEP) {
+            const hh = Math.floor(m / 60).toString().padStart(2, '0')
+            const mm = (m % 60).toString().padStart(2, '0')
+            slots.push(`${hh}:${mm}`)
         }
         return slots
     }, [timelineDate, openingHours])
@@ -628,10 +633,14 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                                                     const endMins = parseInt(booking.end_time.split(':')[0]) * 60 + parseInt(booking.end_time.split(':')[1])
                                                     const gridStartMins = timeSlots.length > 0 ? parseInt(timeSlots[0].split(':')[0]) * 60 + parseInt(timeSlots[0].split(':')[1]) : 17 * 60
                                                     const slotWidth = 56 // w-14 = 56px
+                                                    const slotStepMins = timeSlots.length >= 2
+                                                        ? (parseInt(timeSlots[1].split(':')[0]) * 60 + parseInt(timeSlots[1].split(':')[1]))
+                                                        - (parseInt(timeSlots[0].split(':')[0]) * 60 + parseInt(timeSlots[0].split(':')[1]))
+                                                        : 30
                                                     // Clamp to grid bounds — bookings before grid start still show at position 0
                                                     const effectiveStart = Math.max(startMins, gridStartMins)
-                                                    const left = ((effectiveStart - gridStartMins) / 30) * slotWidth
-                                                    const width = ((endMins - effectiveStart) / 30) * slotWidth
+                                                    const left = ((effectiveStart - gridStartMins) / slotStepMins) * slotWidth
+                                                    const width = ((endMins - effectiveStart) / slotStepMins) * slotWidth
                                                     const isSecondary = booking.group_id && !booking.is_primary
                                                     const isGroup = !!booking.group_id
 
