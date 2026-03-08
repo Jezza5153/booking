@@ -44,6 +44,7 @@ export const RestaurantBooking: React.FC<RestaurantBookingProps> = ({
 
     // Opening hours: which days are closed (0=Sun, 1=Mon, ..., 6=Sat)
     const [closedDays, setClosedDays] = useState<Set<number>>(new Set())
+    const [closedDates, setClosedDates] = useState<Set<string>>(new Set()) // specific_date closures
 
     // Calendar state
     const [currentMonth, setCurrentMonth] = useState(() => {
@@ -55,7 +56,8 @@ export const RestaurantBooking: React.FC<RestaurantBookingProps> = ({
     useEffect(() => {
         const fetchOpenings = async () => {
             try {
-                const res = await fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/openings`)
+                const monthStr = `${currentMonth.getFullYear()}-${(currentMonth.getMonth() + 1).toString().padStart(2, '0')}`
+                const res = await fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/openings?month=${monthStr}`)
                 const data = await res.json()
                 const closed = new Set<number>()
                 if (data.openings) {
@@ -64,13 +66,20 @@ export const RestaurantBooking: React.FC<RestaurantBookingProps> = ({
                     }
                 }
                 setClosedDays(closed)
+                // Set specific date closures
+                const closedDateSet = new Set<string>()
+                if (data.specific_closures) {
+                    for (const c of data.specific_closures) {
+                        if (c.is_closed) closedDateSet.add(c.date)
+                    }
+                }
+                setClosedDates(closedDateSet)
             } catch (e) {
-                // If we can't fetch openings, don't block — all days will appear open
                 console.warn('Could not fetch opening hours:', e)
             }
         }
         fetchOpenings()
-    }, [restaurantId])
+    }, [restaurantId, currentMonth])
 
     // Fetch availability when date and guests are selected
     const fetchAvailability = useCallback(async () => {
@@ -222,7 +231,7 @@ export const RestaurantBooking: React.FC<RestaurantBookingProps> = ({
                                 const dateObj = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day)
                                 const isPast = dateObj < today
                                 const dayOfWeek = dateObj.getDay() // 0=Sun, 1=Mon, ..., 6=Sat
-                                const isClosed = closedDays.has(dayOfWeek)
+                                const isClosed = closedDays.has(dayOfWeek) || closedDates.has(dateStr)
                                 const isDisabled = isPast || isClosed
                                 const isSelected = selectedDate === dateStr
                                 return (

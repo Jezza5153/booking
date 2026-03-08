@@ -1108,13 +1108,20 @@ router.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
             return res.status(400).json({ error: 'Buiten openingstijden' });
         }
 
-        // 1) Fetch ALL active tables
-        const allTablesQ = await client.query(
-            `SELECT id, name, seats, zone FROM restaurant_tables
-             WHERE restaurant_id = $1 AND is_active = true
-             ORDER BY seats DESC`,
-            [restaurant_id]
-        );
+        // 1) Fetch ALL active tables (include can_combine for allocator)
+        const [allTablesQ, bookingSettingsQ] = await Promise.all([
+            client.query(
+                `SELECT id, name, seats, zone, can_combine FROM restaurant_tables
+                 WHERE restaurant_id = $1 AND is_active = true
+                 ORDER BY seats DESC`,
+                [restaurant_id]
+            ),
+            client.query(
+                'SELECT buffer_time FROM restaurant_settings WHERE restaurant_id = $1',
+                [restaurant_id]
+            )
+        ]);
+        const bookingBufferMins = bookingSettingsQ.rows[0]?.buffer_time || 0;
 
         // 1b) Fetch blocks for this date and filter out blocked tables
         const blocksQ = await client.query(
@@ -1172,7 +1179,7 @@ router.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
                 }
             }
         } else {
-            selectedTables = selectTablesForSlot({ allTables, bookingsByTableId, slotStart: time, slotEnd: endTime, guestCount: guest_count });
+            selectedTables = selectTablesForSlot({ allTables, bookingsByTableId, slotStart: time, slotEnd: endTime, guestCount: guest_count, bufferTimeMins: bookingBufferMins });
         }
         if (!selectedTables) {
             await client.query('ROLLBACK');
@@ -1292,10 +1299,12 @@ router.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
 // Route: /api/restaurant/:id/openings
 router.get('/api/restaurant/:id/openings', async (req, res) => {
     const { id } = req.params;
-    const { date: queryDate } = req.query; // optional: YYYY-MM-DD
+    const { date: queryDate, month: queryMonth } = req.query; // optional: YYYY-MM-DD or YYYY-MM
 
     try {
-        const cacheKey = queryDate ? `openings:${id}:${queryDate}:v2` : `openings:${id}:v2`;
+        const cacheKey = queryDate ? `openings:${id}:${queryDate}:v3`
+            : queryMonth ? `openings:${id}:month:${queryMonth}:v3`
+                : `openings:${id}:v3`;
         const { value: payload, cacheStatus } = await getCachedValue({
             key: cacheKey,
             ttlMs: 300_000,
@@ -1331,7 +1340,26 @@ router.get('/api/restaurant/:id/openings', async (req, res) => {
                     }
                 }
 
-                return { openings };
+                // If month is requested, return specific_date closures for that month
+                let specific_closures = [];
+                if (queryMonth) {
+                    const monthStart = `${queryMonth}-01`;
+                    const monthEnd = `${queryMonth}-31`;
+                    const closuresResult = await pool.query(
+                        `SELECT specific_date::text as date, is_closed, open_time::text, close_time::text
+                         FROM restaurant_openings
+                         WHERE restaurant_id = $1 AND specific_date BETWEEN $2 AND $3`,
+                        [id, monthStart, monthEnd]
+                    );
+                    specific_closures = closuresResult.rows.map(r => ({
+                        date: r.date,
+                        is_closed: r.is_closed,
+                        open_time: r.open_time,
+                        close_time: r.close_time
+                    }));
+                }
+
+                return { openings, specific_closures };
             },
         });
 

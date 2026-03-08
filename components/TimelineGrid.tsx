@@ -1522,11 +1522,16 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                                         <div key={table.id} className={`flex border-b border-gray-200 ${isTableBlocked(table.id) ? 'bg-red-50/30' : 'bg-white'}`}>
                                                             {/* Table label */}
                                                             <div
-                                                                className={`w-28 shrink-0 px-2 py-1 flex items-center gap-1 border-r border-gray-300 sticky left-0 z-10 cursor-pointer ${isTableBlocked(table.id) ? 'bg-red-50' : 'bg-white'}`}
+                                                                className={`w-28 shrink-0 px-1 py-1 flex items-center gap-0.5 border-r border-gray-300 sticky left-0 z-10 ${isTableBlocked(table.id) ? 'bg-red-50' : 'bg-white'}`}
                                                                 onContextMenu={(e) => { e.preventDefault(); toggleTableBlock(table.id) }}
-                                                                title="Rechts-klik om te blokkeren/deblokkeren"
+                                                                title="Tik op 🚫 om te blokkeren/deblokkeren"
                                                             >
-                                                                {isTableBlocked(table.id) && <span className="text-[10px]">🚫</span>}
+                                                                <button
+                                                                    onClick={() => toggleTableBlock(table.id)}
+                                                                    className={`shrink-0 w-5 h-5 rounded flex items-center justify-center text-[10px] ${isTableBlocked(table.id) ? 'bg-red-100 text-red-500 hover:bg-green-100 hover:text-green-600' : 'text-gray-300 hover:bg-red-50 hover:text-red-500'}`}
+                                                                >
+                                                                    {isTableBlocked(table.id) ? '✓' : '🚫'}
+                                                                </button>
                                                                 <span className={`font-medium text-xs truncate ${isTableBlocked(table.id) ? 'text-red-500 line-through' : 'text-gray-800'}`}>{table.name}</span>
                                                                 <span className="text-[9px] text-gray-400 ml-0.5">{table.seats}</span>
                                                             </div>

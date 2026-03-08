@@ -547,6 +547,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
                     </select>
                   </div>
                 </div>
+                <label className="flex items-center gap-2 mt-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={table.can_combine !== false}
+                    onChange={(e) => {
+                      const updated = [...restaurantTables];
+                      updated[idx] = { ...table, can_combine: e.target.checked };
+                      setRestaurantTables(updated);
+                    }}
+                    className="w-4 h-4 rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <span className="text-xs text-emerald-700">Combineerbaar</span>
+                </label>
               </div>
             ))}
             {restaurantTables.length === 0 && (

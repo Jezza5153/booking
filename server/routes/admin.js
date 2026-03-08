@@ -1608,6 +1608,26 @@ router.post('/api/admin/restaurant-bookings', authMiddleware, async (req, res) =
         const hours = specificQ.rows[0] || weekdayQ.rows[0];
         const openTime = hours?.open_time ? hours.open_time.substring(0, 5) : '17:00';
         const closeTime = hours?.close_time ? hours.close_time.substring(0, 5) : '23:59';
+        const isClosed = hours?.is_closed === true;
+
+        // Reject bookings on closed days
+        if (isClosed) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ error: 'Restaurant is gesloten op deze datum' });
+        }
+        // Reject bookings before open_time
+        if (timeToMins(time) < timeToMins(openTime)) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ error: `Boeking valt voor openingstijd (${openTime})` });
+        }
+
+        // Load restaurant settings for buffer/duration
+        const settingsQ = await client.query(
+            'SELECT slot_duration, max_party_size, buffer_time FROM restaurant_settings WHERE restaurant_id = $1',
+            [restaurantId]
+        );
+        const settings = settingsQ.rows[0] || {};
+        const bufferTimeMins = settings.buffer_time || 0;
 
         // Accept optional end_time or duration from frontend
         const reqEndTime = req.body.end_time;
@@ -1627,9 +1647,9 @@ router.post('/api/admin/restaurant-bookings', authMiddleware, async (req, res) =
             return res.status(400).json({ error: 'Buiten openingstijden' });
         }
 
-        // 1) Fetch ALL active tables
+        // 1) Fetch ALL active tables (include can_combine for allocator)
         const allTablesQ = await client.query(
-            `SELECT id, name, seats, zone FROM restaurant_tables
+            `SELECT id, name, seats, zone, can_combine FROM restaurant_tables
              WHERE restaurant_id = $1 AND is_active = true
              ORDER BY seats DESC`,
             [restaurantId]
@@ -1657,7 +1677,7 @@ router.post('/api/admin/restaurant-bookings', authMiddleware, async (req, res) =
         const bookingsByTableId = buildBookingsMap([...bookingsQ.rows, ...timeBlocks]);
 
         // 3) Use centralized selection (identical to availability + public booking)
-        const selectedTables = selectTablesForSlot({ allTables, bookingsByTableId, slotStart: time, slotEnd: endTime, guestCount: guest_count });
+        const selectedTables = selectTablesForSlot({ allTables, bookingsByTableId, slotStart: time, slotEnd: endTime, guestCount: guest_count, bufferTimeMins });
         if (!selectedTables) {
             await client.query('ROLLBACK');
             return res.status(409).json({ error: 'No tables available for this time slot' });
@@ -1817,8 +1837,15 @@ router.patch('/api/admin/restaurant-bookings/:id', authMiddleware, async (req, r
         let newTableId = current.table_id;
 
         if (timeChanged) {
+            // Load settings for buffer
+            const editSettingsQ = await client.query(
+                'SELECT buffer_time FROM restaurant_settings WHERE restaurant_id = $1',
+                [restaurantId]
+            );
+            const bufferTimeMins = editSettingsQ.rows[0]?.buffer_time || 0;
+
             const allTablesQ = await client.query(
-                `SELECT id, name, seats, zone FROM restaurant_tables WHERE restaurant_id = $1 AND is_active = true ORDER BY seats DESC`,
+                `SELECT id, name, seats, zone, can_combine FROM restaurant_tables WHERE restaurant_id = $1 AND is_active = true ORDER BY seats DESC`,
                 [restaurantId]
             );
             // Enforce table blocks on edit
@@ -1854,7 +1881,8 @@ router.patch('/api/admin/restaurant-bookings/:id', authMiddleware, async (req, r
                 bookingsByTableId,
                 slotStart: updatedTime,
                 slotEnd: updatedEndTime,
-                guestCount: updatedGuests
+                guestCount: updatedGuests,
+                bufferTimeMins: bufferTimeMins || 0
             });
 
             if (!selectedTables) {
