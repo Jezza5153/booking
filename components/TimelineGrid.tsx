@@ -455,6 +455,39 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
         }
     }, [restaurantId, date, getBlockForTable, showToast])
 
+    // Create a timed block from a specific time until closing
+    const createTimedBlock = useCallback(async (tableId: string, startTime: string) => {
+        if (isTableBlocked(tableId)) return // already full-day blocked
+        const token = localStorage.getItem('events_token')
+        // Find closing time for today
+        const todayDow = new Date(date).getDay()
+        const todayHours = openingHours.find((h: any) => h.day === todayDow)
+        const closeTime = todayHours?.close_time?.substring(0, 5) || '23:59'
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/admin/table-block`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({
+                    restaurantId, table_id: tableId, block_date: date,
+                    start_time: startTime, end_time: closeTime,
+                    reason: `Geblokkeerd vanaf ${startTime}`
+                })
+            })
+            const data = await res.json()
+            if (data.success) {
+                setTableBlocks(prev => [...prev, {
+                    id: data.block_id, table_id: tableId, block_date: date,
+                    start_time: startTime, end_time: closeTime,
+                    reason: `Geblokkeerd vanaf ${startTime}`
+                }])
+                showToast(`Tafel geblokkeerd vanaf ${startTime} 🚫`)
+            }
+        } catch (e) {
+            showToast('Blokkeren mislukt', 'error')
+        }
+    }, [restaurantId, date, openingHours, isTableBlocked, showToast])
+
     const bulkBlockRemaining = useCallback(async () => {
         const token = localStorage.getItem('events_token')
         try {
@@ -1496,7 +1529,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                                                             <div
                                                                                 key={i}
                                                                                 onClick={() => !isClosed && !blocked && available && handleCellClick(table, slot.label)}
-                                                                                onContextMenu={(e) => { e.preventDefault(); toggleTableBlock(table.id) }}
+                                                                                onContextMenu={(e) => { e.preventDefault(); createTimedBlock(table.id, slot.label) }}
                                                                                 className={`shrink-0 border-l border-gray-300 ${blocked ? 'cursor-pointer'
                                                                                     : isClosed ? 'bg-gray-100 cursor-default'
                                                                                         : available ? 'hover:bg-blue-50 cursor-pointer'

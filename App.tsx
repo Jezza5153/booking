@@ -31,7 +31,7 @@ type ViewMode = 'widget' | 'admin' | 'guide' | 'calendar' | 'bookings' | 'timeli
 const App: React.FC = () => {
   const [events, setEvents] = useState<EventData[]>(EVENTS_DATA);
   const [wijken, setWijken] = useState<Wijk[]>(WIJKEN_DATA);
-  const [view, setView] = useState<ViewMode>('widget');
+  const [view, setView] = useState<ViewMode>('timeline');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [sessionRestaurantId, setSessionRestaurantId] = useState<string | null>(null);
@@ -208,8 +208,8 @@ const App: React.FC = () => {
               <div className="hidden md:flex items-center bg-gray-100 p-1 rounded-lg">
                 {([
                   { key: 'widget', icon: Smartphone, label: 'Preview' },
-                  { key: 'calendar', icon: CalendarIcon, label: 'Schedule' },
-                  { key: 'admin', icon: Settings, label: 'Editor' },
+                  { key: 'calendar', icon: CalendarIcon, label: 'Agenda' },
+                  { key: 'admin', icon: Settings, label: 'Instellingen' },
                   { key: 'bookings', icon: Users, label: 'Boekingen' },
                   { key: 'timeline', icon: LayoutGrid, label: 'Tafels' },
                   { key: 'stats', icon: BarChart3, label: 'Stats' },
