@@ -57,6 +57,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
   const [slotDuration, setSlotDuration] = useState(90);
   const [maxPartySize, setMaxPartySize] = useState(10);
   const [bufferTime, setBufferTime] = useState(0);
+  const [maxCoversPerNight, setMaxCoversPerNight] = useState(0); // 0 = unlimited
   const [savingRestaurant, setSavingRestaurant] = useState(false);
 
   // Load restaurant settings on mount
@@ -99,6 +100,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
             if (data.settings.slotDuration !== undefined) setSlotDuration(data.settings.slotDuration);
             if (data.settings.maxPartySize !== undefined) setMaxPartySize(data.settings.maxPartySize);
             if (data.settings.bufferTime !== undefined) setBufferTime(data.settings.bufferTime);
+            if (data.settings.maxCoversPerNight !== undefined) setMaxCoversPerNight(data.settings.maxCoversPerNight || 0);
           }
         }
       } catch (e) {
@@ -117,7 +119,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
         restaurantId: RESTAURANT_ID,
         tables: restaurantTables,
         openingHours: openingHours,
-        settings: { slotDuration, maxPartySize, bufferTime }
+        settings: { slotDuration, maxPartySize, bufferTime, maxCoversPerNight: maxCoversPerNight || null }
       };
 
       const response = await fetch(`${API_BASE_URL}/api/admin/restaurant-settings`, {
@@ -706,6 +708,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
               <option value={15}>15 min</option>
               <option value={30}>30 min</option>
             </select>
+          </div>
+          <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+            <label className="text-[10px] text-gray-500 font-medium uppercase">Max couverts per avond</label>
+            <input
+              type="number"
+              min={0}
+              step={5}
+              value={maxCoversPerNight}
+              onChange={(e) => setMaxCoversPerNight(parseInt(e.target.value) || 0)}
+              placeholder="0 = onbeperkt"
+              className="w-full mt-1 text-sm bg-white border border-gray-200 rounded px-2 py-1.5 font-medium"
+            />
+            <p className="text-[9px] text-gray-400 mt-1">0 = onbeperkt</p>
           </div>
         </div>
 
