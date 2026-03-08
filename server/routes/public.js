@@ -796,7 +796,7 @@ router.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
             staleMs: 60_000,
             loader: async () => {
                 // PERF P0: Run all 4 queries in parallel
-                const [openingResult, tablesResult, bookingsResult, blocksResult] = await Promise.all([
+                const [openingResult, tablesResult, bookingsResult, blocksResult, settingsResult] = await Promise.all([
                     pool.query(
                         `SELECT open_time, close_time, slot_duration_minutes, is_closed 
                          FROM restaurant_openings 
@@ -821,6 +821,10 @@ router.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
                          FROM table_blocks
                          WHERE restaurant_id = $1 AND block_date = $2`,
                         [restaurantId, date]
+                    ),
+                    pool.query(
+                        `SELECT slot_duration, max_party_size, buffer_time FROM restaurant_settings WHERE restaurant_id = $1`,
+                        [restaurantId]
                     ),
                 ]);
 
@@ -857,6 +861,8 @@ router.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
                     bookingsByTableIdMins.get(b.table_id).push(b);
                 }
 
+                const settings = settingsResult.rows[0] || {};
+
                 return {
                     closed: false,
                     open_time,
@@ -864,6 +870,10 @@ router.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
                     allTables: availableTables,
                     bookingsByTableIdMins,
                     bookingsByTableId: buildBookingsMap(allBookingRows),
+                    slotStepMins: settings.slot_duration || SLOT_STEP_MINS,
+                    bookingDurationMins: settings.slot_duration ? settings.slot_duration * 6 : BOOKING_DURATION_MINS, // e.g. 30*6=180
+                    maxPartySize: settings.max_party_size || null,
+                    bufferTimeMins: settings.buffer_time || 0,
                 };
             },
         });
@@ -883,7 +893,13 @@ router.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
         }
 
         // PERF P2: Guest-specific slot filtering on cached data (fast, no DB hit)
-        const { open_time, close_time, allTables, bookingsByTableId } = cachedData;
+        const { open_time, close_time, allTables, bookingsByTableId, slotStepMins, bookingDurationMins, maxPartySize: maxParty, bufferTimeMins } = cachedData;
+
+        // Enforce max party size from settings
+        if (maxParty && guestCount > maxParty) {
+            return res.status(400).json({ error: `Maximaal ${maxParty} gasten per reservering`, max_party_size: maxParty });
+        }
+
         const slots = [];
         const openMins = timeToMins(open_time);
         const closeMins = timeToMins(close_time);
@@ -893,11 +909,14 @@ router.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
         const isToday = bookingDate.toDateString() === nowAmsterdam.toDateString();
         const currentMins = isToday ? nowAmsterdam.getHours() * 60 + nowAmsterdam.getMinutes() : 0;
 
-        for (let m = openMins; m < closeMins; m += SLOT_STEP_MINS) {
+        const effectiveDuration = bookingDurationMins || BOOKING_DURATION_MINS;
+        const effectiveStep = slotStepMins || SLOT_STEP_MINS;
+
+        for (let m = openMins; m < closeMins; m += effectiveStep) {
             if (isToday && m <= currentMins) continue;
 
             const slotStart = minsToTime(m);
-            const slotEndMins = Math.min(m + BOOKING_DURATION_MINS, closeMins);
+            const slotEndMins = Math.min(m + effectiveDuration, closeMins);
             const slotEnd = minsToTime(slotEndMins);
 
             const picked = selectTablesForSlot({ allTables, bookingsByTableId, slotStart, slotEnd, guestCount });
@@ -996,6 +1015,20 @@ router.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
 
     if (!isAdmin && !customer_email) {
         return res.status(400).json({ error: 'E-mailadres is verplicht' });
+    }
+
+    // Enforce max party size from settings (admin can override)
+    if (!isAdmin) {
+        try {
+            const settingsQ = await pool.query(
+                'SELECT max_party_size FROM restaurant_settings WHERE restaurant_id = $1',
+                [restaurant_id]
+            );
+            const maxParty = settingsQ.rows[0]?.max_party_size;
+            if (maxParty && guest_count > maxParty) {
+                return res.status(400).json({ error: `Maximaal ${maxParty} gasten per reservering`, max_party_size: maxParty });
+            }
+        } catch (_) { /* settings table may not exist yet */ }
     }
 
     // FIX #35: Validate email format (same pattern as newsletter subscribe)
