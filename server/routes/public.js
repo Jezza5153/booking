@@ -1292,9 +1292,10 @@ router.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
 // Route: /api/restaurant/:id/openings
 router.get('/api/restaurant/:id/openings', async (req, res) => {
     const { id } = req.params;
+    const { date: queryDate } = req.query; // optional: YYYY-MM-DD
 
     try {
-        const cacheKey = `openings:${id}:v1`;
+        const cacheKey = queryDate ? `openings:${id}:${queryDate}:v2` : `openings:${id}:v2`;
         const { value: payload, cacheStatus } = await getCachedValue({
             key: cacheKey,
             ttlMs: 300_000,
@@ -1308,7 +1309,29 @@ router.get('/api/restaurant/:id/openings', async (req, res) => {
                      ORDER BY day_of_week`,
                     [id]
                 );
-                return { openings: result.rows };
+                let openings = result.rows;
+
+                // If a specific date is requested, check for specific_date overrides
+                if (queryDate) {
+                    const overrideResult = await pool.query(
+                        `SELECT day_of_week as day, NOT is_closed as is_open,
+                                open_time::text as open_time, close_time::text as close_time
+                         FROM restaurant_openings
+                         WHERE restaurant_id = $1 AND specific_date = $2`,
+                        [id, queryDate]
+                    );
+                    if (overrideResult.rows.length > 0) {
+                        const override = overrideResult.rows[0];
+                        // Overlay the override on the weekday data
+                        openings = openings.map(o =>
+                            o.day === override.day
+                                ? { ...o, is_open: override.is_open, open_time: override.open_time, close_time: override.close_time, is_override: true }
+                                : o
+                        );
+                    }
+                }
+
+                return { openings };
             },
         });
 

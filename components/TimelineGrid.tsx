@@ -310,7 +310,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
 
             const [tablesRes, hoursRes, bookingsRes, notesRes, waitlistRes, blocksRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/tables`),
-                fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/openings`),
+                fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/openings?date=${date}`),
                 fetch(`${API_BASE_URL}/api/admin/restaurant-bookings?restaurantId=${restaurantId}&date=${date}`, { headers }),
                 fetch(`${API_BASE_URL}/api/admin/day-notes?restaurantId=${restaurantId}&date=${date}`, { headers }),
                 fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/waitlist?date=${date}`, { headers }),
