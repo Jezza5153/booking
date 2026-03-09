@@ -1623,7 +1623,7 @@ router.post('/api/admin/restaurant-bookings', authMiddleware, async (req, res) =
 
         // Load restaurant settings for buffer/duration
         const settingsQ = await client.query(
-            'SELECT slot_duration, max_party_size, buffer_time FROM restaurant_settings WHERE restaurant_id = $1',
+            'SELECT * FROM restaurant_settings WHERE restaurant_id = $1',
             [restaurantId]
         );
         const settings = settingsQ.rows[0] || {};
@@ -2190,7 +2190,7 @@ router.get('/api/admin/restaurant-settings', authMiddleware, async (req, res) =>
     if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' });
     try {
         const result = await pool.query(
-            'SELECT slot_duration, max_party_size, buffer_time, max_covers_per_night FROM restaurant_settings WHERE restaurant_id = $1',
+            'SELECT * FROM restaurant_settings WHERE restaurant_id = $1',
             [restaurantId]
         );
         if (result.rows.length > 0) {

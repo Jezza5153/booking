@@ -823,7 +823,7 @@ router.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
                         [restaurantId, date]
                     ),
                     pool.query(
-                        `SELECT slot_duration, max_party_size, buffer_time, max_covers_per_night FROM restaurant_settings WHERE restaurant_id = $1`,
+                        `SELECT * FROM restaurant_settings WHERE restaurant_id = $1`,
                         [restaurantId]
                     ),
                 ]);
@@ -1132,7 +1132,7 @@ router.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
                 [restaurant_id]
             ),
             client.query(
-                'SELECT buffer_time, max_covers_per_night FROM restaurant_settings WHERE restaurant_id = $1',
+                'SELECT * FROM restaurant_settings WHERE restaurant_id = $1',
                 [restaurant_id]
             ),
             client.query(
