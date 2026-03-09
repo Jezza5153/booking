@@ -67,6 +67,7 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
     const [restaurantBookings, setRestaurantBookings] = useState<RestaurantBooking[]>([])
     const [loadingTimeline, setLoadingTimeline] = useState(true)
     const [openingHours, setOpeningHours] = useState<{ dayOfWeek: number; open: string; close: string; isOpen: boolean }[]>([])
+    const [slotDuration, setSlotDuration] = useState(30) // dynamic from settings
 
     // Modal states
     const [showEventBookingModal, setShowEventBookingModal] = useState(false)
@@ -121,13 +122,16 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
         try {
             const token = localStorage.getItem('events_token')
 
-            const [tablesRes, bookingsRes, hoursRes] = await Promise.all([
+            const [tablesRes, bookingsRes, hoursRes, settingsRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/tables`),
                 fetch(
                     `${API_BASE_URL}/api/admin/restaurant-bookings?restaurantId=${restaurantId}&date=${timelineDate}`,
                     { headers: { 'Authorization': `Bearer ${token}` } }
                 ),
-                fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/opening-hours`)
+                fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/opening-hours`),
+                fetch(`${API_BASE_URL}/api/admin/restaurant-settings?restaurantId=${restaurantId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
             ])
 
             const tablesData = await tablesRes.json()
@@ -162,6 +166,13 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
             if (hoursRes.ok) {
                 const hoursData = await hoursRes.json()
                 setOpeningHours(hoursData.openingHours || [])
+            }
+
+            if (settingsRes.ok) {
+                const settingsData = await settingsRes.json()
+                if (settingsData.settings?.slotDuration) {
+                    setSlotDuration(settingsData.settings.slotDuration)
+                }
             }
         } catch (e) {
             console.error('Failed to load timeline:', e)
@@ -356,7 +367,7 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
             endMins = parseInt(closeParts[0]) * 60 + parseInt(closeParts[1] || '0')
         }
 
-        const STEP = 30 // 30-min grid resolution
+        const STEP = slotDuration || 30
         const slots: string[] = []
         for (let m = startMins; m <= endMins; m += STEP) {
             const hh = Math.floor(m / 60).toString().padStart(2, '0')
@@ -364,7 +375,7 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
             slots.push(`${hh}:${mm}`)
         }
         return slots
-    }, [timelineDate, openingHours])
+    }, [timelineDate, openingHours, slotDuration])
 
     // Check if the timeline date is open
     const isOpenToday = useMemo(() => {

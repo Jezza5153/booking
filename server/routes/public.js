@@ -811,7 +811,7 @@ router.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
                         [restaurantId]
                     ),
                     pool.query(
-                        `SELECT table_id, to_char(start_time, 'HH24:MI') AS start_time, to_char(end_time, 'HH24:MI') AS end_time
+                        `SELECT table_id, to_char(start_time, 'HH24:MI') AS start_time, to_char(end_time, 'HH24:MI') AS end_time, guest_count
                          FROM restaurant_bookings 
                          WHERE restaurant_id = $1 AND booking_date = $2 AND lower(status) != 'cancelled'`,
                         [restaurantId, date]
@@ -823,7 +823,7 @@ router.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
                         [restaurantId, date]
                     ),
                     pool.query(
-                        `SELECT slot_duration, max_party_size, buffer_time FROM restaurant_settings WHERE restaurant_id = $1`,
+                        `SELECT slot_duration, max_party_size, buffer_time, max_covers_per_night FROM restaurant_settings WHERE restaurant_id = $1`,
                         [restaurantId]
                     ),
                 ]);
@@ -863,6 +863,9 @@ router.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
 
                 const settings = settingsResult.rows[0] || {};
 
+                // Sum existing covers for maxCoversPerNight enforcement
+                const existingCovers = bookingsResult.rows.reduce((sum, b) => sum + (b.guest_count || 0), 0);
+
                 return {
                     closed: false,
                     open_time,
@@ -871,9 +874,11 @@ router.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
                     bookingsByTableIdMins,
                     bookingsByTableId: buildBookingsMap(allBookingRows),
                     slotStepMins: settings.slot_duration || SLOT_STEP_MINS,
-                    bookingDurationMins: settings.slot_duration ? settings.slot_duration * 6 : BOOKING_DURATION_MINS, // e.g. 30*6=180
+                    bookingDurationMins: settings.slot_duration ? settings.slot_duration * 6 : BOOKING_DURATION_MINS,
                     maxPartySize: settings.max_party_size || null,
                     bufferTimeMins: settings.buffer_time || 0,
+                    maxCoversPerNight: settings.max_covers_per_night || null,
+                    existingCovers,
                 };
             },
         });
@@ -893,7 +898,7 @@ router.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
         }
 
         // PERF P2: Guest-specific slot filtering on cached data (fast, no DB hit)
-        const { open_time, close_time, allTables, bookingsByTableId, slotStepMins, bookingDurationMins, maxPartySize: maxParty, bufferTimeMins } = cachedData;
+        const { open_time, close_time, allTables, bookingsByTableId, slotStepMins, bookingDurationMins, maxPartySize: maxParty, bufferTimeMins, maxCoversPerNight, existingCovers } = cachedData;
 
         // Enforce max party size from settings
         if (maxParty && guestCount > maxParty) {
@@ -926,7 +931,17 @@ router.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
             }
         }
 
-        const payload = { date, guest_count: guestCount, close_time: normalizeToHHMM(close_time), slots };
+        // Enforce maxCoversPerNight
+        const coversCapReached = maxCoversPerNight && (existingCovers + guestCount) > maxCoversPerNight;
+
+        const payload = {
+            date,
+            guest_count: guestCount,
+            close_time: normalizeToHHMM(close_time),
+            slots: coversCapReached ? [] : slots,
+            ...(coversCapReached ? { message: `Maximaal ${maxCoversPerNight} couverts per avond bereikt (huidig: ${existingCovers})` } : {}),
+            ...(maxCoversPerNight ? { max_covers: maxCoversPerNight, current_covers: existingCovers } : {})
+        };
 
         setPublicCacheHeaders(res, { maxAge: 5, sMaxAge: 15, staleWhileRevalidate: 30 });
         res.set('X-Cache-Status', cacheStatus);
@@ -1109,7 +1124,7 @@ router.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
         }
 
         // 1) Fetch ALL active tables (include can_combine for allocator)
-        const [allTablesQ, bookingSettingsQ] = await Promise.all([
+        const [allTablesQ, bookingSettingsQ, existingCoversQ] = await Promise.all([
             client.query(
                 `SELECT id, name, seats, zone, can_combine FROM restaurant_tables
                  WHERE restaurant_id = $1 AND is_active = true
@@ -1117,11 +1132,28 @@ router.post('/api/restaurant/book', bookingRateLimiter, async (req, res) => {
                 [restaurant_id]
             ),
             client.query(
-                'SELECT buffer_time FROM restaurant_settings WHERE restaurant_id = $1',
+                'SELECT buffer_time, max_covers_per_night FROM restaurant_settings WHERE restaurant_id = $1',
                 [restaurant_id]
+            ),
+            client.query(
+                `SELECT COALESCE(SUM(guest_count), 0) AS total_covers FROM restaurant_bookings
+                 WHERE restaurant_id = $1 AND booking_date = $2 AND lower(status) != 'cancelled'`,
+                [restaurant_id, date]
             )
         ]);
         const bookingBufferMins = bookingSettingsQ.rows[0]?.buffer_time || 0;
+        const maxCoversPerNight = bookingSettingsQ.rows[0]?.max_covers_per_night || null;
+        const existingCovers = parseInt(existingCoversQ.rows[0]?.total_covers || '0');
+
+        // Enforce maxCoversPerNight (non-admin only)
+        if (!isAdmin && maxCoversPerNight && (existingCovers + guest_count) > maxCoversPerNight) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({
+                error: `Maximaal ${maxCoversPerNight} couverts per avond bereikt`,
+                max_covers: maxCoversPerNight,
+                current_covers: existingCovers
+            });
+        }
 
         // 1b) Fetch blocks for this date and filter out blocked tables
         const blocksQ = await client.query(
