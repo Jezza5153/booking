@@ -351,6 +351,14 @@ async function runMigrations() {
         console.warn('⚠️ Restaurant settings migration skipped:', e.message);
     }
 
+    // Auto-migration: max_covers_per_night column on settings (may be missing if table existed before)
+    try {
+        await pool.query('ALTER TABLE restaurant_settings ADD COLUMN IF NOT EXISTS max_covers_per_night INTEGER');
+        console.log('✅ max_covers_per_night column migration applied');
+    } catch (e) {
+        console.warn('⚠️ max_covers_per_night migration skipped:', e.message);
+    }
+
     // Auto-migration: can_combine column on tables
     try {
         await pool.query('ALTER TABLE restaurant_tables ADD COLUMN IF NOT EXISTS can_combine BOOLEAN DEFAULT true');
