@@ -308,13 +308,14 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
             const token = localStorage.getItem('events_token')
             const headers = { 'Authorization': `Bearer ${token}` }
 
-            const [tablesRes, hoursRes, bookingsRes, notesRes, waitlistRes, blocksRes] = await Promise.all([
+            const [tablesRes, hoursRes, bookingsRes, notesRes, waitlistRes, blocksRes, settingsRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/tables`),
                 fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/openings?date=${date}`),
                 fetch(`${API_BASE_URL}/api/admin/restaurant-bookings?restaurantId=${restaurantId}&date=${date}`, { headers }),
                 fetch(`${API_BASE_URL}/api/admin/day-notes?restaurantId=${restaurantId}&date=${date}`, { headers }),
                 fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/waitlist?date=${date}`, { headers }),
-                fetch(`${API_BASE_URL}/api/admin/table-blocks?restaurantId=${restaurantId}&date=${date}`, { headers })
+                fetch(`${API_BASE_URL}/api/admin/table-blocks?restaurantId=${restaurantId}&date=${date}`, { headers }),
+                fetch(`${API_BASE_URL}/api/admin/restaurant-settings?restaurantId=${restaurantId}`, { headers })
             ])
 
             const tablesData = await tablesRes.json()
@@ -364,6 +365,13 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
             if (blocksRes.ok) {
                 const blocksData = await blocksRes.json()
                 setTableBlocks(blocksData.blocks || [])
+            }
+
+            if (settingsRes.ok) {
+                const settingsData = await settingsRes.json()
+                if (settingsData.settings?.slotDuration) {
+                    setSlotDuration(settingsData.settings.slotDuration as 15 | 30 | 60)
+                }
             }
         } catch (e) {
             console.error('Failed to load timeline data:', e)
@@ -583,8 +591,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                 const table = tables.find(t => t.id === block.table_id)
                 if (table) {
                     for (const slot of timeSlots) {
-                        const mins = parseInt(slot.split(':')[0]) * 60 + parseInt(slot.split(':')[1])
-                        set.add(`${block.table_id}:${mins}`)
+                        set.add(`${block.table_id}:${slot.mins}`)
                     }
                 }
             } else if (block.start_time && block.end_time) {
@@ -684,7 +691,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
 
         // Get all available tables at this time
         const availableTables = tables
-            .filter(t => isSlotAvailable(t, checkTime) && (t.can_combine !== false))
+            .filter(t => isSlotAvailable(t, checkTime))
             .sort((a, b) => a.seats - b.seats)
 
         if (availableTables.length === 0) return null
@@ -700,7 +707,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
         const totalSeatsNeeded = guestCount
 
         // Simple greedy: start with largest tables
-        const sortedDesc = [...availableTables].sort((a, b) => b.seats - a.seats)
+        const sortedDesc = [...availableTables].filter(t => t.can_combine !== false).sort((a, b) => b.seats - a.seats)
         let selectedTables: Table[] = []
         let currentSeats = 0
 
@@ -877,7 +884,8 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
             }
         })
 
-        const totalSeats = tables.reduce((sum, t) => sum + t.seats, 0)
+        const blockedTableIds = new Set(tableBlocks.filter(b => !b.start_time).map(b => b.table_id))
+        const totalSeats = tables.filter(t => !blockedTableIds.has(t.id)).reduce((sum, t) => sum + t.seats, 0)
         return totalSeats > 0 ? Math.round((bookedSeats / totalSeats) * 100) : 0
     }
 
