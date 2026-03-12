@@ -158,7 +158,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
       await saveAdminData({
         restaurantId: RESTAURANT_ID,
         zones: wijken,
-        events: events
+        events: events,
+        force: true
       });
 
       // CRITICAL FIX: Rehydrate state from server to prevent drift
@@ -979,10 +980,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
               <h3 className="text-lg font-bold text-gray-900 mb-2">
                 {deleteConfirm.type === 'zone' ? 'Delete Zone?' : 'Delete Event?'}
               </h3>
-              <p className="text-sm text-gray-600 mb-6">
+              <p className="text-sm text-gray-600 mb-4">
                 {deleteConfirm.type === 'zone'
                   ? 'Events using this zone may lose capacity settings. This action cannot be undone.'
                   : 'This will permanently delete the event and all its slots. This action cannot be undone.'}
+              </p>
+              <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4 flex items-center gap-2">
+                ⚠️ Existing bookings linked to this {deleteConfirm.type === 'zone' ? 'zone' : 'event'} will also be removed.
               </p>
               <div className="flex gap-3 justify-end">
                 <button

@@ -1097,20 +1097,28 @@ router.post('/api/admin/save', authMiddleware, async (req, res) => {
         // (slots have ON DELETE RESTRICT constraint on zone_id)
         const zoneIds = (zones || []).map(z => z.id);
         if (zoneIds.length > 0) {
-            // First, delete any slots that reference zones we're about to delete
+            // CASCADE: Delete bookings → slots → zones for zones being removed
+            await client.query(
+                `DELETE FROM bookings WHERE slot_id IN (
+                    SELECT id FROM slots WHERE zone_id IN (
+                        SELECT id FROM zones WHERE restaurant_id = $1 AND id != ALL($2::text[])
+                    )
+                )`,
+                [targetRestaurantId, zoneIds]
+            );
             await client.query(
                 `DELETE FROM slots WHERE zone_id IN (
                     SELECT id FROM zones WHERE restaurant_id = $1 AND id != ALL($2::text[])
                 )`,
                 [targetRestaurantId, zoneIds]
             );
-            // Now safe to delete zones
             await client.query(
                 `DELETE FROM zones WHERE restaurant_id = $1 AND id != ALL($2::text[])`,
                 [targetRestaurantId, zoneIds]
             );
         } else if (force) {
-            // Only delete all zones if force is set - delete slots first
+            // CASCADE: Delete bookings → slots → zones (all)
+            await client.query(`DELETE FROM bookings WHERE slot_id IN (SELECT id FROM slots WHERE zone_id IN (SELECT id FROM zones WHERE restaurant_id = $1))`, [targetRestaurantId]);
             await client.query(`DELETE FROM slots WHERE zone_id IN (SELECT id FROM zones WHERE restaurant_id = $1)`, [targetRestaurantId]);
             await client.query(`DELETE FROM zones WHERE restaurant_id = $1`, [targetRestaurantId]);
         }
@@ -1133,7 +1141,15 @@ router.post('/api/admin/save', authMiddleware, async (req, res) => {
         // --- EVENTS: Get current event IDs then delete those not in payload ---
         const eventIds = (events || []).map(e => e.id);
         if (eventIds.length > 0) {
-            // Delete events NOT in the payload (slots cascade due to FK)
+            // CASCADE: Delete bookings → slots → events for events being removed
+            await client.query(
+                `DELETE FROM bookings WHERE slot_id IN (
+                    SELECT id FROM slots WHERE event_id IN (
+                        SELECT id FROM events WHERE restaurant_id = $1 AND id != ALL($2::text[])
+                    )
+                )`,
+                [targetRestaurantId, eventIds]
+            );
             await client.query(
                 `DELETE FROM slots WHERE event_id IN (SELECT id FROM events WHERE restaurant_id = $1 AND id != ALL($2::text[]))`,
                 [targetRestaurantId, eventIds]
@@ -1143,7 +1159,8 @@ router.post('/api/admin/save', authMiddleware, async (req, res) => {
                 [targetRestaurantId, eventIds]
             );
         } else if (force) {
-            // Only delete all if force is set
+            // CASCADE: Delete bookings → slots → events (all)
+            await client.query(`DELETE FROM bookings WHERE slot_id IN (SELECT id FROM slots WHERE event_id IN (SELECT id FROM events WHERE restaurant_id = $1))`, [targetRestaurantId]);
             await client.query(`DELETE FROM slots WHERE event_id IN (SELECT id FROM events WHERE restaurant_id = $1)`, [targetRestaurantId]);
             await client.query(`DELETE FROM events WHERE restaurant_id = $1`, [targetRestaurantId]);
         }
