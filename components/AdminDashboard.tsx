@@ -332,11 +332,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto p-6 space-y-8 pb-20">
+    <div className="w-full max-w-5xl mx-auto p-3 sm:p-6 space-y-4 sm:space-y-8 pb-20">
 
       {/* --- EVENT ZONES CONFIGURATION --- */}
-      <div className="bg-white rounded-xl border border-indigo-200 shadow-sm p-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className="bg-white rounded-xl border border-indigo-200 shadow-sm p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div>
             <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
               <MapPin className="w-5 h-5 text-indigo-600" />
@@ -344,7 +344,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
             </h2>
             <p className="text-xs text-gray-500 mt-1">Configure zones and tables for events (special dinners, tastings, etc.)</p>
           </div>
-          <button onClick={handleAddWijk} className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100 hover:bg-indigo-100 transition-colors">
+          <button onClick={handleAddWijk} className="w-full sm:w-auto justify-center text-xs font-semibold text-indigo-600 bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-100 hover:bg-indigo-100 transition-colors">
             + Add Zone
           </button>
         </div>
@@ -435,8 +435,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
       </div>
 
       {/* --- RESTAURANT TABLES CONFIGURATION --- */}
-      <div className="bg-white rounded-xl border border-emerald-200 shadow-sm p-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className="bg-white rounded-xl border border-emerald-200 shadow-sm p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div>
             <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
               <MapPin className="w-5 h-5 text-emerald-600" />
@@ -445,11 +445,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
             <p className="text-xs text-gray-500 mt-1">Configureer tafels, openingstijden en reserveringsregels</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <button
             onClick={handleSaveRestaurantSettings}
             disabled={savingRestaurant}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 ${saveRestaurantStatus === 'success' ? 'bg-emerald-600 text-white' :
+            className={`w-full sm:w-auto justify-center flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 ${saveRestaurantStatus === 'success' ? 'bg-emerald-600 text-white' :
               saveRestaurantStatus === 'error' ? 'bg-red-600 text-white' :
                 'bg-emerald-600 hover:bg-emerald-700 text-white'
               }`}
@@ -468,8 +468,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
 
         {/* Tables Configuration */}
         <div className="mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
               <h3 className="text-sm font-bold text-gray-700 uppercase">Tafels</h3>
               <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold">
                 <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
@@ -487,7 +487,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
                 };
                 setRestaurantTables([...restaurantTables, newTable]);
               }}
-              className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-colors"
+              className="w-full sm:w-auto justify-center text-xs font-semibold text-emerald-600 bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-colors"
             >
               + Tafel toevoegen
             </button>
@@ -586,7 +586,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {DAYS_NL.map((dayName, dayIndex) => {
               const hours = openingHours.find(h => h.dayOfWeek === dayIndex) || { open: '17:00', close: '23:00', isOpen: true };
               return (
@@ -725,11 +725,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
         </div>
 
         {/* Save Button */}
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex justify-stretch sm:justify-end">
           <button
             onClick={handleSaveRestaurantSettings}
             disabled={savingRestaurant}
-            className={`px-4 py-2 font-bold rounded-lg flex items-center gap-2 disabled:opacity-60 transition-colors ${saveRestaurantStatus === 'success' ? 'bg-emerald-600 text-white' :
+            className={`w-full sm:w-auto justify-center px-4 py-2 font-bold rounded-lg flex items-center gap-2 disabled:opacity-60 transition-colors ${saveRestaurantStatus === 'success' ? 'bg-emerald-600 text-white' :
               saveRestaurantStatus === 'error' ? 'bg-red-600 text-white' :
                 'bg-emerald-600 hover:bg-emerald-700 text-white'
               }`}
@@ -748,15 +748,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
       </div>
 
       {/* --- EVENT HEADER --- */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Event Manager</h1>
           <p className="text-sm text-gray-500">Manage time slots and simulate bookings.</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <button
             onClick={onAddEvent}
-            className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 flex items-center gap-2 shadow-sm transition-colors"
+            className="w-full sm:w-auto justify-center bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 flex items-center gap-2 shadow-sm transition-colors"
           >
             <Plus className="w-4 h-4" />
             New Event
@@ -764,7 +764,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
           <button
             onClick={handleSaveChanges}
             disabled={saving}
-            className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition-all ${saveStatus === 'success' ? 'bg-green-600 text-white' :
+            className={`w-full sm:w-auto justify-center px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition-all ${saveStatus === 'success' ? 'bg-green-600 text-white' :
               saveStatus === 'error' ? 'bg-red-600 text-white' :
                 saving ? 'bg-indigo-400 text-white cursor-wait' :
                   'bg-indigo-600 text-white hover:bg-indigo-700'
@@ -788,8 +788,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
         events.map((event) => (
           <div key={event.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
             {/* Event Header */}
-            <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-              <div className="flex items-center gap-4 group">
+            <div className="bg-gray-50 px-4 sm:px-6 py-4 border-b border-gray-200">
+              <div className="flex items-start gap-3 sm:gap-4 group">
                 <div className="p-2 bg-white rounded-md border border-gray-200 text-gray-400 cursor-move">
                   <GripVertical className="w-4 h-4" />
                 </div>
@@ -844,7 +844,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
             </div>
 
             {/* Slots Grid Editor */}
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                 {event.slots.map((slot) => {
                   const wijk = wijken.find(w => w.id === slot.wijkId);
@@ -863,7 +863,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
                       {/* Delete Slot */}
                       <button
                         onClick={() => handleDeleteSlot(event.id, slot.id)}
-                        className="absolute -top-2 -left-2 p-1 bg-red-100 text-red-600 rounded-full opacity-0 group-hover/slot:opacity-100 transition-opacity scale-90 hover:scale-100 z-20 shadow-sm"
+                        className="absolute -top-2 -left-2 p-1 bg-red-100 text-red-600 rounded-full opacity-100 sm:opacity-0 sm:group-hover/slot:opacity-100 transition-opacity scale-90 hover:scale-100 z-20 shadow-sm"
                       >
                         <Trash2 className="w-3 h-3" />
                       </button>
@@ -879,23 +879,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
 
                       <div className="space-y-3 pt-1">
                         {/* Date & Time & Zone */}
-                        <div className="flex gap-2">
+                        <div className="flex flex-col sm:flex-row gap-2">
                           {/* Native Date Input (visible, works on Safari) */}
                           {/* P0-4 FIX: Controlled input shows existing date */}
                           <input
                             type="date"
                             value={slot.date?.match(/^\d{4}-\d{2}-\d{2}/) ? slot.date.slice(0, 10) : ''}
                             onChange={(e) => handleDateSelect(event.id, slot.id, e.target.value)}
-                            className="w-28 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded px-2 py-1.5 cursor-pointer hover:border-indigo-300"
+                            className="w-full sm:w-28 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded px-2 py-1.5 cursor-pointer hover:border-indigo-300"
                           />
                           {/* Time Dropdown */}
                           <select
                             value={slot.time}
                             onChange={(e) => handleSlotChange(event.id, slot.id, 'time', e.target.value)}
-                            className="w-20 text-sm font-bold text-gray-900 bg-white border border-gray-200 rounded px-1.5 py-1 text-center cursor-pointer"
+                            className="w-full sm:w-20 text-sm font-bold text-gray-900 bg-white border border-gray-200 rounded px-1.5 py-1 text-center cursor-pointer"
                           >
-                            {Array.from({ length: 48 }, (_, i) => {
-                              const hours = Math.floor(i / 4) + 12; // Start at 12:00
+                            {Array.from({ length: 96 }, (_, i) => {
+                              const hours = Math.floor(i / 4); // Full 24h: start at 00:00
                               const minutes = (i % 4) * 15;
                               const time = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
                               return <option key={time} value={time}>{time}</option>;
@@ -905,7 +905,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
                           <select
                             value={slot.wijkId || ''}
                             onChange={(e) => handleSlotChange(event.id, slot.id, 'wijkId', e.target.value)}
-                            className="flex-1 min-w-0 max-w-[120px] text-xs bg-white border border-gray-200 rounded px-1.5 py-1 text-gray-600 truncate"
+                            className="w-full sm:flex-1 min-w-0 text-xs bg-white border border-gray-200 rounded px-1.5 py-1 text-gray-600 truncate"
                           >
                             {wijken.map(w => (
                               <option key={w.id} value={w.id}>{w.name}</option>
