@@ -242,6 +242,8 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
     })
 
     const [slotDuration, setSlotDuration] = useState<15 | 30 | 60>(30) // minutes per slot
+    const [isCompactScreen, setIsCompactScreen] = useState(() => typeof window !== 'undefined' && window.innerWidth < 640)
+    const [mobileGridMode, setMobileGridMode] = useState<'book' | 'block'>('book')
 
     // Generate time slots — extends 2hr past closing for gray area
     // Each slot has { label: "17:00", mins: 1020 } to avoid midnight wrap bugs
@@ -291,6 +293,13 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
     useEffect(() => {
         const iv = setInterval(() => { const n = new Date(); setNowMins(n.getHours() * 60 + n.getMinutes()) }, 60000)
         return () => clearInterval(iv)
+    }, [])
+
+    useEffect(() => {
+        const syncViewport = () => setIsCompactScreen(window.innerWidth < 640)
+        syncViewport()
+        window.addEventListener('resize', syncViewport)
+        return () => window.removeEventListener('resize', syncViewport)
     }, [])
 
     // Check if today is open
@@ -733,7 +742,8 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
 
     // Submit walk-in with multi-table support
     const submitWalkin = async () => {
-        if (!walkinForm.customer_name || walkinForm.guest_count < 1 || isSubmitting) return
+        if (walkinForm.guest_count < 1 || isSubmitting) return
+        const effectiveName = walkinForm.customer_name.trim() || 'Walk-in'
         setIsSubmitting(true)
 
         // Use smart allocation for multi-table
@@ -772,7 +782,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                     time: startTime,
                     end_time: endTime,
                     guest_count: walkinForm.guest_count,
-                    customer_name: walkinForm.customer_name,
+                    customer_name: effectiveName,
                     status: 'arrived',
                     is_walkin: true,
                     tables_linked: tableIds.length > 1 ? tableIds : undefined
@@ -920,10 +930,10 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
         <>
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 {/* Header - Modern Premium Design */}
-                <div className="px-6 py-4 border-b border-gray-100 bg-white/80 backdrop-blur-sm sticky top-0 z-20">
-                    <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
+                <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-100 bg-white/80 backdrop-blur-sm sticky top-0 z-20">
+                    <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3 sm:gap-6">
                         {/* Left: Date Navigation & View Mode */}
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
                             {/* TODAY BUTTON - Prominent standalone when not on today */}
                             {date !== new Date().toISOString().split('T')[0] && (
                                 <button
@@ -958,8 +968,8 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                 {/* Mini Calendar Popup */}
                                 {showCalendarPopup && (
                                     <>
-                                        <div className="fixed inset-0 z-30" onClick={() => setShowCalendarPopup(false)} />
-                                        <div className="absolute top-full left-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-40 w-72">
+                                        <div className="fixed inset-0 z-30 bg-black/20 sm:bg-transparent" onClick={() => setShowCalendarPopup(false)} />
+                                        <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 sm:translate-y-0 sm:inset-x-auto sm:absolute sm:top-full sm:left-0 sm:mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-40 w-auto sm:w-72 max-w-sm mx-auto sm:mx-0">
                                             {(() => {
                                                 const calDate = new Date(date)
                                                 const calYear = calDate.getFullYear()
@@ -1045,11 +1055,11 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                 )}
                             </div>
 
-                            <div className="flex flex-col">
-                                <h2 className="text-xl font-bold text-gray-900 leading-none">
+                            <div className="flex min-w-0 flex-col">
+                                <h2 className="truncate text-sm font-bold leading-none text-gray-900 sm:text-xl">
                                     {new Date(date).toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })}
                                 </h2>
-                                <span className="text-xs text-gray-400 font-medium uppercase tracking-wider mt-0.5">
+                                <span className="mt-0.5 text-[10px] font-medium uppercase tracking-wider text-gray-400 sm:text-xs">
                                     {viewMode === 'day' ? 'Dagoverzicht' : 'Weekoverzicht'}
                                 </span>
                             </div>
@@ -1083,18 +1093,18 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                         </div>
 
                         {/* Right: Actions Toolbar */}
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
                             {/* View Controls Group */}
-                            <div className="hidden md:flex items-center bg-gray-50 rounded-lg p-1 border border-gray-100 mr-2">
+                            <div className="flex w-full sm:w-auto items-center bg-gray-50 rounded-lg p-1 border border-gray-100 mr-0 sm:mr-2">
                                 <button
                                     onClick={() => setViewMode('day')}
-                                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${viewMode === 'day' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                                    className={`px-2.5 py-1.5 text-[11px] sm:text-xs font-medium rounded-md transition-all ${viewMode === 'day' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                                 >
                                     Dag
                                 </button>
                                 <button
                                     onClick={() => setViewMode('week')}
-                                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${viewMode === 'week' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                                    className={`px-2.5 py-1.5 text-[11px] sm:text-xs font-medium rounded-md transition-all ${viewMode === 'week' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                                 >
                                     Week
                                 </button>
@@ -1102,7 +1112,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                 <select
                                     value={slotDuration}
                                     onChange={(e) => setSlotDuration(parseInt(e.target.value))}
-                                    className="bg-transparent text-xs font-medium text-gray-600 border-none focus:ring-0 py-0 pl-2 pr-6 cursor-pointer"
+                                    className="w-16 bg-transparent text-[11px] sm:text-xs font-medium text-gray-600 border-none focus:ring-0 py-0 pl-2 pr-6 cursor-pointer"
                                 >
                                     <option value={60}>1u</option>
                                     <option value={30}>30m</option>
@@ -1112,7 +1122,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                             </div>
 
                             {/* Secondary Actions */}
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-0.5 sm:gap-1">
                                 <button
                                     onClick={fetchData}
                                     className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-full transition-colors"
@@ -1129,7 +1139,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                 </button>
                                 <button
                                     onClick={() => setShowDayNotes(!showDayNotes)}
-                                    className={`p-2 rounded-full transition-colors ${dayNotes.length > 0 ? 'text-amber-500 bg-amber-50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
+                                    className={`relative p-2 rounded-full transition-colors ${dayNotes.length > 0 ? 'text-amber-500 bg-amber-50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
                                     title="Notities"
                                 >
                                     <StickyNote className="w-5 h-5" />
@@ -1149,31 +1159,51 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                 </button>
                             </div>
 
-                            <div className="h-8 w-px bg-gray-200 mx-2"></div>
+                            {isCompactScreen && viewMode === 'day' && (
+                                <div className="flex items-center bg-gray-50 rounded-lg p-1 border border-gray-100">
+                                    <button
+                                        onClick={() => setMobileGridMode('book')}
+                                        className={`px-2.5 py-1.5 text-[11px] font-medium rounded-md transition-all ${mobileGridMode === 'book' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                                    >
+                                        Boek
+                                    </button>
+                                    <button
+                                        onClick={() => setMobileGridMode('block')}
+                                        className={`px-2.5 py-1.5 text-[11px] font-medium rounded-md transition-all ${mobileGridMode === 'block' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                                    >
+                                        Blokkeer
+                                    </button>
+                                </div>
+                            )}
+
+                            <div className="h-8 w-px bg-gray-200 mx-1 sm:mx-2 hidden sm:block"></div>
 
                             {/* Primary Actions */}
                             <div className="flex items-center gap-2">
                                 <button
                                     onClick={() => setShowWalkinModal(true)}
-                                    className="hidden sm:flex items-center gap-2 text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 upgrade-btn px-4 py-2 rounded-xl transition-all font-medium text-sm shadow-sm"
+                                    className="flex items-center gap-1.5 sm:gap-2 text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 upgrade-btn px-3 sm:px-4 py-2 rounded-xl transition-all font-medium text-xs sm:text-sm shadow-sm"
                                 >
                                     <Users className="w-4 h-4 text-gray-500" />
-                                    Walk-in
+                                    <span>Walk-in</span>
                                 </button>
 
                                 <button
                                     onClick={bulkBlockRemaining}
-                                    className="hidden sm:flex items-center gap-2 text-red-600 bg-red-50 border border-red-200 hover:bg-red-100 px-4 py-2 rounded-xl transition-all font-medium text-sm shadow-sm"
+                                    className="flex items-center gap-1.5 sm:gap-2 text-red-600 bg-red-50 border border-red-200 hover:bg-red-100 px-3 sm:px-4 py-2 rounded-xl transition-all font-medium text-xs sm:text-sm shadow-sm"
                                     title="Blokkeer alle lege tafels voor vanavond"
                                 >
-                                    🚫 Vol vanavond
+                                    <span aria-hidden="true">🚫</span>
+                                    <span className="hidden sm:inline">Vol vanavond</span>
+                                    <span className="sm:hidden">Vol</span>
                                 </button>
                                 <button
                                     onClick={() => setShowNewBookingModal(true)}
-                                    className="flex items-center gap-2 bg-[#0F172A] text-white px-5 py-2.5 rounded-xl hover:bg-black transition-all font-medium text-sm shadow-lg shadow-gray-200 active:transform active:scale-95"
+                                    className="flex items-center gap-1.5 sm:gap-2 bg-[#0F172A] text-white px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl hover:bg-black transition-all font-medium text-xs sm:text-sm shadow-lg shadow-gray-200 active:transform active:scale-95"
                                 >
                                     <Plus className="w-4 h-4" />
-                                    <span>Nieuwe boeking</span>
+                                    <span className="hidden sm:inline">Nieuwe boeking</span>
+                                    <span className="sm:hidden">Nieuw</span>
                                 </button>
                             </div>
                         </div>
@@ -1182,7 +1212,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
 
 
                 {/* Service Stats Bar - Quick Couverts Overview */}
-                <div className="grid grid-cols-4 gap-3 mb-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-4 px-3 sm:px-0">
                     <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200 p-3 text-center">
                         <div className="text-2xl font-black text-amber-900">
                             {bookings.filter(b => b.status !== 'arrived' && b.status !== 'cancelled' && b.status !== 'walkin' && b.status !== 'no_show' && (!b.group_id || b.is_primary)).reduce((sum, b) => sum + (b.guest_count || 0), 0)}
@@ -1290,7 +1320,8 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                                         }).catch(() => { }) // best-effort
                                                         setWaitlist(prev => prev.filter(w => w.id !== entry.id))
                                                     }}
-                                                    className="px-2 py-1 text-xs bg-emerald-500 text-white rounded hover:bg-emerald-600"
+                                                    className="px-2.5 py-1.5 text-xs bg-emerald-500 text-white rounded hover:bg-emerald-600"
+                                                    style={{ minHeight: '36px', minWidth: '36px' }}
                                                 >
                                                     Boeken
                                                 </button>
@@ -1313,34 +1344,35 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                                             setWaitlist(prev => prev.filter(w => w.id !== entry.id))
                                                         }
                                                     }}
-                                                    className="p-1 text-purple-600 hover:text-red-600"
+                                                    className="p-2 text-purple-600 hover:text-red-600 rounded hover:bg-red-50"
+                                                    style={{ minHeight: '36px', minWidth: '36px' }}
                                                 >
-                                                    <X className="w-3 h-3" />
+                                                    <X className="w-4 h-4" />
                                                 </button>
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                             )}
-                            <div className="grid grid-cols-4 gap-2">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                                 <input
                                     type="text"
                                     value={waitlistForm.customer_name}
                                     onChange={e => setWaitlistForm(p => ({ ...p, customer_name: e.target.value }))}
                                     placeholder="Naam"
-                                    className="px-2 py-1 text-sm border border-purple-300 rounded"
+                                    className="px-2 py-1.5 text-sm border border-purple-300 rounded"
                                 />
                                 <input
                                     type="tel"
                                     value={waitlistForm.customer_phone}
                                     onChange={e => setWaitlistForm(p => ({ ...p, customer_phone: e.target.value }))}
                                     placeholder="Telefoon"
-                                    className="px-2 py-1 text-sm border border-purple-300 rounded"
+                                    className="px-2 py-1.5 text-sm border border-purple-300 rounded"
                                 />
                                 <select
                                     value={waitlistForm.guest_count}
                                     onChange={e => setWaitlistForm(p => ({ ...p, guest_count: parseInt(e.target.value) }))}
-                                    className="px-2 py-1 text-sm border border-purple-300 rounded"
+                                    className="px-2 py-1.5 text-sm border border-purple-300 rounded"
                                 >
                                     {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => (
                                         <option key={n} value={n}>{n} pers.</option>
@@ -1350,7 +1382,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                     type="time"
                                     value={waitlistForm.preferred_time}
                                     onChange={e => setWaitlistForm(p => ({ ...p, preferred_time: e.target.value }))}
-                                    className="px-2 py-1 text-sm border border-purple-300 rounded"
+                                    className="px-2 py-1.5 text-sm border border-purple-300 rounded"
                                     placeholder="Voorkeur"
                                 />
                                 <input
@@ -1358,7 +1390,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                     value={waitlistForm.notes || ''}
                                     onChange={e => setWaitlistForm(p => ({ ...p, notes: e.target.value }))}
                                     placeholder="Opmerkingen"
-                                    className="col-span-2 px-2 py-1 text-sm border border-purple-300 rounded"
+                                    className="col-span-2 px-2 py-1.5 text-sm border border-purple-300 rounded"
                                 />
                                 <button
                                     onClick={async () => {
@@ -1395,7 +1427,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                             }
                                         }
                                     }}
-                                    className="px-2 py-1 text-sm bg-purple-500 text-white rounded hover:bg-purple-600"
+                                    className="col-span-2 sm:col-span-1 px-2 py-1.5 text-sm bg-purple-500 text-white rounded hover:bg-purple-600"
                                 >
                                     Toevoegen
                                 </button>
@@ -1421,7 +1453,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                     viewMode === 'week' ? (
                         /* Week View */
                         <div className="p-4">
-                            <div className="grid grid-cols-7 gap-2">
+                            <div className="grid grid-cols-3 sm:grid-cols-7 gap-2">
                                 {Array.from({ length: 7 }).map((_, i) => {
                                     const d = new Date(date)
                                     const dayOfWeekForWeek = d.getDay()
@@ -1476,159 +1508,177 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                         </div>
                     ) : (
                         /* Day View — Tapla-style grid */
-                        <div className="overflow-x-auto">
-                            {(() => {
-                                const COL = 80
-                                const totalGridPx = timeSlots.length * COL
-                                // Now line: use actual minutes for positioning
-                                const nowPx = ((nowMins - gridStartMins) / slotDuration) * COL
-                                const showNowLine = nowPx > 0 && nowPx < totalGridPx
-                                // isToday check
-                                const today = new Date()
-                                const isToday = date === `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+                        <>
+                            {isCompactScreen && (
+                                <div className="px-3 pb-2 text-[11px] text-gray-500 sm:hidden">
+                                    {mobileGridMode === 'book'
+                                        ? 'Veeg horizontaal voor alle tijden. Tik op een vak voor snelle boeking.'
+                                        : 'Veeg horizontaal en tik op een vrij vak om te blokkeren tot sluiting.'}
+                                </div>
+                            )}
+                            <div className="overflow-x-auto">
+                                {(() => {
+                                    const COL = isCompactScreen ? 64 : 80
+                                    const LABEL_COL = isCompactScreen ? 88 : 112
+                                    const totalGridPx = timeSlots.length * COL
+                                    // Now line: use actual minutes for positioning
+                                    const nowPx = ((nowMins - gridStartMins) / slotDuration) * COL
+                                    const showNowLine = nowPx > 0 && nowPx < totalGridPx
+                                    // isToday check
+                                    const today = new Date()
+                                    const isToday = date === `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 
-                                return (
-                                    <div style={{ minWidth: `${112 + totalGridPx}px` }}>
-                                        {/* Time Header */}
-                                        <div className="flex border-b border-gray-300 sticky top-0 bg-white z-20">
-                                            <div className="w-28 shrink-0 border-r border-gray-300 sticky left-0 bg-white z-10" />
-                                            <div className="flex-1 flex">
-                                                {timeSlots.map((slot) => {
-                                                    const isFullHour = slot.label.endsWith(':00')
-                                                    const isClosed = slot.mins >= closeMins
-                                                    return (
-                                                        <div
-                                                            key={slot.label + slot.mins}
-                                                            className={`shrink-0 border-l border-gray-300 py-1.5 ${isClosed ? 'bg-gray-100' : ''}`}
-                                                            style={{ width: `${COL}px` }}
-                                                        >
-                                                            <span className={`pl-1.5 text-xs ${isFullHour ? 'font-bold text-gray-900' : 'font-normal text-gray-400'}`}>
-                                                                {slot.label}
-                                                            </span>
-                                                        </div>
-                                                    )
-                                                })}
-                                            </div>
-                                        </div>
-
-                                        {/* Restaurant zone label */}
-                                        <div className="flex border-b border-gray-200 bg-gray-50">
-                                            <div className="w-28 shrink-0 px-2 py-0.5 text-xs font-medium text-gray-500 border-r border-gray-300 sticky left-0 bg-gray-50 z-10">Restaurant</div>
-                                            <div className="flex-1" />
-                                        </div>
-
-                                        {/* Table Rows + Now Line wrapper */}
-                                        {loading ? (
-                                            <div className="px-4 py-8 text-center text-gray-400">Laden...</div>
-                                        ) : tables.length === 0 ? (
-                                            <div className="px-4 py-8 text-center text-gray-400">Geen tafels gevonden</div>
-                                        ) : (
-                                            <div className="relative">
-                                                {tables.map((table) => {
-                                                    const tableBookings = bookings.filter(b => b.table_id === table.id && b.status !== 'cancelled')
-                                                    return (
-                                                        <div key={table.id} className={`flex border-b border-gray-200 ${isTableBlocked(table.id) ? 'bg-red-50/30' : 'bg-white'}`}>
-                                                            {/* Table label */}
+                                    return (
+                                        <div style={{ minWidth: `${LABEL_COL + totalGridPx}px` }}>
+                                            {/* Time Header */}
+                                            <div className="flex border-b border-gray-300 sticky top-0 bg-white z-20">
+                                                <div className="shrink-0 border-r border-gray-300 sticky left-0 bg-white z-10" style={{ width: `${LABEL_COL}px` }} />
+                                                <div className="flex-1 flex">
+                                                    {timeSlots.map((slot) => {
+                                                        const isFullHour = slot.label.endsWith(':00')
+                                                        const isClosed = slot.mins >= closeMins
+                                                        return (
                                                             <div
-                                                                className={`w-28 shrink-0 px-1 py-1 flex items-center gap-0.5 border-r border-gray-300 sticky left-0 z-10 ${isTableBlocked(table.id) ? 'bg-red-50' : 'bg-white'}`}
-                                                                onContextMenu={(e) => { e.preventDefault(); toggleTableBlock(table.id) }}
-                                                                title="Tik op 🚫 om te blokkeren/deblokkeren"
+                                                                key={slot.label + slot.mins}
+                                                                className={`shrink-0 border-l border-gray-300 py-1.5 ${isClosed ? 'bg-gray-100' : ''}`}
+                                                                style={{ width: `${COL}px` }}
                                                             >
-                                                                <button
-                                                                    onClick={() => toggleTableBlock(table.id)}
-                                                                    className={`shrink-0 w-5 h-5 rounded flex items-center justify-center text-[10px] ${isTableBlocked(table.id) ? 'bg-red-100 text-red-500 hover:bg-green-100 hover:text-green-600' : 'text-gray-300 hover:bg-red-50 hover:text-red-500'}`}
-                                                                >
-                                                                    {isTableBlocked(table.id) ? '✓' : '🚫'}
-                                                                </button>
-                                                                <span className={`font-medium text-xs truncate ${isTableBlocked(table.id) ? 'text-red-500 line-through' : 'text-gray-800'}`}>{table.name}</span>
-                                                                <span className="text-[9px] text-gray-400 ml-0.5">{table.seats}</span>
+                                                                <span className={`pl-1.5 text-xs ${isFullHour ? 'font-bold text-gray-900' : 'font-normal text-gray-400'}`}>
+                                                                    {slot.label}
+                                                                </span>
                                                             </div>
+                                                        )
+                                                    })}
+                                                </div>
+                                            </div>
 
-                                                            {/* Timeline */}
-                                                            <div className="flex-1 relative" style={{ height: '36px' }}>
-                                                                {/* Grid cells */}
-                                                                <div className="absolute inset-0 flex">
-                                                                    {timeSlots.map((slot, i) => {
-                                                                        const available = isSlotAvailable(table, slot.label)
-                                                                        const isClosed = slot.mins >= closeMins
-                                                                        const blocked = isTableBlocked(table.id)
+                                            {/* Restaurant zone label */}
+                                            <div className="flex border-b border-gray-200 bg-gray-50">
+                                                <div className="shrink-0 px-2 py-0.5 text-xs font-medium text-gray-500 border-r border-gray-300 sticky left-0 bg-gray-50 z-10" style={{ width: `${LABEL_COL}px` }}>Restaurant</div>
+                                                <div className="flex-1" />
+                                            </div>
+
+                                            {/* Table Rows + Now Line wrapper */}
+                                            {loading ? (
+                                                <div className="px-4 py-8 text-center text-gray-400">Laden...</div>
+                                            ) : tables.length === 0 ? (
+                                                <div className="px-4 py-8 text-center text-gray-400">Geen tafels gevonden</div>
+                                            ) : (
+                                                <div className="relative">
+                                                    {tables.map((table) => {
+                                                        const tableBookings = bookings.filter(b => b.table_id === table.id && b.status !== 'cancelled')
+                                                        return (
+                                                            <div key={table.id} className={`flex border-b border-gray-200 ${isTableBlocked(table.id) ? 'bg-red-50/30' : 'bg-white'}`}>
+                                                                {/* Table label */}
+                                                                <div
+                                                                    className={`shrink-0 px-1 py-1 flex items-center gap-0.5 border-r border-gray-300 sticky left-0 z-10 ${isTableBlocked(table.id) ? 'bg-red-50' : 'bg-white'}`}
+                                                                    style={{ width: `${LABEL_COL}px` }}
+                                                                    onContextMenu={(e) => { e.preventDefault(); toggleTableBlock(table.id) }}
+                                                                    title="Tik op 🚫 om te blokkeren/deblokkeren"
+                                                                >
+                                                                    <button
+                                                                        onClick={() => toggleTableBlock(table.id)}
+                                                                        className={`shrink-0 w-5 h-5 rounded flex items-center justify-center text-[10px] ${isTableBlocked(table.id) ? 'bg-red-100 text-red-500 hover:bg-green-100 hover:text-green-600' : 'text-gray-300 hover:bg-red-50 hover:text-red-500'}`}
+                                                                    >
+                                                                        {isTableBlocked(table.id) ? '✓' : '🚫'}
+                                                                    </button>
+                                                                    <span className={`font-medium text-xs truncate ${isTableBlocked(table.id) ? 'text-red-500 line-through' : 'text-gray-800'}`}>{table.name}</span>
+                                                                    <span className="text-[9px] text-gray-400 ml-0.5">{table.seats}</span>
+                                                                </div>
+
+                                                                {/* Timeline */}
+                                                                <div className="flex-1 relative" style={{ height: '36px' }}>
+                                                                    {/* Grid cells */}
+                                                                    <div className="absolute inset-0 flex">
+                                                                        {timeSlots.map((slot, i) => {
+                                                                            const available = isSlotAvailable(table, slot.label)
+                                                                            const isClosed = slot.mins >= closeMins
+                                                                            const blocked = isTableBlocked(table.id)
+                                                                            return (
+                                                                                <div
+                                                                                    key={i}
+                                                                                    onClick={() => {
+                                                                                        if (isClosed || blocked || !available) return
+                                                                                        if (isCompactScreen && mobileGridMode === 'block') {
+                                                                                            void createTimedBlock(table.id, slot.label)
+                                                                                            return
+                                                                                        }
+                                                                                        handleCellClick(table, slot.label)
+                                                                                    }}
+                                                                                    onContextMenu={(e) => { e.preventDefault(); createTimedBlock(table.id, slot.label) }}
+                                                                                    className={`shrink-0 border-l border-gray-300 ${blocked ? 'cursor-pointer'
+                                                                                        : isClosed ? 'bg-gray-100 cursor-default'
+                                                                                            : available ? 'hover:bg-blue-50 cursor-pointer'
+                                                                                                : 'bg-red-50/20 cursor-not-allowed'
+                                                                                        }`}
+                                                                                    style={{
+                                                                                        width: `${COL}px`,
+                                                                                        ...(blocked ? {
+                                                                                            background: 'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(239,68,68,0.12) 4px, rgba(239,68,68,0.12) 8px)',
+                                                                                            backgroundColor: 'rgba(239,68,68,0.06)'
+                                                                                        } : {})
+                                                                                    }}
+                                                                                    title={blocked ? '🚫 Geblokkeerd — rechts-klik om te deblokkeren' : ''}
+                                                                                />
+                                                                            )
+                                                                        })}
+                                                                    </div>
+
+                                                                    {/* Booking blocks */}
+                                                                    {tableBookings.map(booking => {
+                                                                        const statusConfig = STATUS_COLORS[booking.status as keyof typeof STATUS_COLORS] || STATUS_COLORS.confirmed
+                                                                        const isGrouped = booking.group_id && bookings.filter(b => b.group_id === booking.group_id).length > 1
+                                                                        const groupSiblings = isGrouped ? bookings.filter(b => b.group_id === booking.group_id) : []
+                                                                        const totalGroupGuests = isGrouped ? groupSiblings[0]?.guest_count || booking.guest_count : booking.guest_count
+                                                                        const groupColor = booking.group_id ? groupColorMap.get(booking.group_id) : ''
+                                                                        const tablesInGroup = isGrouped ? groupSiblings.length : 1
+
+                                                                        const startM = parseInt(booking.start_time.split(':')[0]) * 60 + parseInt(booking.start_time.split(':')[1])
+                                                                        const endM = parseInt(booking.end_time.split(':')[0]) * 60 + parseInt(booking.end_time.split(':')[1])
+                                                                        const l = ((startM - gridStartMins) / slotDuration) * COL
+                                                                        const w = ((endM - startM) / slotDuration) * COL
+
                                                                         return (
                                                                             <div
-                                                                                key={i}
-                                                                                onClick={() => !isClosed && !blocked && available && handleCellClick(table, slot.label)}
-                                                                                onContextMenu={(e) => { e.preventDefault(); createTimedBlock(table.id, slot.label) }}
-                                                                                className={`shrink-0 border-l border-gray-300 ${blocked ? 'cursor-pointer'
-                                                                                    : isClosed ? 'bg-gray-100 cursor-default'
-                                                                                        : available ? 'hover:bg-blue-50 cursor-pointer'
-                                                                                            : 'bg-red-50/20 cursor-not-allowed'
-                                                                                    }`}
-                                                                                style={{
-                                                                                    width: `${COL}px`,
-                                                                                    ...(blocked ? {
-                                                                                        background: 'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(239,68,68,0.12) 4px, rgba(239,68,68,0.12) 8px)',
-                                                                                        backgroundColor: 'rgba(239,68,68,0.06)'
-                                                                                    } : {})
-                                                                                }}
-                                                                                title={blocked ? '🚫 Geblokkeerd — rechts-klik om te deblokkeren' : ''}
-                                                                            />
+                                                                                key={booking.id}
+                                                                                style={{ left: `${l}px`, width: `${Math.max(w, COL)}px` }}
+                                                                                onClick={() => setShowBookingDetail(booking)}
+                                                                                className={`absolute top-0.5 bottom-0.5 ${statusConfig.bg} ${statusConfig.hover} rounded-sm px-1.5 cursor-pointer hover:shadow-md overflow-hidden z-10 flex items-center ${isGrouped ? `border-l-[3px] ${groupColor}` : ''}`}
+                                                                                title={`${booking.customer_name} - ${totalGroupGuests} pers.${isGrouped ? ` (${tablesInGroup} tafels)` : ''}`}
+                                                                            >
+                                                                                <div className="flex items-center gap-0.5 text-white text-[11px] font-medium leading-none whitespace-nowrap">
+                                                                                    {isGrouped && <span className="text-[10px]">🔗</span>}
+                                                                                    <StatusIcon status={booking.status} />
+                                                                                    <span className="truncate">{totalGroupGuests}p{isGrouped ? `·${tablesInGroup}t` : ''} {booking.customer_name}</span>
+                                                                                    {Number(booking.visit_count) > 0 && <span>⭐</span>}
+                                                                                </div>
+                                                                            </div>
                                                                         )
                                                                     })}
                                                                 </div>
-
-                                                                {/* Booking blocks */}
-                                                                {tableBookings.map(booking => {
-                                                                    const statusConfig = STATUS_COLORS[booking.status as keyof typeof STATUS_COLORS] || STATUS_COLORS.confirmed
-                                                                    const isGrouped = booking.group_id && bookings.filter(b => b.group_id === booking.group_id).length > 1
-                                                                    const groupSiblings = isGrouped ? bookings.filter(b => b.group_id === booking.group_id) : []
-                                                                    const totalGroupGuests = isGrouped ? groupSiblings[0]?.guest_count || booking.guest_count : booking.guest_count
-                                                                    const groupColor = booking.group_id ? groupColorMap.get(booking.group_id) : ''
-                                                                    const tablesInGroup = isGrouped ? groupSiblings.length : 1
-
-                                                                    const startM = parseInt(booking.start_time.split(':')[0]) * 60 + parseInt(booking.start_time.split(':')[1])
-                                                                    const endM = parseInt(booking.end_time.split(':')[0]) * 60 + parseInt(booking.end_time.split(':')[1])
-                                                                    const l = ((startM - gridStartMins) / slotDuration) * COL
-                                                                    const w = ((endM - startM) / slotDuration) * COL
-
-                                                                    return (
-                                                                        <div
-                                                                            key={booking.id}
-                                                                            style={{ left: `${l}px`, width: `${Math.max(w, COL)}px` }}
-                                                                            onClick={() => setShowBookingDetail(booking)}
-                                                                            className={`absolute top-0.5 bottom-0.5 ${statusConfig.bg} ${statusConfig.hover} rounded-sm px-1.5 cursor-pointer hover:shadow-md overflow-hidden z-10 flex items-center ${isGrouped ? `border-l-[3px] ${groupColor}` : ''}`}
-                                                                            title={`${booking.customer_name} - ${totalGroupGuests} pers.${isGrouped ? ` (${tablesInGroup} tafels)` : ''}`}
-                                                                        >
-                                                                            <div className="flex items-center gap-0.5 text-white text-[11px] font-medium leading-none whitespace-nowrap">
-                                                                                {isGrouped && <span className="text-[10px]">🔗</span>}
-                                                                                <StatusIcon status={booking.status} />
-                                                                                <span className="truncate">{totalGroupGuests}p{isGrouped ? `·${tablesInGroup}t` : ''} {booking.customer_name}</span>
-                                                                                {Number(booking.visit_count) > 0 && <span>⭐</span>}
-                                                                            </div>
-                                                                        </div>
-                                                                    )
-                                                                })}
                                                             </div>
-                                                        </div>
-                                                    )
-                                                })}
+                                                        )
+                                                    })}
 
-                                                {/* Live current-time line */}
-                                                {isToday && showNowLine && (
-                                                    <div
-                                                        className="absolute top-0 bottom-0 pointer-events-none"
-                                                        style={{ left: `${112 + nowPx}px`, width: '3px', backgroundColor: '#3b82f6', zIndex: 50 }}
-                                                    />
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                )
-                            })()}
-                        </div>
+                                                    {/* Live current-time line */}
+                                                    {isToday && showNowLine && (
+                                                        <div
+                                                            className="absolute top-0 bottom-0 pointer-events-none"
+                                                            style={{ left: `${LABEL_COL + nowPx}px`, width: '3px', backgroundColor: '#3b82f6', zIndex: 50 }}
+                                                        />
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )
+                                })()}
+                            </div>
+                        </>
                     )
                 }
 
                 {/* Legend */}
-                <div className="px-4 py-2 border-t border-gray-200 flex items-center gap-4 text-xs text-gray-500">
+                <div className="px-4 py-2 border-t border-gray-200 flex flex-wrap items-center gap-4 text-xs text-gray-500">
                     <span className="font-medium">Status:</span>
                     {Object.entries(STATUS_COLORS).map(([key, val]) => (
                         <div key={key} className="flex items-center gap-1">
@@ -1841,7 +1891,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                         value={walkinForm.customer_name}
                                         onChange={e => setWalkinForm(f => ({ ...f, customer_name: e.target.value }))}
                                         className="w-full px-2 py-1.5 border rounded text-sm"
-                                        placeholder="Walk-in gast"
+                                        placeholder="Optioneel"
                                     />
                                 </div>
 
@@ -1854,7 +1904,12 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                     >
                                         <option value="">Automatisch kiezen</option>
                                         {tables
-                                            .filter(t => t.seats >= walkinForm.guest_count)
+                                            .filter(t => {
+                                                // Show all available tables, mark if undersized
+                                                const now = new Date()
+                                                const checkTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
+                                                return isSlotAvailable(t, checkTime)
+                                            })
                                             .map(t => (
                                                 <option key={t.id} value={t.id}>{t.name} ({t.seats} pers.)</option>
                                             ))
@@ -1865,7 +1920,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
 
                             <button
                                 onClick={submitWalkin}
-                                disabled={isSubmitting || !walkinForm.customer_name}
+                                disabled={isSubmitting}
                                 className="w-full mt-4 px-3 py-2.5 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
                                 <UserCheck className="w-4 h-4" />
@@ -2051,7 +2106,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                             </div>
 
                             <div className="space-y-3">
-                                <div className="flex gap-2">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                     <div className="flex-1">
                                         <label className="text-xs text-gray-500">Gasten</label>
                                         <input
