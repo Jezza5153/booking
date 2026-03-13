@@ -221,9 +221,9 @@ export const BookingStats: React.FC<Props> = ({ restaurantId, onBack }) => {
 
     // ── RENDER ──
     return (
-        <div className="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 100px)' }}>
+        <div className="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden flex flex-col min-h-[calc(100dvh-140px)] md:h-[calc(100vh-100px)]">
             {/* Header */}
-            <div className="bg-white border-b border-gray-200 px-5 py-3 flex items-center justify-between shrink-0">
+            <div className="bg-white border-b border-gray-200 px-4 sm:px-5 py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between shrink-0">
                 <div className="flex items-center gap-3">
                     <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-lg" style={{ minWidth: 44, minHeight: 44 }}>
                         <ArrowLeft className="w-5 h-5 text-gray-600" />
@@ -233,7 +233,7 @@ export const BookingStats: React.FC<Props> = ({ restaurantId, onBack }) => {
                         {lastUpdated && <div className="text-xs text-gray-400">Bijgewerkt {lastUpdated.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}</div>}
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                     <button onClick={exportCSV} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200" style={{ minHeight: 44 }}>
                         <Download className="w-4 h-4" /> CSV
                     </button>
@@ -255,14 +255,14 @@ export const BookingStats: React.FC<Props> = ({ restaurantId, onBack }) => {
             </div>
 
             {/* Date controls */}
-            <div className="bg-white border-b border-gray-200 px-5 py-2.5 flex items-center gap-2 flex-wrap shrink-0">
+            <div className="bg-white border-b border-gray-200 px-4 sm:px-5 py-2.5 flex items-center gap-2 overflow-x-auto shrink-0">
                 {([['7d', '7d'], ['30d', '30d'], ['week', 'Week'], ['prev_week', 'Vor. week'], ['month', 'Maand'], ['prev_month', 'Vor. maand']] as [DatePreset, string][]).map(([key, label]) => (
                     <button key={key} onClick={() => applyPreset(key)}
                         className={`px-3 py-2 text-sm rounded-lg font-medium transition-colors ${activePreset === key ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
                         style={{ minHeight: 40 }}>{label}</button>
                 ))}
                 <DateRangePicker from={dateRange.from} to={dateRange.to} onChange={setDateRange} />
-                <div className="flex items-center gap-1 ml-auto">
+                <div className="flex items-center gap-1 ml-0 sm:ml-auto">
                     <button onClick={() => navigatePeriod(-1)} className="p-2 hover:bg-gray-100 rounded-lg" style={{ minHeight: 44 }}><ChevronLeft className="w-5 h-5 text-gray-500" /></button>
                     <span className="text-sm text-gray-500 font-medium px-2 tabular-nums">{fmtDate(dateRange.from)} — {fmtDate(dateRange.to)}</span>
                     <button onClick={() => navigatePeriod(1)} className="p-2 hover:bg-gray-100 rounded-lg" style={{ minHeight: 44 }}><ChevronRight className="w-5 h-5 text-gray-500" /></button>

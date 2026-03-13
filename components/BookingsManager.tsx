@@ -90,6 +90,14 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
         guest_count: 2, customer_name: '', customer_email: '', customer_phone: '',
         remarks: '', time: '', duration: 180
     })
+    const [isCompactScreen, setIsCompactScreen] = useState(() => typeof window !== 'undefined' && window.innerWidth < 640)
+
+    // Re-evaluate compact mode on resize/rotate
+    useEffect(() => {
+        const onResize = () => setIsCompactScreen(window.innerWidth < 640)
+        window.addEventListener('resize', onResize)
+        return () => window.removeEventListener('resize', onResize)
+    }, [])
 
     // Fetch event bookings and all events
     const fetchData = async () => {
@@ -189,6 +197,13 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
     useEffect(() => {
         fetchTimelineData()
     }, [timelineDate])
+
+    useEffect(() => {
+        const syncViewport = () => setIsCompactScreen(window.innerWidth < 640)
+        syncViewport()
+        window.addEventListener('resize', syncViewport)
+        return () => window.removeEventListener('resize', syncViewport)
+    }, [])
 
     // Group event bookings by event title
     const groupedByEvent = useMemo(() => {
@@ -385,13 +400,18 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
         return dayInfo?.isOpen !== false // Default to open if not found
     }, [timelineDate, openingHours])
 
+    const timelineLabelWidth = isCompactScreen ? 84 : 96
+    const timelineSlotWidth = isCompactScreen ? 48 : 56
+
     return (
         <div className="w-full max-w-7xl mx-auto px-3 sm:px-6">
             {/* Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-2">
                 <div>
                     <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900">Boekingen Overzicht</h2>
-                    <p className="text-xs sm:text-sm text-gray-500 mt-1">Events links, Restaurant rechts</p>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                        {isCompactScreen ? 'Events en restaurant stapelen onder elkaar op mobiel.' : 'Events links, Restaurant rechts'}
+                    </p>
                 </div>
                 <div className="flex gap-2">
                     <button
@@ -555,15 +575,15 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
 
                     {/* Date Navigation */}
                     <div className="bg-white rounded-xl border border-gray-200 p-4">
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
                             <button
                                 onClick={() => navigateDate(-1)}
                                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                             >
                                 <ChevronLeft className="w-5 h-5 text-gray-600" />
                             </button>
-                            <div className="flex items-center gap-3">
-                                <span className="font-semibold text-gray-900">{formatDate(timelineDate)}</span>
+                            <div className="flex flex-1 flex-wrap items-center justify-center gap-2 sm:gap-3 text-center">
+                                <span className="font-semibold text-gray-900 text-sm sm:text-base">{formatDate(timelineDate)}</span>
                                 {timelineDate !== new Date().toISOString().split('T')[0] && (
                                     <button
                                         onClick={() => setTimelineDate(new Date().toISOString().split('T')[0])}
@@ -597,9 +617,17 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                             <div className="text-center py-8 text-gray-500">Geen tafels geconfigureerd</div>
                         ) : (
                             <div className="overflow-x-auto">
+                                {isCompactScreen && (
+                                    <div className="px-4 py-2 text-[11px] text-emerald-700 bg-emerald-50/80 border-b border-emerald-100">
+                                        Veeg horizontaal voor alle tijden. Tik op een blok of lijstitem voor details.
+                                    </div>
+                                )}
                                 {/* Time Header */}
                                 <div className="flex border-b-2 border-gray-300 sticky top-0 bg-white z-10">
-                                    <div className="w-24 shrink-0 px-2 py-2 bg-gray-100 text-xs font-bold text-gray-600 uppercase border-r-2 border-gray-300 flex items-center">
+                                    <div
+                                        className="shrink-0 px-2 py-2 bg-gray-100 text-xs font-bold text-gray-600 uppercase border-r-2 border-gray-300 flex items-center"
+                                        style={{ width: `${timelineLabelWidth}px` }}
+                                    >
                                         Tafel
                                     </div>
                                     <div className="flex-1 flex">
@@ -608,7 +636,8 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                                             return (
                                                 <div
                                                     key={slot}
-                                                    className={`w-14 shrink-0 px-1 py-2 text-center text-[10px] font-semibold border-l ${isFullHour ? 'border-gray-300 bg-gray-50 text-gray-800' : 'border-gray-100 text-gray-400'}`}
+                                                    className={`shrink-0 px-1 py-2 text-center text-[10px] font-semibold border-l ${isFullHour ? 'border-gray-300 bg-gray-50 text-gray-800' : 'border-gray-100 text-gray-400'}`}
+                                                    style={{ width: `${timelineSlotWidth}px` }}
                                                 >
                                                     {slot}
                                                 </div>
@@ -625,8 +654,11 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                                             key={table.id}
                                             className={`flex border-b border-gray-100 ${tableIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}
                                         >
-                                            <div className="w-24 shrink-0 px-2 py-2 flex items-center gap-1.5 border-r-2 border-gray-300 bg-gray-50/50">
-                                                <span className="font-semibold text-sm text-gray-900">{table.name}</span>
+                                            <div
+                                                className="shrink-0 px-2 py-2 flex items-center gap-1.5 border-r-2 border-gray-300 bg-gray-50/50"
+                                                style={{ width: `${timelineLabelWidth}px` }}
+                                            >
+                                                <span className="font-semibold text-xs sm:text-sm text-gray-900">{table.name}</span>
                                                 <span className="text-[10px] text-gray-400 bg-gray-200 px-1 py-0.5 rounded">
                                                     {table.seats}p
                                                 </span>
@@ -635,7 +667,11 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                                                 {timeSlots.map((slot, i) => {
                                                     const isFullHour = slot.endsWith(':00')
                                                     return (
-                                                        <div key={i} className={`w-14 shrink-0 border-l ${isFullHour ? 'border-gray-300' : 'border-gray-100'}`} />
+                                                        <div
+                                                            key={i}
+                                                            className={`shrink-0 border-l ${isFullHour ? 'border-gray-300' : 'border-gray-100'}`}
+                                                            style={{ width: `${timelineSlotWidth}px` }}
+                                                        />
                                                     )
                                                 })}
                                                 {/* Booking blocks */}
@@ -643,22 +679,22 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                                                     const startMins = parseInt(booking.start_time.split(':')[0]) * 60 + parseInt(booking.start_time.split(':')[1])
                                                     const endMins = parseInt(booking.end_time.split(':')[0]) * 60 + parseInt(booking.end_time.split(':')[1])
                                                     const gridStartMins = timeSlots.length > 0 ? parseInt(timeSlots[0].split(':')[0]) * 60 + parseInt(timeSlots[0].split(':')[1]) : 17 * 60
-                                                    const slotWidth = 56 // w-14 = 56px
                                                     const slotStepMins = timeSlots.length >= 2
                                                         ? (parseInt(timeSlots[1].split(':')[0]) * 60 + parseInt(timeSlots[1].split(':')[1]))
                                                         - (parseInt(timeSlots[0].split(':')[0]) * 60 + parseInt(timeSlots[0].split(':')[1]))
                                                         : 30
+                                                    const minBlockWidth = isCompactScreen ? 42 : 50
                                                     // Clamp to grid bounds — bookings before grid start still show at position 0
                                                     const effectiveStart = Math.max(startMins, gridStartMins)
-                                                    const left = ((effectiveStart - gridStartMins) / slotStepMins) * slotWidth
-                                                    const width = ((endMins - effectiveStart) / slotStepMins) * slotWidth
+                                                    const left = ((effectiveStart - gridStartMins) / slotStepMins) * timelineSlotWidth
+                                                    const width = ((endMins - effectiveStart) / slotStepMins) * timelineSlotWidth
                                                     const isSecondary = booking.group_id && !booking.is_primary
                                                     const isGroup = !!booking.group_id
 
                                                     return (
                                                         <div
                                                             key={booking.id}
-                                                            style={{ left: `${left}px`, width: `${Math.max(width, 50)}px` }}
+                                                            style={{ left: `${left}px`, width: `${Math.max(width, minBlockWidth)}px` }}
                                                             className={`absolute top-1 bottom-1 rounded-md px-2 py-1 overflow-hidden cursor-pointer transition-opacity hover:opacity-90 ${isSecondary
                                                                 ? 'bg-emerald-400 border-2 border-dashed border-emerald-600'
                                                                 : 'bg-emerald-500'
@@ -691,7 +727,7 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                                     <div key={booking.id} className={`px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors ${booking.status === 'arrived' ? 'bg-emerald-50/50' : ''}`} onClick={() => setSelectedRestaurantBooking(booking)}>
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="flex-1">
-                                                <div className="flex items-center gap-3">
+                                                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                                                     <span className="font-semibold text-gray-900 hover:text-emerald-700 transition-colors">{booking.customer_name}</span>
                                                     {Number(booking.visit_count) > 0 && (
                                                         <span title={`${booking.visit_count} eerdere bezoeken`} className="text-sm">⭐</span>
@@ -723,7 +759,7 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                                                     </div>
                                                 )}
                                             </div>
-                                            <div className="flex items-center gap-3">
+                                            <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center sm:gap-3">
                                                 <div className="text-right text-sm font-mono text-gray-700">
                                                     {booking.start_time}
                                                 </div>
@@ -838,7 +874,7 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                                 </button>
                             </div>
 
-                            <div className="grid grid-cols-3 gap-3">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                 <div className="rounded-xl border border-gray-200 p-3">
                                     <div className="text-xs font-bold text-gray-500 uppercase">Gasten</div>
                                     <div className="font-semibold text-gray-900 flex items-center gap-1">
@@ -1013,7 +1049,7 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                                     />
                                 </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                                     <input

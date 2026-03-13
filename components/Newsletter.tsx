@@ -155,7 +155,7 @@ export function Newsletter({ restaurantId }: { restaurantId: string }) {
 
             {/* Stats Cards */}
             {data && (
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="bg-white rounded-xl border border-gray-200 p-4">
                         <div className="flex items-center gap-2 text-gray-600 mb-1">
                             <Users className="w-4 h-4" />
@@ -324,14 +324,15 @@ export function Newsletter({ restaurantId }: { restaurantId: string }) {
                     </div>
                 </div>
 
+            <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                     <thead className="bg-gray-50">
                         <tr>
                             <th className="px-4 py-2 text-left font-medium text-gray-600">Naam</th>
                             <th className="px-4 py-2 text-left font-medium text-gray-600">Email</th>
                             <th className="px-4 py-2 text-center font-medium text-gray-600">Opt-in</th>
-                            <th className="px-4 py-2 text-right font-medium text-gray-600">Bezoeken</th>
-                            <th className="px-4 py-2 text-right font-medium text-gray-600">Laatste bezoek</th>
+                            <th className="px-4 py-2 text-right font-medium text-gray-600 hidden sm:table-cell">Bezoeken</th>
+                            <th className="px-4 py-2 text-right font-medium text-gray-600 hidden sm:table-cell">Laatste bezoek</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -357,8 +358,8 @@ export function Newsletter({ restaurantId }: { restaurantId: string }) {
                                             <span className="text-gray-400 text-xs">Nee</span>
                                         )}
                                     </td>
-                                    <td className="px-4 py-2 text-right text-gray-600">{sub.total_visits || 0}</td>
-                                    <td className="px-4 py-2 text-right text-gray-500 text-xs">
+                                    <td className="px-4 py-2 text-right text-gray-600 hidden sm:table-cell">{sub.total_visits || 0}</td>
+                                    <td className="px-4 py-2 text-right text-gray-500 text-xs hidden sm:table-cell">
                                         {sub.last_visit ? new Date(sub.last_visit).toLocaleDateString('nl-NL') : '-'}
                                     </td>
                                 </tr>
@@ -366,6 +367,7 @@ export function Newsletter({ restaurantId }: { restaurantId: string }) {
                         )}
                     </tbody>
                 </table>
+            </div>
             </div>
         </div>
     )

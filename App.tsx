@@ -4,7 +4,7 @@ import { LoginPage } from './components/LoginPage';
 import { EVENTS_DATA, WIJKEN_DATA } from './data';
 import { EventData, Wijk } from './types';
 import { API_BASE_URL, fetchWidgetData, fetchAdminData, RESTAURANT_ID } from './api';
-import { Smartphone, Settings, BookOpen, Calendar as CalendarIcon, LogOut, Users, LayoutGrid, BarChart3, Loader2, Mail } from 'lucide-react';
+import { Smartphone, Settings, BookOpen, Calendar as CalendarIcon, LogOut, Users, LayoutGrid, BarChart3, Loader2, Mail, ChevronRight, type LucideIcon } from 'lucide-react';
 
 // Lazy load heavy components for faster initial load
 const AdminDashboard = lazy(() => import('./components/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
@@ -27,6 +27,23 @@ const prefetchMap: Record<string, () => void> = {
 };
 
 type ViewMode = 'widget' | 'admin' | 'guide' | 'calendar' | 'bookings' | 'timeline' | 'stats' | 'newsletter';
+
+const VIEW_OPTIONS: Array<{
+  key: ViewMode;
+  icon: LucideIcon;
+  label: string;
+  shortLabel: string;
+  mobilePrimary?: boolean;
+}> = [
+    { key: 'widget', icon: Smartphone, label: 'Preview', shortLabel: 'Preview' },
+    { key: 'calendar', icon: CalendarIcon, label: 'Agenda', shortLabel: 'Agenda', mobilePrimary: true },
+    { key: 'admin', icon: Settings, label: 'Instellingen', shortLabel: 'Instel', mobilePrimary: true },
+    { key: 'bookings', icon: Users, label: 'Boekingen', shortLabel: 'Boeken', mobilePrimary: true },
+    { key: 'timeline', icon: LayoutGrid, label: 'Tafels', shortLabel: 'Tafels', mobilePrimary: true },
+    { key: 'stats', icon: BarChart3, label: 'Stats', shortLabel: 'Stats', mobilePrimary: true },
+    { key: 'newsletter', icon: Mail, label: 'Emails', shortLabel: 'Mail' },
+    { key: 'guide', icon: BookOpen, label: 'Guide', shortLabel: 'Gids' },
+  ];
 
 const App: React.FC = () => {
   const [events, setEvents] = useState<EventData[]>(EVENTS_DATA);
@@ -200,22 +217,16 @@ const App: React.FC = () => {
               <div className="w-8 h-8 rounded-lg bg-black flex items-center justify-center shadow-md">
                 <span className="text-white font-bold text-lg tracking-wider">E</span>
               </div>
-              <span className="font-bold text-lg sm:text-xl tracking-tight text-gray-900 hidden sm:inline">EVENTS <span className="text-xs text-gray-400 font-normal uppercase ml-1">Manager</span></span>
+              <span className="font-bold text-sm sm:text-xl tracking-tight text-gray-900">
+                EVENTS
+                <span className="hidden sm:inline text-xs text-gray-400 font-normal uppercase ml-1">Manager</span>
+              </span>
             </div>
 
             <div className="flex items-center gap-2 sm:gap-4">
               {/* Desktop: full tabs with labels */}
               <div className="hidden md:flex items-center bg-gray-100 p-1 rounded-lg">
-                {([
-                  { key: 'widget', icon: Smartphone, label: 'Preview' },
-                  { key: 'calendar', icon: CalendarIcon, label: 'Agenda' },
-                  { key: 'admin', icon: Settings, label: 'Instellingen' },
-                  { key: 'bookings', icon: Users, label: 'Boekingen' },
-                  { key: 'timeline', icon: LayoutGrid, label: 'Tafels' },
-                  { key: 'stats', icon: BarChart3, label: 'Stats' },
-                  { key: 'newsletter', icon: Mail, label: 'Emails' },
-                  { key: 'guide', icon: BookOpen, label: 'Guide' },
-                ] as const).map(({ key, icon: Icon, label }) => (
+                {VIEW_OPTIONS.map(({ key, icon: Icon, label }) => (
                   <button
                     key={key}
                     onClick={() => setView(key)}
@@ -229,28 +240,22 @@ const App: React.FC = () => {
                 ))}
               </div>
 
-              {/* Mobile: compact scrollable icon tabs */}
-              <div className="flex md:hidden items-center gap-1 overflow-x-auto scrollbar-hide bg-gray-100 p-1 rounded-lg max-w-[calc(100vw-120px)]">
-                {([
-                  { key: 'widget', icon: Smartphone, label: 'Preview' },
-                  { key: 'calendar', icon: CalendarIcon, label: 'Cal' },
-                  { key: 'admin', icon: Settings, label: 'Edit' },
-                  { key: 'bookings', icon: Users, label: 'Boek' },
-                  { key: 'timeline', icon: LayoutGrid, label: 'Tafels' },
-                  { key: 'stats', icon: BarChart3, label: 'Stats' },
-                  { key: 'newsletter', icon: Mail, label: 'Mail' },
-                  { key: 'guide', icon: BookOpen, label: 'Gids' },
-                ] as const).map(({ key, icon: Icon, label }) => (
-                  <button
-                    key={key}
-                    onClick={() => setView(key)}
-                    onTouchStart={prefetchMap[key]}
-                    className={`flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-md transition-all min-w-[44px] ${view === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400'}`}
+              {/* Mobile: current view picker instead of a tiny horizontal icon rail */}
+              <div className="flex md:hidden items-center gap-2">
+                <label htmlFor="mobile-admin-view" className="sr-only">Admin scherm</label>
+                <div className="relative min-w-[150px]">
+                  <select
+                    id="mobile-admin-view"
+                    value={view}
+                    onChange={(e) => setView(e.target.value as ViewMode)}
+                    className="w-full appearance-none rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 pr-8 text-sm font-medium text-gray-800 shadow-sm focus:border-gray-400 focus:outline-none"
                   >
-                    <Icon className="w-4 h-4" />
-                    <span className="text-[10px] font-medium leading-tight">{label}</span>
-                  </button>
-                ))}
+                    {VIEW_OPTIONS.map(({ key, label }) => (
+                      <option key={key} value={key}>{label}</option>
+                    ))}
+                  </select>
+                  <ChevronRight className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 rotate-90 text-gray-400" />
+                </div>
               </div>
 
               {/* Logout button */}
@@ -267,7 +272,7 @@ const App: React.FC = () => {
       </nav>
 
       {/* Main Content Area — reduced padding on mobile */}
-      <main className="flex-1 py-4 sm:py-8 pb-20 md:pb-8">
+      <main className="flex-1 py-4 sm:py-8 pb-28 md:pb-8">
 
 
         {/* VIEW: WIDGET PREVIEW */}
@@ -298,7 +303,7 @@ const App: React.FC = () => {
         {/* VIEW: CALENDAR APP */}
         {view === 'calendar' && (
           <Suspense fallback={<div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-gray-400" /></div>}>
-            <div className="animate-in slide-in-from-bottom-4 duration-300">
+            <div className="animate-in slide-in-from-bottom-4 duration-300 max-w-6xl mx-auto px-4">
               <CalendarManager events={events} wijken={wijken} />
             </div>
           </Suspense>
@@ -324,7 +329,7 @@ const App: React.FC = () => {
         {/* VIEW: BOOKINGS MANAGER */}
         {view === 'bookings' && (
           <Suspense fallback={<div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-gray-400" /></div>}>
-            <div className="animate-in slide-in-from-bottom-4 duration-300">
+            <div className="animate-in slide-in-from-bottom-4 duration-300 max-w-6xl mx-auto px-4">
               <BookingsManager restaurantId={getRestaurantId()} />
             </div>
           </Suspense>
@@ -360,13 +365,32 @@ const App: React.FC = () => {
         {/* VIEW: NEWSLETTER */}
         {view === 'newsletter' && (
           <Suspense fallback={<div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-gray-400" /></div>}>
-            <div className="animate-in slide-in-from-bottom-4 duration-300">
+            <div className="animate-in slide-in-from-bottom-4 duration-300 max-w-6xl mx-auto px-4">
               <Newsletter restaurantId={getRestaurantId()} />
             </div>
           </Suspense>
         )}
 
       </main>
+
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 backdrop-blur md:hidden">
+        <div
+          className="mx-auto grid max-w-lg grid-cols-5 gap-1 px-2 pt-2"
+          style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 0.5rem)' }}
+        >
+          {VIEW_OPTIONS.filter(({ mobilePrimary }) => mobilePrimary).map(({ key, icon: Icon, shortLabel }) => (
+            <button
+              key={key}
+              onClick={() => setView(key)}
+              onTouchStart={prefetchMap[key]}
+              className={`flex flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-[11px] font-semibold transition-colors ${view === key ? 'bg-gray-900 text-white shadow-lg shadow-gray-200' : 'text-gray-500 hover:bg-gray-100'}`}
+            >
+              <Icon className="w-4 h-4" />
+              <span>{shortLabel}</span>
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 };

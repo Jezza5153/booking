@@ -587,7 +587,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             {DAYS_NL.map((dayName, dayIndex) => {
               const hours = openingHours.find(h => h.dayOfWeek === dayIndex) || { open: '17:00', close: '23:00', isOpen: true };
               return (
@@ -751,8 +751,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
       {/* --- EVENT HEADER --- */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Event Manager</h1>
-          <p className="text-sm text-gray-500">Manage time slots and simulate bookings.</p>
+          <h1 className="text-2xl font-bold text-gray-900">Evenementen</h1>
+          <p className="text-sm text-gray-500">Beheer tijdsloten en evenementen.</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3">
           <button
@@ -760,7 +760,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
             className="w-full sm:w-auto justify-center bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 flex items-center gap-2 shadow-sm transition-colors"
           >
             <Plus className="w-4 h-4" />
-            New Event
+            Nieuw Evenement
           </button>
           <button
             onClick={handleSaveChanges}
@@ -778,7 +778,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
             ) : saveStatus === 'error' ? (
               <><XCircle className="w-4 h-4" /> {saveMessage}</>
             ) : (
-              <><Save className="w-4 h-4" /> Save Changes</>
+              <><Save className="w-4 h-4" /> Opslaan</>
             )}
           </button>
         </div>
@@ -795,7 +795,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
                   <GripVertical className="w-4 h-4" />
                 </div>
                 <div className="flex-1">
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Event Title</label>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Evenement Titel</label>
                   <input
                     type="text"
                     value={event.title}
@@ -816,17 +816,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
               {/* Description and Price Row */}
               <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Description (optional)</label>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Omschrijving (optioneel)</label>
                   <input
                     type="text"
                     value={event.description || ''}
                     onChange={(e) => handleEventDescriptionChange(event.id, e.target.value)}
                     className="w-full text-sm text-gray-700 bg-white border border-gray-200 rounded-lg px-3 py-2 placeholder-gray-400"
-                    placeholder="A short description shown to customers"
+                    placeholder="Een korte beschrijving voor klanten"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Price per person (€)</label>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Prijs per persoon (€)</label>
                   <div className="flex items-center gap-2">
                     <span className="text-gray-500 font-medium">€</span>
                     <input
@@ -917,17 +917,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
                         {/* Inventory Grid */}
                         <div className="bg-white rounded border border-gray-200 p-2">
                           <div className="flex items-center justify-between text-[10px] text-gray-400 uppercase font-medium mb-1.5">
-                            <span>Table Type</span>
-                            <span>Booked / Total</span>
+                            <span>Tafel Type</span>
+                            <span>Geboekt / Totaal</span>
                           </div>
 
                           {/* 2 Tops */}
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-xs text-gray-600 font-medium w-12">2-Tops</span>
                             <div className="flex items-center gap-1">
-                              <button onClick={() => adjustBookedTable(event.id, slot.id, '2', -1)} className="p-0.5 hover:bg-gray-100 rounded text-gray-400"><MinusCircle className="w-3 h-3" /></button>
+                              <button onClick={() => adjustBookedTable(event.id, slot.id, '2', -1)} className="p-1.5 hover:bg-gray-100 rounded text-gray-400 min-w-[32px] min-h-[32px] flex items-center justify-center"><MinusCircle className="w-4 h-4" /></button>
                               <span className={`text-xs font-mono w-8 text-center ${slot.booked2tops >= max2 ? 'text-red-600 font-bold' : ''}`}>{slot.booked2tops}/{max2}</span>
-                              <button onClick={() => adjustBookedTable(event.id, slot.id, '2', 1)} className="p-0.5 hover:bg-gray-100 rounded text-gray-400"><PlusCircle className="w-3 h-3" /></button>
+                              <button onClick={() => adjustBookedTable(event.id, slot.id, '2', 1)} className="p-1.5 hover:bg-gray-100 rounded text-gray-400 min-w-[32px] min-h-[32px] flex items-center justify-center"><PlusCircle className="w-4 h-4" /></button>
                             </div>
                           </div>
 
@@ -935,9 +935,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-xs text-gray-600 font-medium w-12">4-Tops</span>
                             <div className="flex items-center gap-1">
-                              <button onClick={() => adjustBookedTable(event.id, slot.id, '4', -1)} className="p-0.5 hover:bg-gray-100 rounded text-gray-400"><MinusCircle className="w-3 h-3" /></button>
+                              <button onClick={() => adjustBookedTable(event.id, slot.id, '4', -1)} className="p-1.5 hover:bg-gray-100 rounded text-gray-400 min-w-[32px] min-h-[32px] flex items-center justify-center"><MinusCircle className="w-4 h-4" /></button>
                               <span className={`text-xs font-mono w-8 text-center ${slot.booked4tops >= max4 ? 'text-red-600 font-bold' : ''}`}>{slot.booked4tops}/{max4}</span>
-                              <button onClick={() => adjustBookedTable(event.id, slot.id, '4', 1)} className="p-0.5 hover:bg-gray-100 rounded text-gray-400"><PlusCircle className="w-3 h-3" /></button>
+                              <button onClick={() => adjustBookedTable(event.id, slot.id, '4', 1)} className="p-1.5 hover:bg-gray-100 rounded text-gray-400 min-w-[32px] min-h-[32px] flex items-center justify-center"><PlusCircle className="w-4 h-4" /></button>
                             </div>
                           </div>
 
@@ -945,9 +945,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
                           <div className="flex items-center justify-between">
                             <span className="text-xs text-gray-600 font-medium w-12">6-Tops</span>
                             <div className="flex items-center gap-1">
-                              <button onClick={() => adjustBookedTable(event.id, slot.id, '6', -1)} className="p-0.5 hover:bg-gray-100 rounded text-gray-400"><MinusCircle className="w-3 h-3" /></button>
+                              <button onClick={() => adjustBookedTable(event.id, slot.id, '6', -1)} className="p-1.5 hover:bg-gray-100 rounded text-gray-400 min-w-[32px] min-h-[32px] flex items-center justify-center"><MinusCircle className="w-4 h-4" /></button>
                               <span className={`text-xs font-mono w-8 text-center ${slot.booked6tops >= max6 ? 'text-red-600 font-bold' : ''}`}>{slot.booked6tops}/{max6}</span>
-                              <button onClick={() => adjustBookedTable(event.id, slot.id, '6', 1)} className="p-0.5 hover:bg-gray-100 rounded text-gray-400"><PlusCircle className="w-3 h-3" /></button>
+                              <button onClick={() => adjustBookedTable(event.id, slot.id, '6', 1)} className="p-1.5 hover:bg-gray-100 rounded text-gray-400 min-w-[32px] min-h-[32px] flex items-center justify-center"><PlusCircle className="w-4 h-4" /></button>
                             </div>
                           </div>
 
@@ -964,7 +964,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
                   className="flex flex-col items-center justify-center gap-2 p-3 rounded-lg border-2 border-dashed border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-colors text-gray-400 hover:text-indigo-600 h-full min-h-[160px]"
                 >
                   <Plus className="w-6 h-6" />
-                  <span className="text-xs font-semibold">Add Slot</span>
+                  <span className="text-xs font-semibold">Slot toevoegen</span>
                 </button>
               </div>
             </div>

@@ -158,9 +158,9 @@ export const CalendarManager: React.FC<CalendarManagerProps> = ({
   }
 
   return (
-    <div className="flex h-[calc(100vh-80px)] bg-white max-w-7xl mx-auto border-x border-gray-200 shadow-xl shadow-gray-100 overflow-hidden relative">
+    <div className="flex flex-col lg:flex-row min-h-[calc(100dvh-140px)] lg:h-[calc(100vh-80px)] bg-white max-w-7xl mx-auto rounded-xl lg:rounded-none border border-gray-200 shadow-xl shadow-gray-100 overflow-hidden relative">
       {/* Sidebar */}
-      <div className="w-72 bg-gray-50 border-r border-gray-200 flex flex-col p-4">
+      <div className="w-full lg:w-72 bg-gray-50 border-b lg:border-b-0 lg:border-r border-gray-200 flex flex-col p-4">
         <div className="mb-6 px-2">
           <div className="flex items-center gap-2 text-gray-900 font-extrabold">
             <Calendar className="w-5 h-5 text-[#c9a227]" />
@@ -206,7 +206,7 @@ export const CalendarManager: React.FC<CalendarManagerProps> = ({
           </button>
         </div>
 
-        <div className="mt-auto pt-6">
+        <div className="mt-4 lg:mt-auto pt-2 lg:pt-6">
           <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-2">
             Zones
           </div>
@@ -228,8 +228,8 @@ export const CalendarManager: React.FC<CalendarManagerProps> = ({
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0 relative">
         {/* Toolbar */}
-        <div className="h-16 border-b border-gray-200 flex items-center justify-between px-6 bg-white">
-          <div className="flex items-center gap-3">
+        <div className="min-h-16 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 py-4 bg-white">
+          <div className="flex flex-wrap items-center gap-3">
             <h2 className="text-lg font-extrabold text-gray-900">
               {bookedOnly ? "Geboekte tijdsloten" : "Beschikbaarheid"}
             </h2>
@@ -245,7 +245,7 @@ export const CalendarManager: React.FC<CalendarManagerProps> = ({
         </div>
 
         {/* List */}
-        <div className="flex-1 overflow-y-auto bg-gray-50/50 p-6 sm:p-8">
+        <div className="flex-1 overflow-y-auto bg-gray-50/50 p-4 sm:p-8">
           <div className="max-w-4xl mx-auto space-y-8">
             {grouped.keys.map((dateKey) => {
               const slots = grouped.map.get(dateKey) || []
@@ -272,7 +272,7 @@ export const CalendarManager: React.FC<CalendarManagerProps> = ({
                       return (
                         <div
                           key={`${slot.id}-${idx}`}
-                          className={["px-6 py-4 flex items-center justify-between gap-4", isFull ? "bg-gray-50/60" : "hover:bg-gray-50"].join(" ")}
+                          className={["px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-3 sm:gap-4", isFull ? "bg-gray-50/60" : "hover:bg-gray-50"].join(" ")}
                         >
                           <div className="flex items-center gap-6 min-w-0">
                             <div className={["w-24 font-mono text-lg font-semibold flex items-center gap-2", isFull ? "text-gray-400 line-through" : "text-gray-900"].join(" ")}>
@@ -292,7 +292,14 @@ export const CalendarManager: React.FC<CalendarManagerProps> = ({
                           </div>
 
                           <div className="flex items-center gap-6">
-                            {/* Breakdown */}
+                            {/* Breakdown — compact on mobile, expanded on desktop */}
+                            <div className="flex sm:hidden text-xs font-mono font-semibold text-gray-600 gap-1">
+                              <span className={[(slot.booked2tops || 0) >= (slot.max2 || 0) && (slot.max2 || 0) > 0 ? "text-red-600" : ""].join(" ")}>{slot.booked2tops || 0}/{slot.max2 || 0}</span>
+                              <span className="text-gray-300">·</span>
+                              <span className={[(slot.booked4tops || 0) >= (slot.max4 || 0) && (slot.max4 || 0) > 0 ? "text-red-600" : ""].join(" ")}>{slot.booked4tops || 0}/{slot.max4 || 0}</span>
+                              <span className="text-gray-300">·</span>
+                              <span className={[(slot.booked6tops || 0) >= (slot.max6 || 0) && (slot.max6 || 0) > 0 ? "text-red-600" : ""].join(" ")}>{slot.booked6tops || 0}/{slot.max6 || 0}</span>
+                            </div>
                             <div className="hidden sm:flex gap-4 text-xs">
                               <div className="flex flex-col items-center">
                                 <span className="text-gray-400 mb-0.5">2p</span>
@@ -341,7 +348,7 @@ export const CalendarManager: React.FC<CalendarManagerProps> = ({
 
       {/* Sync modal */}
       {showSyncModal && (
-        <div className="absolute inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-6">
             <div className="text-center">
               <div className="w-16 h-16 bg-[#c9a227]/10 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -409,7 +416,7 @@ export const CalendarManager: React.FC<CalendarManagerProps> = ({
 
       {/* Slot details modal */}
       {selectedSlotDetails && (
-        <div className="absolute inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
             <div className="flex items-start justify-between">
               <div>
