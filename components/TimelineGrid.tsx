@@ -1057,9 +1057,10 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
 
                             <div className="flex min-w-0 flex-col">
                                 <h2 className="truncate text-sm font-bold leading-none text-gray-900 sm:text-xl">
-                                    {new Date(date).toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })}
+                                    <span className="sm:hidden">{new Date(date).toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+                                    <span className="hidden sm:inline">{new Date(date).toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
                                 </h2>
-                                <span className="mt-0.5 text-[10px] font-medium uppercase tracking-wider text-gray-400 sm:text-xs">
+                                <span className="mt-0.5 text-[10px] font-medium uppercase tracking-wider text-gray-400 sm:text-xs hidden sm:block">
                                     {viewMode === 'day' ? 'Dagoverzicht' : 'Weekoverzicht'}
                                 </span>
                             </div>
@@ -1132,14 +1133,14 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                 </button>
                                 <button
                                     onClick={() => window.print()}
-                                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-full transition-colors"
+                                    className="hidden sm:block p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-full transition-colors"
                                     title="Printen"
                                 >
                                     <Printer className="w-5 h-5" />
                                 </button>
                                 <button
                                     onClick={() => setShowDayNotes(!showDayNotes)}
-                                    className={`relative p-2 rounded-full transition-colors ${dayNotes.length > 0 ? 'text-amber-500 bg-amber-50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
+                                    className={`hidden sm:block relative p-2 rounded-full transition-colors ${dayNotes.length > 0 ? 'text-amber-500 bg-amber-50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
                                     title="Notities"
                                 >
                                     <StickyNote className="w-5 h-5" />
@@ -1147,7 +1148,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                 </button>
                                 <button
                                     onClick={() => setShowWaitlistPanel(!showWaitlistPanel)}
-                                    className={`p-2 rounded-full transition-colors relative ${waitlist.length > 0 ? 'text-purple-500 bg-purple-50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
+                                    className={`hidden sm:block p-2 rounded-full transition-colors relative ${waitlist.length > 0 ? 'text-purple-500 bg-purple-50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
                                     title="Wachtlijst"
                                 >
                                     <Clock className="w-5 h-5" />
@@ -1211,8 +1212,29 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                 </div>
 
 
-                {/* Service Stats Bar - Quick Couverts Overview */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-4 px-3 sm:px-0">
+                {/* Service Stats Bar - Compact on mobile, cards on desktop */}
+                <div className="sm:hidden flex items-center gap-3 px-3 mb-3 overflow-x-auto">
+                    <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-lg font-black text-amber-700">{bookings.filter(b => b.status !== 'arrived' && b.status !== 'cancelled' && b.status !== 'walkin' && b.status !== 'no_show' && (!b.group_id || b.is_primary)).reduce((sum, b) => sum + (b.guest_count || 0), 0)}</span>
+                        <span className="text-[10px] font-bold text-amber-500 uppercase">Verwacht</span>
+                    </div>
+                    <div className="w-px h-5 bg-gray-200 shrink-0"></div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-lg font-black text-emerald-700">{bookings.filter(b => b.status === 'arrived' && (!b.group_id || b.is_primary)).reduce((sum, b) => sum + (b.guest_count || 0), 0)}</span>
+                        <span className="text-[10px] font-bold text-emerald-500 uppercase">Binnen</span>
+                    </div>
+                    <div className="w-px h-5 bg-gray-200 shrink-0"></div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-lg font-black text-blue-700">{bookings.filter(b => (b.status === 'walkin' || (b as any).is_walkin) && (!b.group_id || b.is_primary)).reduce((sum, b) => sum + (b.guest_count || 0), 0)}</span>
+                        <span className="text-[10px] font-bold text-blue-500 uppercase">Walk-in</span>
+                    </div>
+                    <div className="w-px h-5 bg-gray-200 shrink-0"></div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-lg font-black text-purple-700">{bookings.filter(b => (b.status === 'arrived' || b.status === 'walkin' || (b as any).is_walkin) && (!b.group_id || b.is_primary)).reduce((sum, b) => sum + (b.guest_count || 0), 0)}</span>
+                        <span className="text-[10px] font-bold text-purple-500 uppercase">Totaal</span>
+                    </div>
+                </div>
+                <div className="hidden sm:grid grid-cols-4 gap-3 mb-4">
                     <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200 p-3 text-center">
                         <div className="text-2xl font-black text-amber-900">
                             {bookings.filter(b => b.status !== 'arrived' && b.status !== 'cancelled' && b.status !== 'walkin' && b.status !== 'no_show' && (!b.group_id || b.is_primary)).reduce((sum, b) => sum + (b.guest_count || 0), 0)}
@@ -1519,7 +1541,8 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                             <div className="overflow-x-auto">
                                 {(() => {
                                     const COL = isCompactScreen ? 64 : 80
-                                    const LABEL_COL = isCompactScreen ? 88 : 112
+                                    const LABEL_COL = isCompactScreen ? 108 : 112
+                                    const ROW_H = isCompactScreen ? 44 : 36
                                     const totalGridPx = timeSlots.length * COL
                                     // Now line: use actual minutes for positioning
                                     const nowPx = ((nowMins - gridStartMins) / slotDuration) * COL
@@ -1578,16 +1601,17 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                                                 >
                                                                     <button
                                                                         onClick={() => toggleTableBlock(table.id)}
-                                                                        className={`shrink-0 w-5 h-5 rounded flex items-center justify-center text-[10px] ${isTableBlocked(table.id) ? 'bg-red-100 text-red-500 hover:bg-green-100 hover:text-green-600' : 'text-gray-300 hover:bg-red-50 hover:text-red-500'}`}
+                                                                        className={`shrink-0 w-5 h-5 rounded items-center justify-center text-[10px] hidden sm:flex ${isTableBlocked(table.id) ? 'bg-red-100 text-red-500 hover:bg-green-100 hover:text-green-600' : 'text-gray-300 hover:bg-red-50 hover:text-red-500'}`}
                                                                     >
                                                                         {isTableBlocked(table.id) ? '✓' : '🚫'}
                                                                     </button>
+                                                                    {isTableBlocked(table.id) && <span className="sm:hidden text-[10px] shrink-0">🚫</span>}
                                                                     <span className={`font-medium text-xs truncate ${isTableBlocked(table.id) ? 'text-red-500 line-through' : 'text-gray-800'}`}>{table.name}</span>
-                                                                    <span className="text-[9px] text-gray-400 ml-0.5">{table.seats}</span>
+                                                                    <span className="text-[9px] text-gray-400 ml-0.5 shrink-0">{table.seats}</span>
                                                                 </div>
 
                                                                 {/* Timeline */}
-                                                                <div className="flex-1 relative" style={{ height: '36px' }}>
+                                                                <div className="flex-1 relative" style={{ height: `${ROW_H}px` }}>
                                                                     {/* Grid cells */}
                                                                     <div className="absolute inset-0 flex">
                                                                         {timeSlots.map((slot, i) => {
