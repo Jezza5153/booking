@@ -312,6 +312,7 @@ export const RestaurantBooking: React.FC<RestaurantBookingProps> = ({
                             placeholder="Naam *"
                             value={name}
                             onChange={e => setName(e.target.value)}
+                            autoComplete="name"
                             className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder-white/40"
                         />
                         <input
@@ -319,6 +320,8 @@ export const RestaurantBooking: React.FC<RestaurantBookingProps> = ({
                             placeholder="E-mail *"
                             value={email}
                             onChange={e => setEmail(e.target.value)}
+                            autoComplete="email"
+                            inputMode="email"
                             className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder-white/40"
                             required
                         />
@@ -327,6 +330,8 @@ export const RestaurantBooking: React.FC<RestaurantBookingProps> = ({
                             placeholder="Telefoon"
                             value={phone}
                             onChange={e => setPhone(e.target.value)}
+                            autoComplete="tel"
+                            inputMode="tel"
                             className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder-white/40"
                         />
                         <textarea

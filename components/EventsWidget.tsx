@@ -84,35 +84,6 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
     }
   }, [])
 
-  const [showFooterImage, setShowFooterImage] = useState(false)
-
-  // Keep initial paint light: load decorative footer image only after user scroll intent
-  // (with a long fallback so branding still appears eventually).
-  useEffect(() => {
-    if (showFooterImage) return
-
-    const scroller = eventsScrollerRef.current
-    const onScrollIntent = () => {
-      if (!scroller) return
-      const hasMeaningfulScroll = scroller.scrollTop > 24
-      const nearBottom = (scroller.scrollHeight - (scroller.scrollTop + scroller.clientHeight)) < 140
-      if (hasMeaningfulScroll || nearBottom) {
-        setShowFooterImage(true)
-      }
-    }
-
-    scroller?.addEventListener('scroll', onScrollIntent, { passive: true })
-
-    const fallbackId = window.setTimeout(() => {
-      setShowFooterImage(true)
-    }, 12_000)
-
-    return () => {
-      scroller?.removeEventListener('scroll', onScrollIntent)
-      window.clearTimeout(fallbackId)
-    }
-  }, [showFooterImage])
-
   const loadData = useCallback(async (options: {
     silentRefresh?: boolean
     forceRefresh?: boolean
@@ -302,7 +273,7 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
           </div>
         </div>
 
-        <div ref={eventsScrollerRef} className="overflow-y-auto no-scrollbar">
+        <div ref={eventsScrollerRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain -webkit-overflow-scrolling-touch" style={{ WebkitOverflowScrolling: 'touch' }}>
           {loading ? (
             <div className="px-5 py-8">
               <div className="flex items-center gap-3 text-white/70">
@@ -374,32 +345,16 @@ export const EventsWidget: React.FC<EventsWidgetProps> = ({
           )}
         </div>
 
-        {/* Branded footer — brain logo blended into background */}
-        <div className="flex-1 relative overflow-hidden">
-          {/* Background brain image — faded and blended */}
-          <div className="absolute inset-0">
-            {showFooterImage ? (
-              <img
-                src="/jezzacooks-brain.jpg"
-                alt=""
-                width={726}
-                height={504}
-                loading="lazy"
-                decoding="async"
-                fetchPriority="low"
-                className="w-full h-full object-cover opacity-[0.15]"
-              />
-            ) : null}
-            {/* Top fade: blends image into widget content */}
-            <div className="absolute inset-0 bg-gradient-to-b from-[#0b0b0b] via-transparent to-transparent" />
-          </div>
+        {/* Scroll fade hint — shows when content is scrollable */}
+        <div className="pointer-events-none h-6 -mt-6 relative z-10 bg-gradient-to-t from-[#0b0b0b] to-transparent" />
 
-          {/* Text overlay */}
+        {/* Branded footer — compact, doesn't steal space from events */}
+        <div className="shrink-0 relative overflow-hidden">
           <a
             href="https://jezzacooks.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="relative z-10 flex flex-col items-center justify-end h-full pb-4 pt-8 group"
+            className="relative z-10 flex flex-col items-center py-3 group"
           >
             <div className="text-[9px] tracking-[0.2em] uppercase text-white/20 group-hover:text-white/35 transition-colors">
               Powered by

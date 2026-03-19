@@ -60,6 +60,7 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
     const [allEvents, setAllEvents] = useState<{ id: string; title: string }[]>([])
     const [selected, setSelected] = useState<BookingRow | null>(null)
     const [isCancelling, setIsCancelling] = useState(false)
+    const [searchQuery, setSearchQuery] = useState('')
 
     // Restaurant timeline state
     const [timelineDate, setTimelineDate] = useState(() => new Date().toISOString().split('T')[0])
@@ -575,31 +576,58 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
 
                     {/* Date Navigation */}
                     <div className="bg-white rounded-xl border border-gray-200 p-4">
-                        <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex items-center justify-between gap-3">
                             <button
                                 onClick={() => navigateDate(-1)}
-                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors shrink-0"
                             >
                                 <ChevronLeft className="w-5 h-5 text-gray-600" />
                             </button>
-                            <div className="flex flex-1 flex-wrap items-center justify-center gap-2 sm:gap-3 text-center">
-                                <span className="font-semibold text-gray-900 text-sm sm:text-base">{formatDate(timelineDate)}</span>
-                                {timelineDate !== new Date().toISOString().split('T')[0] && (
-                                    <button
-                                        onClick={() => setTimelineDate(new Date().toISOString().split('T')[0])}
-                                        className="px-3 py-1.5 bg-amber-500 text-white rounded-full text-xs font-bold hover:bg-amber-600 transition-all shadow-sm animate-pulse flex items-center gap-1.5"
-                                    >
-                                        <Calendar className="w-3.5 h-3.5" />
-                                        VANDAAG
-                                    </button>
-                                )}
+                            <div className="flex flex-col items-center gap-1 text-center min-w-0">
+                                <span className="font-semibold text-gray-900 text-sm sm:text-base truncate">{formatDate(timelineDate)}</span>
+                                {/* Always rendered to prevent layout jump */}
+                                <button
+                                    onClick={() => setTimelineDate(new Date().toISOString().split('T')[0])}
+                                    className={[
+                                        "px-3 py-1 bg-amber-500 text-white rounded-full text-xs font-bold hover:bg-amber-600 transition-all shadow-sm flex items-center gap-1.5",
+                                        timelineDate === new Date().toISOString().split('T')[0]
+                                            ? 'opacity-0 pointer-events-none'
+                                            : ''
+                                    ].join(' ')}
+                                    tabIndex={timelineDate === new Date().toISOString().split('T')[0] ? -1 : 0}
+                                >
+                                    <Calendar className="w-3.5 h-3.5" />
+                                    VANDAAG
+                                </button>
                             </div>
                             <button
                                 onClick={() => navigateDate(1)}
-                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors shrink-0"
                             >
                                 <ChevronRight className="w-5 h-5 text-gray-600" />
                             </button>
+                        </div>
+                    </div>
+
+                    {/* Search Bar */}
+                    <div className="bg-white rounded-xl border border-gray-200 p-3">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="Zoek op naam, email of telefoon..."
+                                className="w-full pl-9 pr-8 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-900 placeholder-gray-400 focus:border-emerald-400 focus:ring-1 focus:ring-emerald-200 outline-none transition-all"
+                            />
+                            {searchQuery && (
+                                <button
+                                    onClick={() => setSearchQuery('')}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-200 rounded-full transition-colors"
+                                >
+                                    <X className="w-3.5 h-3.5 text-gray-500" />
+                                </button>
+                            )}
                         </div>
                     </div>
 
@@ -720,10 +748,34 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                     {restaurantBookings.filter(b => !b.group_id || b.is_primary).length > 0 && (
                         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                             <div className="bg-emerald-50 px-4 py-3 border-b border-emerald-200">
-                                <h4 className="font-bold text-emerald-900">Vandaag: {restaurantBookings.filter(b => !b.group_id || b.is_primary).length} reserveringen</h4>
+                                <h4 className="font-bold text-emerald-900">
+                                    Vandaag: {restaurantBookings.filter(b => !b.group_id || b.is_primary).length} reserveringen
+                                    {searchQuery && (
+                                        <span className="ml-2 text-xs font-normal text-emerald-600">
+                                            ({restaurantBookings.filter(b => {
+                                                if (b.group_id && !b.is_primary) return false
+                                                const q = searchQuery.toLowerCase()
+                                                return (
+                                                    b.customer_name?.toLowerCase().includes(q) ||
+                                                    b.customer_email?.toLowerCase().includes(q) ||
+                                                    b.customer_phone?.toLowerCase().includes(q)
+                                                )
+                                            }).length} gevonden)
+                                        </span>
+                                    )}
+                                </h4>
                             </div>
                             <div className="divide-y divide-gray-100 max-h-64 overflow-y-auto">
-                                {restaurantBookings.filter(b => !b.group_id || b.is_primary).map(booking => (
+                                {restaurantBookings.filter(b => {
+                                    if (b.group_id && !b.is_primary) return false
+                                    if (!searchQuery) return true
+                                    const q = searchQuery.toLowerCase()
+                                    return (
+                                        b.customer_name?.toLowerCase().includes(q) ||
+                                        b.customer_email?.toLowerCase().includes(q) ||
+                                        b.customer_phone?.toLowerCase().includes(q)
+                                    )
+                                }).map(booking => (
                                     <div key={booking.id} className={`px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors ${booking.status === 'arrived' ? 'bg-emerald-50/50' : ''}`} onClick={() => setSelectedRestaurantBooking(booking)}>
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="flex-1">

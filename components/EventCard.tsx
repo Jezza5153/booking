@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react"
+import React, { useMemo, useState, useRef, useEffect } from "react"
 import { EventData, Wijk } from "../types"
 import { SlotBubble } from "./SlotBubble"
 import { ArrowRight, Users, Mail, Armchair, Loader2, CheckCircle, AlertTriangle } from "lucide-react"
@@ -23,6 +23,7 @@ function guestCountToTableType(count: number): TableType {
 }
 
 export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingComplete, bookingEmail, autoExpand }) => {
+  const bookingPanelRef = useRef<HTMLDivElement>(null)
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(() => {
     if (autoExpand && event.slots && event.slots.length > 0) {
       return event.slots[0].id
@@ -88,6 +89,10 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
     setLargeGroupInput("")
     setBookingError(null)
     setBookingSuccess(false)
+    // Auto-scroll booking panel into view on mobile after animation
+    setTimeout(() => {
+      bookingPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }, 350)
   }
 
   // Check if calculated table type has availability
@@ -238,6 +243,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
 
       {/* Booking panel */}
       <div
+        ref={bookingPanelRef}
         className={[
           "grid transition-[grid-template-rows,opacity] duration-300 ease-out",
           selectedSlotId ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
@@ -308,9 +314,17 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
               ) : (
                 <>
                   {bookingError && (
-                    <div className="rounded-2xl border border-red-500/25 bg-red-500/10 p-4 text-sm text-red-200 flex gap-3 items-start">
-                      <AlertTriangle className="w-4 h-4 mt-0.5 text-red-300" />
-                      <div>{bookingError}</div>
+                    <div className="rounded-2xl border border-red-500/25 bg-red-500/10 p-4 text-sm text-red-200">
+                      <div className="flex gap-3 items-start">
+                        <AlertTriangle className="w-4 h-4 mt-0.5 text-red-300 shrink-0" />
+                        <div>{bookingError}</div>
+                      </div>
+                      <button
+                        onClick={() => setBookingError(null)}
+                        className="mt-3 w-full rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-200 hover:bg-red-500/20 transition"
+                      >
+                        Opnieuw proberen
+                      </button>
                     </div>
                   )}
 
@@ -399,6 +413,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
                                 value={customerName}
                                 onChange={(e) => setCustomerName(e.target.value)}
                                 placeholder="Je naam"
+                                autoComplete="name"
                                 className="w-full mt-1 px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-white/35 focus:border-[#c9a227]/60 focus:ring-1 focus:ring-[#c9a227]/30 outline-none"
                               />
                               {!customerName.trim() && (
@@ -413,6 +428,8 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
                                 value={customerEmail}
                                 onChange={(e) => setCustomerEmail(e.target.value)}
                                 placeholder="email@voorbeeld.nl"
+                                autoComplete="email"
+                                inputMode="email"
                                 className="w-full mt-1 px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-white/35 focus:border-[#c9a227]/60 focus:ring-1 focus:ring-[#c9a227]/30 outline-none"
                               />
                               {!customerEmail.trim() ? (
@@ -429,6 +446,8 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
                                 value={customerPhone}
                                 onChange={(e) => setCustomerPhone(e.target.value)}
                                 placeholder="06 12345678"
+                                autoComplete="tel"
+                                inputMode="tel"
                                 className="w-full mt-1 px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-white/35 focus:border-[#c9a227]/60 focus:ring-1 focus:ring-[#c9a227]/30 outline-none"
                               />
                             </div>
@@ -451,7 +470,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
                             className={[
                               "w-full rounded-xl px-4 py-4 text-base font-bold transition flex items-center justify-center gap-2",
                               "bg-gradient-to-r from-[#c9a227] to-[#8f6f17] text-[#0b0b0b]",
-                              "hover:from-[#d4af37] hover:to-[#a8831d]",
+                              "hover:from-[#d4af37] hover:to-[#a8831d] active:scale-[0.97]",
                               (isBooking || !canSubmit) ? "opacity-60 cursor-not-allowed" : "",
                             ].join(" ")}
                           >
@@ -528,7 +547,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, wijken, onBookingCo
                             className={[
                               "w-full rounded-xl px-4 py-4 text-base font-bold transition flex items-center justify-center gap-2",
                               "bg-gradient-to-r from-[#c9a227] to-[#8f6f17] text-[#0b0b0b]",
-                              "hover:from-[#d4af37] hover:to-[#a8831d]",
+                              "hover:from-[#d4af37] hover:to-[#a8831d] active:scale-[0.97]",
                               (isBooking || !canSubmit) ? "opacity-60 cursor-not-allowed" : "",
                             ].join(" ")}
                           >

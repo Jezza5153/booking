@@ -50,9 +50,10 @@ export const SlotBubble: React.FC<SlotBubbleProps> = ({ slot, isSelected, onClic
       aria-label={`${displayDate} om ${time}${isNextAvailable ? ', aanbevolen' : ''}${isFull ? ', vol' : ''}`}
       className={[
         "relative group flex flex-col items-center justify-center",
-        "py-2 px-1.5 w-full min-h-[48px]",
+        "py-2 px-2.5 w-full min-h-[48px]",
         "rounded-lg transition-all duration-200 ease-out",
         "border select-none",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c9a227]/60 focus-visible:ring-offset-1 focus-visible:ring-offset-[#0b0b0b]",
         isFull
           ? "opacity-40 cursor-not-allowed bg-white/[0.02] border-white/10"
           : isSelected
@@ -83,17 +84,17 @@ export const SlotBubble: React.FC<SlotBubbleProps> = ({ slot, isSelected, onClic
 
       {/* Capacity Indicator: Paar plekken over (60-89%) */}
       {isPaarPlekkenOver && !isSelected && !isFull && (
-        <div className="absolute -top-2 right-1 flex items-center gap-0.5 text-[9px] text-amber-400/90">
+        <div className="absolute -top-2 right-0.5 flex items-center gap-0.5 text-[8px] text-amber-400/90">
           <AlertCircle className="w-2.5 h-2.5" />
-          <span className="font-medium">Paar plekken</span>
+          <span className="font-medium">Bijna vol</span>
         </div>
       )}
 
       {/* Capacity Indicator: Laatste plekken (90-99%) */}
       {isLaatstePlekken && !isSelected && !isFull && (
-        <div className="absolute -top-2 right-1 flex items-center gap-0.5 text-[9px] text-red-400 animate-pulse">
+        <div className="absolute -top-2 right-0.5 flex items-center gap-0.5 text-[8px] text-red-400 animate-pulse">
           <AlertCircle className="w-2.5 h-2.5" />
-          <span className="font-bold">Laatste plekken!</span>
+          <span className="font-bold">Laatste!</span>
         </div>
       )}
 

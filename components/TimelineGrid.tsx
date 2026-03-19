@@ -167,6 +167,10 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
     const [showBookingDetail, setShowBookingDetail] = useState<Booking | null>(null)
     const [showCustomerSearch, setShowCustomerSearch] = useState(false)
     const [showCalendarPopup, setShowCalendarPopup] = useState(false)
+    const [calendarViewMonth, setCalendarViewMonth] = useState(() => {
+        const d = new Date()
+        return { year: d.getFullYear(), month: d.getMonth() }
+    })
 
     // Toast notification
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
@@ -429,7 +433,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
     // Toast helper
     const showToast = (message: string, type: 'success' | 'error' = 'success') => {
         setToast({ message, type })
-        setTimeout(() => setToast(null), 3000)
+        setTimeout(() => setToast(null), type === 'error' ? 5000 : 3000)
     }
 
     // Table block helpers
@@ -546,6 +550,18 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
             window.location.hash = '#/tafels'
         }
     }, [])
+
+    // PERF: Pre-computed couvert stats (avoids 8x duplicate inline filter chains)
+    const couvertStats = useMemo(() => {
+        const primary = bookings.filter(b => !b.group_id || b.is_primary)
+        const expected = primary.filter(b => b.status !== 'arrived' && b.status !== 'cancelled' && b.status !== 'walkin' && b.status !== 'no_show').reduce((s, b) => s + (b.guest_count || 0), 0)
+        const arrived = primary.filter(b => b.status === 'arrived').reduce((s, b) => s + (b.guest_count || 0), 0)
+        const walkin = primary.filter(b => b.status === 'walkin' || (b as any).is_walkin).reduce((s, b) => s + (b.guest_count || 0), 0)
+        const total = arrived + walkin
+        const activeCount = primary.filter(b => b.status !== 'cancelled').length
+        const activeGuests = primary.filter(b => b.status !== 'cancelled').reduce((s, b) => s + b.guest_count, 0)
+        return { expected, arrived, walkin, total, activeCount, activeGuests }
+    }, [bookings])
 
     // Navigate date
     const navigateDate = (delta: number) => {
@@ -934,33 +950,48 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                     <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3 sm:gap-6">
                         {/* Left: Date Navigation & View Mode */}
                         <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
-                            {/* TODAY BUTTON - Prominent standalone when not on today */}
-                            {date !== new Date().toISOString().split('T')[0] && (
-                                <button
-                                    onClick={goToToday}
-                                    className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-amber-500/30 hover:bg-amber-600 transition-all active:scale-95 animate-pulse"
-                                >
-                                    <Calendar className="w-4 h-4" />
-                                    VANDAAG
-                                </button>
-                            )}
+                            {/* TODAY BUTTON - Always rendered to prevent layout jump, hidden when already on today */}
+                            <button
+                                onClick={goToToday}
+                                className={[
+                                    "flex items-center gap-2 px-4 py-2.5 sm:py-2 bg-amber-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-amber-500/30 hover:bg-amber-600 transition-all active:scale-95",
+                                    date === new Date().toISOString().split('T')[0]
+                                        ? 'opacity-0 pointer-events-none'
+                                        : ''
+                                ].join(' ')}
+                                tabIndex={date === new Date().toISOString().split('T')[0] ? -1 : 0}
+                                style={{ minHeight: '44px' }}
+                            >
+                                <Calendar className="w-4 h-4" />
+                                VANDAAG
+                            </button>
                             <div className="flex items-center bg-gray-50 rounded-lg p-1 border border-gray-100 shadow-sm relative">
                                 <button
                                     onClick={() => navigateDate(-1)}
-                                    className="p-1.5 hover:bg-white hover:shadow-sm rounded-md transition-all text-gray-500 hover:text-gray-900"
+                                    className="p-2 sm:p-1.5 hover:bg-white hover:shadow-sm rounded-md transition-all text-gray-500 hover:text-gray-900"
+                                    style={{ minHeight: '44px', minWidth: '44px' }}
                                 >
                                     <ChevronLeft className="w-5 h-5" />
                                 </button>
                                 <button
-                                    onClick={() => setShowCalendarPopup(!showCalendarPopup)}
-                                    className="px-3 py-1 text-sm font-semibold text-gray-700 hover:text-gray-900 transition-colors flex items-center gap-1"
+                                    onClick={() => {
+                                        if (!showCalendarPopup) {
+                                            // Reset view month to current selected date when opening
+                                            const d = new Date(date)
+                                            setCalendarViewMonth({ year: d.getFullYear(), month: d.getMonth() })
+                                        }
+                                        setShowCalendarPopup(!showCalendarPopup)
+                                    }}
+                                    className="px-3 py-2 sm:py-1 text-sm font-semibold text-gray-700 hover:text-gray-900 transition-colors flex items-center gap-1"
+                                    style={{ minHeight: '44px' }}
                                 >
                                     <Calendar className="w-3.5 h-3.5" />
                                     Kalender
                                 </button>
                                 <button
                                     onClick={() => navigateDate(1)}
-                                    className="p-1.5 hover:bg-white hover:shadow-sm rounded-md transition-all text-gray-500 hover:text-gray-900"
+                                    className="p-2 sm:p-1.5 hover:bg-white hover:shadow-sm rounded-md transition-all text-gray-500 hover:text-gray-900"
+                                    style={{ minHeight: '44px', minWidth: '44px' }}
                                 >
                                     <ChevronRight className="w-5 h-5" />
                                 </button>
@@ -971,52 +1002,73 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                         <div className="fixed inset-0 z-30 bg-black/20 sm:bg-transparent" onClick={() => setShowCalendarPopup(false)} />
                                         <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 sm:translate-y-0 sm:inset-x-auto sm:absolute sm:top-full sm:left-0 sm:mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-40 w-auto sm:w-72 max-w-sm mx-auto sm:mx-0">
                                             {(() => {
-                                                const calDate = new Date(date)
-                                                const calYear = calDate.getFullYear()
-                                                const calMonth = calDate.getMonth()
+                                                const calYear = calendarViewMonth.year
+                                                const calMonth = calendarViewMonth.month
                                                 const firstDayRaw = new Date(calYear, calMonth, 1).getDay()
                                                 const firstDay = firstDayRaw === 0 ? 6 : firstDayRaw - 1
                                                 const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate()
+                                                const prevMonthDays = new Date(calYear, calMonth, 0).getDate()
                                                 const todayStr = new Date().toISOString().split('T')[0]
+                                                const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7
+                                                const trailingDays = totalCells - firstDay - daysInMonth
+
                                                 return (
                                                     <>
                                                         <div className="flex items-center justify-between mb-3">
                                                             <button
                                                                 onClick={() => {
-                                                                    const d = new Date(date)
-                                                                    d.setMonth(d.getMonth() - 1)
-                                                                    setDate(d.toISOString().split('T')[0])
+                                                                    setCalendarViewMonth(prev => {
+                                                                        const m = prev.month - 1
+                                                                        return m < 0
+                                                                            ? { year: prev.year - 1, month: 11 }
+                                                                            : { year: prev.year, month: m }
+                                                                    })
                                                                 }}
-                                                                className="p-1 hover:bg-gray-100 rounded-md text-gray-500"
+                                                                className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-gray-700 transition-colors"
                                                             >
                                                                 <ChevronLeft className="w-4 h-4" />
                                                             </button>
-                                                            <span className="text-sm font-semibold text-gray-900 capitalize">
-                                                                {calDate.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' })}
+                                                            <span className="text-sm font-bold text-gray-900 capitalize">
+                                                                {new Date(calYear, calMonth).toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' })}
                                                             </span>
                                                             <button
                                                                 onClick={() => {
-                                                                    const d = new Date(date)
-                                                                    d.setMonth(d.getMonth() + 1)
-                                                                    setDate(d.toISOString().split('T')[0])
+                                                                    setCalendarViewMonth(prev => {
+                                                                        const m = prev.month + 1
+                                                                        return m > 11
+                                                                            ? { year: prev.year + 1, month: 0 }
+                                                                            : { year: prev.year, month: m }
+                                                                    })
                                                                 }}
-                                                                className="p-1 hover:bg-gray-100 rounded-md text-gray-500"
+                                                                className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-gray-700 transition-colors"
                                                             >
                                                                 <ChevronRight className="w-4 h-4" />
                                                             </button>
                                                         </div>
-                                                        <div className="grid grid-cols-7 gap-1 text-center mb-1">
-                                                            {['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'].map(d => (
-                                                                <div key={d} className="text-[10px] text-gray-400 uppercase font-medium">{d}</div>
+                                                        <div className="grid grid-cols-7 gap-0.5 text-center mb-1.5">
+                                                            {['MA', 'DI', 'WO', 'DO', 'VR', 'ZA', 'ZO'].map(d => (
+                                                                <div key={d} className="text-[10px] text-gray-400 font-bold uppercase py-1">{d}</div>
                                                             ))}
                                                         </div>
-                                                        <div className="grid grid-cols-7 gap-1">
-                                                            {Array(firstDay).fill(null).map((_, i) => <div key={`e-${i}`} />)}
+                                                        <div className="grid grid-cols-7 gap-0.5">
+                                                            {/* Previous month trailing days */}
+                                                            {Array.from({ length: firstDay }, (_, i) => {
+                                                                const day = prevMonthDays - firstDay + 1 + i
+                                                                return (
+                                                                    <div key={`prev-${i}`} className="py-1.5 text-center text-sm text-gray-300 select-none">
+                                                                        {day}
+                                                                    </div>
+                                                                )
+                                                            })}
+                                                            {/* Current month days */}
                                                             {Array.from({ length: daysInMonth }, (_, i) => {
                                                                 const day = i + 1
                                                                 const dayStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
                                                                 const isToday = dayStr === todayStr
                                                                 const isSelected = dayStr === date
+                                                                const dayOfWeek = new Date(calYear, calMonth, day).getDay()
+                                                                const dayInfo = openingHours.find(h => h.dayOfWeek === dayOfWeek)
+                                                                const isClosed = dayInfo?.isOpen === false
                                                                 return (
                                                                     <button
                                                                         key={day}
@@ -1024,27 +1076,44 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                                                             setDate(dayStr)
                                                                             setShowCalendarPopup(false)
                                                                         }}
-                                                                        className={`py-1.5 rounded-lg text-sm transition-all ${isSelected
-                                                                            ? 'bg-gray-900 text-white font-bold'
-                                                                            : isToday
-                                                                                ? 'bg-emerald-100 text-emerald-800 font-semibold'
-                                                                                : 'text-gray-700 hover:bg-gray-100'
-                                                                            }`}
+                                                                        className={[
+                                                                            'py-1.5 rounded-lg text-sm transition-all relative',
+                                                                            isSelected
+                                                                                ? 'bg-gray-900 text-white font-bold shadow-sm'
+                                                                                : isToday
+                                                                                    ? 'bg-emerald-100 text-emerald-800 font-bold ring-2 ring-emerald-300'
+                                                                                    : isClosed
+                                                                                        ? 'text-gray-300 line-through'
+                                                                                        : 'text-gray-700 hover:bg-gray-100 font-medium',
+                                                                        ].join(' ')}
+                                                                        title={isClosed ? 'Gesloten' : undefined}
                                                                     >
                                                                         {day}
                                                                     </button>
                                                                 )
                                                             })}
+                                                            {/* Next month leading days */}
+                                                            {Array.from({ length: trailingDays }, (_, i) => (
+                                                                <div key={`next-${i}`} className="py-1.5 text-center text-sm text-gray-300 select-none">
+                                                                    {i + 1}
+                                                                </div>
+                                                            ))}
                                                         </div>
-                                                        <div className="mt-2 pt-2 border-t flex justify-between">
+                                                        <div className="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between">
                                                             <button
                                                                 onClick={() => {
                                                                     setDate(todayStr)
                                                                     setShowCalendarPopup(false)
                                                                 }}
-                                                                className="text-xs text-emerald-600 font-medium hover:underline"
+                                                                className="text-xs font-bold text-emerald-600 hover:text-emerald-700 hover:underline transition-colors"
                                                             >
                                                                 Naar vandaag
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setShowCalendarPopup(false)}
+                                                                className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                                                            >
+                                                                Sluiten
                                                             </button>
                                                         </div>
                                                     </>
@@ -1076,7 +1145,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                 </div>
                                 <div className="flex flex-col">
                                     <span className="text-lg font-bold leading-none">
-                                        {bookings.filter(b => b.status !== 'cancelled' && (!b.group_id || b.is_primary)).length}
+                                        {couvertStats.activeCount}
                                     </span>
                                     <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Boekingen</span>
                                 </div>
@@ -1086,7 +1155,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                 <Users className="w-4 h-4 text-blue-400" />
                                 <div className="flex flex-col">
                                     <span className="text-lg font-bold leading-none">
-                                        {bookings.filter(b => b.status !== 'cancelled' && (!b.group_id || b.is_primary)).reduce((sum, b) => sum + b.guest_count, 0)}
+                                        {couvertStats.activeGuests}
                                     </span>
                                     <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Gasten</span>
                                 </div>
@@ -1123,37 +1192,41 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                             </div>
 
                             {/* Secondary Actions */}
-                            <div className="flex items-center gap-0.5 sm:gap-1">
+                            <div className="flex items-center gap-1 sm:gap-1">
                                 <button
                                     onClick={fetchData}
-                                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-full transition-colors"
+                                    className="p-2.5 sm:p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-full transition-colors"
                                     title="Vernieuwen"
+                                    style={{ minHeight: '44px', minWidth: '44px' }}
                                 >
                                     <RefreshCw className="w-5 h-5" />
                                 </button>
                                 <button
                                     onClick={() => window.print()}
-                                    className="hidden sm:block p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-full transition-colors"
+                                    className="hidden sm:flex p-2.5 sm:p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-full transition-colors items-center justify-center"
                                     title="Printen"
+                                    style={{ minHeight: '44px', minWidth: '44px' }}
                                 >
                                     <Printer className="w-5 h-5" />
                                 </button>
                                 <button
                                     onClick={() => setShowDayNotes(!showDayNotes)}
-                                    className={`hidden sm:block relative p-2 rounded-full transition-colors ${dayNotes.length > 0 ? 'text-amber-500 bg-amber-50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
+                                    className={`relative p-2.5 sm:p-2 rounded-full transition-colors flex items-center justify-center ${dayNotes.length > 0 ? 'text-amber-500 bg-amber-50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
                                     title="Notities"
+                                    style={{ minHeight: '44px', minWidth: '44px' }}
                                 >
                                     <StickyNote className="w-5 h-5" />
-                                    {dayNotes.length > 0 && <span className="absolute top-0 right-0 w-2 h-2 bg-amber-500 rounded-full"></span>}
+                                    {dayNotes.length > 0 && <span className="absolute top-1 right-1 w-2 h-2 bg-amber-500 rounded-full"></span>}
                                 </button>
                                 <button
                                     onClick={() => setShowWaitlistPanel(!showWaitlistPanel)}
-                                    className={`hidden sm:block p-2 rounded-full transition-colors relative ${waitlist.length > 0 ? 'text-purple-500 bg-purple-50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
+                                    className={`p-2.5 sm:p-2 rounded-full transition-colors relative flex items-center justify-center ${waitlist.length > 0 ? 'text-purple-500 bg-purple-50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
                                     title="Wachtlijst"
+                                    style={{ minHeight: '44px', minWidth: '44px' }}
                                 >
                                     <Clock className="w-5 h-5" />
                                     {waitlist.length > 0 && (
-                                        <span className="absolute -top-1 -right-1 w-4 h-4 bg-purple-500 text-white text-[10px] flex items-center justify-center rounded-full ring-2 ring-white">
+                                        <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-purple-500 text-white text-[10px] flex items-center justify-center rounded-full ring-2 ring-white">
                                             {waitlist.length}
                                         </span>
                                     )}
@@ -1183,14 +1256,22 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                             <div className="flex items-center gap-2">
                                 <button
                                     onClick={() => setShowWalkinModal(true)}
-                                    className="flex items-center gap-1.5 sm:gap-2 text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 upgrade-btn px-3 sm:px-4 py-2 rounded-xl transition-all font-medium text-xs sm:text-sm shadow-sm"
+                                    className="flex items-center gap-1.5 sm:gap-2 text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 upgrade-btn px-3 sm:px-4 py-2.5 sm:py-2 rounded-xl transition-all font-medium text-xs sm:text-sm shadow-sm"
+                                    style={{ minHeight: '44px' }}
                                 >
                                     <Users className="w-4 h-4 text-gray-500" />
                                     <span>Walk-in</span>
                                 </button>
 
                                 <button
-                                    onClick={bulkBlockRemaining}
+                                    onClick={() => setConfirmDialog({
+                                        message: 'Weet je zeker dat je ALLE lege tafels wilt blokkeren voor vanavond? Dit blokkeert nieuwe boekingen.',
+                                        action: () => {
+                                            bulkBlockRemaining()
+                                            setConfirmDialog(null)
+                                        },
+                                        type: 'danger'
+                                    })}
                                     className="flex items-center gap-1.5 sm:gap-2 text-red-600 bg-red-50 border border-red-200 hover:bg-red-100 px-3 sm:px-4 py-2 rounded-xl transition-all font-medium text-xs sm:text-sm shadow-sm"
                                     title="Blokkeer alle lege tafels voor vanavond"
                                 >
@@ -1200,7 +1281,8 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                 </button>
                                 <button
                                     onClick={() => setShowNewBookingModal(true)}
-                                    className="flex items-center gap-1.5 sm:gap-2 bg-[#0F172A] text-white px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl hover:bg-black transition-all font-medium text-xs sm:text-sm shadow-lg shadow-gray-200 active:transform active:scale-95"
+                                    className="flex items-center gap-1.5 sm:gap-2 bg-[#0F172A] text-white px-3 sm:px-5 py-2.5 sm:py-2.5 rounded-xl hover:bg-black transition-all font-medium text-xs sm:text-sm shadow-lg shadow-gray-200 active:transform active:scale-95"
+                                    style={{ minHeight: '44px' }}
                                 >
                                     <Plus className="w-4 h-4" />
                                     <span className="hidden sm:inline">Nieuwe boeking</span>
@@ -1215,47 +1297,47 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                 {/* Service Stats Bar - Compact on mobile, cards on desktop */}
                 <div className="sm:hidden flex items-center gap-3 px-3 mb-3 overflow-x-auto">
                     <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="text-lg font-black text-amber-700">{bookings.filter(b => b.status !== 'arrived' && b.status !== 'cancelled' && b.status !== 'walkin' && b.status !== 'no_show' && (!b.group_id || b.is_primary)).reduce((sum, b) => sum + (b.guest_count || 0), 0)}</span>
+                        <span className="text-lg font-black text-amber-700">{couvertStats.expected}</span>
                         <span className="text-[10px] font-bold text-amber-500 uppercase">Verwacht</span>
                     </div>
                     <div className="w-px h-5 bg-gray-200 shrink-0"></div>
                     <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="text-lg font-black text-emerald-700">{bookings.filter(b => b.status === 'arrived' && (!b.group_id || b.is_primary)).reduce((sum, b) => sum + (b.guest_count || 0), 0)}</span>
+                        <span className="text-lg font-black text-emerald-700">{couvertStats.arrived}</span>
                         <span className="text-[10px] font-bold text-emerald-500 uppercase">Binnen</span>
                     </div>
                     <div className="w-px h-5 bg-gray-200 shrink-0"></div>
                     <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="text-lg font-black text-blue-700">{bookings.filter(b => (b.status === 'walkin' || (b as any).is_walkin) && (!b.group_id || b.is_primary)).reduce((sum, b) => sum + (b.guest_count || 0), 0)}</span>
+                        <span className="text-lg font-black text-blue-700">{couvertStats.walkin}</span>
                         <span className="text-[10px] font-bold text-blue-500 uppercase">Walk-in</span>
                     </div>
                     <div className="w-px h-5 bg-gray-200 shrink-0"></div>
                     <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="text-lg font-black text-purple-700">{bookings.filter(b => (b.status === 'arrived' || b.status === 'walkin' || (b as any).is_walkin) && (!b.group_id || b.is_primary)).reduce((sum, b) => sum + (b.guest_count || 0), 0)}</span>
+                        <span className="text-lg font-black text-purple-700">{couvertStats.total}</span>
                         <span className="text-[10px] font-bold text-purple-500 uppercase">Totaal</span>
                     </div>
                 </div>
                 <div className="hidden sm:grid grid-cols-4 gap-3 mb-4">
                     <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200 p-3 text-center">
                         <div className="text-2xl font-black text-amber-900">
-                            {bookings.filter(b => b.status !== 'arrived' && b.status !== 'cancelled' && b.status !== 'walkin' && b.status !== 'no_show' && (!b.group_id || b.is_primary)).reduce((sum, b) => sum + (b.guest_count || 0), 0)}
+                            {couvertStats.expected}
                         </div>
                         <div className="text-[10px] font-bold text-amber-600 uppercase">Verwacht</div>
                     </div>
                     <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl border border-emerald-200 p-3 text-center">
                         <div className="text-2xl font-black text-emerald-900">
-                            {bookings.filter(b => b.status === 'arrived' && (!b.group_id || b.is_primary)).reduce((sum, b) => sum + (b.guest_count || 0), 0)}
+                            {couvertStats.arrived}
                         </div>
                         <div className="text-[10px] font-bold text-emerald-600 uppercase">Binnen</div>
                     </div>
                     <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-3 text-center">
                         <div className="text-2xl font-black text-blue-900">
-                            {bookings.filter(b => (b.status === 'walkin' || (b as any).is_walkin) && (!b.group_id || b.is_primary)).reduce((sum, b) => sum + (b.guest_count || 0), 0)}
+                            {couvertStats.walkin}
                         </div>
                         <div className="text-[10px] font-bold text-blue-600 uppercase">Walk-in</div>
                     </div>
                     <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl border border-purple-200 p-3 text-center">
                         <div className="text-2xl font-black text-purple-900">
-                            {bookings.filter(b => (b.status === 'arrived' || b.status === 'walkin' || (b as any).is_walkin) && (!b.group_id || b.is_primary)).reduce((sum, b) => sum + (b.guest_count || 0), 0)}
+                            {couvertStats.total}
                         </div>
                         <div className="text-[10px] font-bold text-purple-600 uppercase">Totaal</div>
                     </div>
@@ -1991,30 +2073,6 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                         )}
                                     </div>
 
-                                    {/* Edit button — always visible at top */}
-                                    <button
-                                        onClick={() => {
-                                            const b = showBookingDetail
-                                            const startMins = parseInt(b.start_time.split(':')[0]) * 60 + parseInt(b.start_time.split(':')[1])
-                                            const endMins = parseInt(b.end_time.split(':')[0]) * 60 + parseInt(b.end_time.split(':')[1])
-                                            setEditForm({
-                                                guest_count: b.guest_count,
-                                                customer_name: b.customer_name,
-                                                customer_phone: b.customer_phone || '',
-                                                customer_email: b.customer_email || '',
-                                                remarks: b.remarks || '',
-                                                time: b.start_time,
-                                                duration: endMins - startMins
-                                            })
-                                            setEditingBooking(b)
-                                            setShowBookingDetail(null)
-                                        }}
-                                        className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600"
-                                    >
-                                        <Edit3 className="w-4 h-4" />
-                                        Boeking bewerken
-                                    </button>
-
                                     {/* Multi-table indicator */}
                                     {(showBookingDetail.linked_tables || isGrouped) && (
                                         <div className="p-2 bg-blue-50 rounded-lg text-sm text-blue-800 flex items-center gap-2">
@@ -2048,6 +2106,30 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                         </div>
                                     )}
 
+                                    {/* Edit button — below contact info so staff sees details first */}
+                                    <button
+                                        onClick={() => {
+                                            const b = showBookingDetail
+                                            const startMins = parseInt(b.start_time.split(':')[0]) * 60 + parseInt(b.start_time.split(':')[1])
+                                            const endMins = parseInt(b.end_time.split(':')[0]) * 60 + parseInt(b.end_time.split(':')[1])
+                                            setEditForm({
+                                                guest_count: b.guest_count,
+                                                customer_name: b.customer_name,
+                                                customer_phone: b.customer_phone || '',
+                                                customer_email: b.customer_email || '',
+                                                remarks: b.remarks || '',
+                                                time: b.start_time,
+                                                duration: endMins - startMins
+                                            })
+                                            setEditingBooking(b)
+                                            setShowBookingDetail(null)
+                                        }}
+                                        className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-sm hover:bg-blue-100 transition-colors"
+                                    >
+                                        <Edit3 className="w-4 h-4" />
+                                        Boeking bewerken
+                                    </button>
+
                                     {/* Customer History - fetched inline */}
                                     {(showBookingDetail.customer_email || showBookingDetail.customer_id) && (
                                         <CustomerHistory
@@ -2065,7 +2147,8 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                         <div className="grid grid-cols-2 gap-2">
                                             <button
                                                 onClick={() => updateBookingStatus(showBookingDetail.id, 'arrived')}
-                                                className="flex items-center justify-center gap-2 px-3 py-2 bg-amber-500 text-white rounded-lg text-sm hover:bg-amber-600"
+                                                className="flex items-center justify-center gap-2 px-3 py-3 sm:py-2 bg-amber-500 text-white rounded-lg text-sm hover:bg-amber-600 active:scale-95 transition-all"
+                                                style={{ minHeight: '48px' }}
                                             >
                                                 <UserCheck className="w-4 h-4" />
                                                 Gearriveerd
@@ -2079,14 +2162,16 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                                     },
                                                     type: 'warning'
                                                 })}
-                                                className="flex items-center justify-center gap-2 px-3 py-2 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600"
+                                                className="flex items-center justify-center gap-2 px-3 py-3 sm:py-2 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 active:scale-95 transition-all"
+                                                style={{ minHeight: '48px' }}
                                             >
                                                 <UserX className="w-4 h-4" />
                                                 No-show
                                             </button>
                                             <button
                                                 onClick={() => updateBookingStatus(showBookingDetail.id, 'confirmed')}
-                                                className="flex items-center justify-center gap-2 px-3 py-2 bg-emerald-500 text-white rounded-lg text-sm hover:bg-emerald-600"
+                                                className="flex items-center justify-center gap-2 px-3 py-3 sm:py-2 bg-emerald-500 text-white rounded-lg text-sm hover:bg-emerald-600 active:scale-95 transition-all"
+                                                style={{ minHeight: '48px' }}
                                             >
                                                 <Check className="w-4 h-4" />
                                                 Bevestigd
@@ -2100,7 +2185,8 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                                     },
                                                     type: 'danger'
                                                 })}
-                                                className="flex items-center justify-center gap-2 px-3 py-2 bg-gray-500 text-white rounded-lg text-sm hover:bg-gray-600"
+                                                className="flex items-center justify-center gap-2 px-3 py-3 sm:py-2 bg-gray-500 text-white rounded-lg text-sm hover:bg-gray-600 active:scale-95 transition-all"
+                                                style={{ minHeight: '48px' }}
                                             >
                                                 <X className="w-4 h-4" />
                                                 Annuleren
