@@ -48,7 +48,12 @@ const VIEW_OPTIONS: Array<{
 const App: React.FC = () => {
   const [events, setEvents] = useState<EventData[]>(EVENTS_DATA);
   const [wijken, setWijken] = useState<Wijk[]>(WIJKEN_DATA);
-  const [view, setView] = useState<ViewMode>('timeline');
+  const [view, setViewState] = useState<ViewMode>(() => {
+    // Initialize from hash route
+    const hash = window.location.hash.replace('#/', '').split('?')[0];
+    const VALID_VIEWS: ViewMode[] = ['widget', 'admin', 'guide', 'calendar', 'bookings', 'timeline', 'stats', 'newsletter'];
+    return VALID_VIEWS.includes(hash as ViewMode) ? (hash as ViewMode) : 'timeline';
+  });
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [sessionRestaurantId, setSessionRestaurantId] = useState<string | null>(null);
@@ -173,8 +178,43 @@ const App: React.FC = () => {
     }
   };
 
-  // Show loading while checking auth
-  if (isCheckingAuth) {
+  // ── Routing: determine if we're on a public or admin route ──
+  // Hash-based admin routes: #/tafels, #/admin, #/bookings, etc.
+  // Root URL (no hash, or empty hash) = PUBLIC booking widget
+  const ADMIN_HASHES = ['tafels', 'admin', 'calendar', 'bookings', 'timeline', 'stats', 'newsletter', 'guide', 'widget'];
+
+  const getHashRoute = (): string | null => {
+    const hash = window.location.hash.replace('#/', '').split('?')[0];
+    return ADMIN_HASHES.includes(hash) ? hash : null;
+  };
+
+  const [hashRoute, setHashRoute] = useState<string | null>(getHashRoute());
+
+  // Listen for hash changes (back/forward navigation)
+  useEffect(() => {
+    const onHashChange = () => {
+      setHashRoute(getHashRoute());
+      const hash = window.location.hash.replace('#/', '').split('?')[0];
+      const VALID_VIEWS: ViewMode[] = ['widget', 'admin', 'guide', 'calendar', 'bookings', 'timeline', 'stats', 'newsletter'];
+      if (VALID_VIEWS.includes(hash as ViewMode)) {
+        setViewState(hash as ViewMode);
+      }
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  // Wrapper to also update hash when changing view
+  const setView = (v: ViewMode) => {
+    setViewState(v);
+    window.location.hash = `#/${v}`;
+  };
+
+  // Determine if this is a public page (no admin hash route)
+  const isPublicPage = !hashRoute;
+
+  // Show loading while checking auth (only for admin routes)
+  if (isCheckingAuth && !isPublicPage) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-pulse text-gray-400">Loading...</div>
@@ -182,19 +222,11 @@ const App: React.FC = () => {
     );
   }
 
-  // Show login page if not authenticated
-  // Exception: Allow public access if this is a direct event link (?event=) or explicitly marked public (?public=true)
-  const isPublicLink = new URLSearchParams(window.location.search).has('event') ||
-    new URLSearchParams(window.location.search).get('public') === 'true';
-
-  if (!isAuthenticated && !isPublicLink) {
-    return <LoginPage onLoginSuccess={handleLoginSuccess} />;
-  }
-
-  // If public link and not authenticated, ONLY show the widget in full screen (no navigation)
-  if (isPublicLink && !isAuthenticated) {
+  // PUBLIC ROUTE: Root URL always shows the booking widget
+  // This is what customers see when they click the Google booking link
+  if (isPublicPage) {
     return (
-      <div className="w-screen h-[100dvh] bg-[#0b0b0b]">
+      <div className="w-screen h-[100dvh] bg-[#0b0b0b] relative">
         <EventsWidget
           events={events}
           wijken={wijken}
@@ -202,8 +234,22 @@ const App: React.FC = () => {
           restaurantId={getRestaurantId()}
           showHeader={true}
         />
+        {/* Subtle admin link for owners — only show if authenticated */}
+        {isAuthenticated && (
+          <a
+            href="#/tafels"
+            className="fixed bottom-4 right-4 z-50 bg-white/10 hover:bg-white/20 text-white/60 hover:text-white text-xs px-3 py-1.5 rounded-full backdrop-blur-sm transition-all"
+          >
+            Admin →
+          </a>
+        )}
       </div>
     );
+  }
+
+  // ADMIN ROUTE: Requires authentication
+  if (!isAuthenticated) {
+    return <LoginPage onLoginSuccess={handleLoginSuccess} />;
   }
 
   return (
