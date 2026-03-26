@@ -381,10 +381,10 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
             }
 
             if (settingsRes.ok) {
-                const settingsData = await settingsRes.json()
-                if (settingsData.settings?.slotDuration) {
-                    setSlotDuration(settingsData.settings.slotDuration as 15 | 30 | 60)
-                }
+                // Note: slotDuration from settings is the BOOKING duration (e.g. 90 min),
+                // NOT the grid resolution. The tafels grid always uses 30-min columns.
+                // We intentionally do NOT set slotDuration from settings here.
+                await settingsRes.json() // consume response body
             }
         } catch (e) {
             console.error('Failed to load timeline data:', e)

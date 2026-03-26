@@ -873,8 +873,8 @@ router.get('/api/restaurant/:restaurantId/availability', async (req, res) => {
                     allTables: availableTables,
                     bookingsByTableIdMins,
                     bookingsByTableId: buildBookingsMap(allBookingRows),
-                    slotStepMins: settings.slot_duration || SLOT_STEP_MINS,
-                    bookingDurationMins: settings.slot_duration ? settings.slot_duration * 6 : BOOKING_DURATION_MINS,
+                    slotStepMins: SLOT_STEP_MINS, // Always 30-min intervals between available slots
+                    bookingDurationMins: settings.slot_duration || BOOKING_DURATION_MINS, // slot_duration IS the booking length (e.g. 90 min)
                     maxPartySize: settings.max_party_size || null,
                     bufferTimeMins: settings.buffer_time || 0,
                     maxCoversPerNight: settings.max_covers_per_night || null,
