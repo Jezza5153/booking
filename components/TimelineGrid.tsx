@@ -564,13 +564,24 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
     }, [bookings])
 
     // Navigate date
+    // FIX: Parse date parts manually to avoid UTC midnight timezone shift
+    // new Date("2026-03-31") → UTC midnight → CET shows March 30 → navigation loops
     const navigateDate = (delta: number) => {
-        const d = new Date(date)
-        d.setDate(d.getDate() + delta)
-        setDate(d.toISOString().split('T')[0])
+        const [y, m, day] = date.split('-').map(Number)
+        const d = new Date(y, m - 1, day + delta)
+        const ny = d.getFullYear()
+        const nm = String(d.getMonth() + 1).padStart(2, '0')
+        const nd = String(d.getDate()).padStart(2, '0')
+        setDate(`${ny}-${nm}-${nd}`)
     }
 
-    const goToToday = () => setDate(new Date().toISOString().split('T')[0])
+    const goToToday = () => {
+        const now = new Date()
+        const y = now.getFullYear()
+        const m = String(now.getMonth() + 1).padStart(2, '0')
+        const d = String(now.getDate()).padStart(2, '0')
+        setDate(`${y}-${m}-${d}`)
+    }
 
     // Format date for display
     const formatDate = (dateStr: string) => {
@@ -646,7 +657,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
 
         setQuickBookData({ table, time: timeSlot })
         setQuickBookForm({
-            guest_count: Math.min(table.seats, 2),
+            guest_count: 2,
             customer_name: '',
             customer_phone: '',
             customer_email: '',
@@ -656,7 +667,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
         setShowQuickBookModal(true)
     }
 
-    // Submit quick booking
+    // Submit quick booking — uses multi-table allocation when party exceeds clicked table
     const submitQuickBook = async () => {
         if (!quickBookData || !quickBookForm.customer_name || isSubmitting) return
         setIsSubmitting(true)
@@ -668,6 +679,21 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
             const endMins = h * 60 + m + quickBookForm.duration
             const endTime = `${Math.floor(endMins / 60).toString().padStart(2, '0')}:${(endMins % 60).toString().padStart(2, '0')}`
 
+            // Smart table allocation: if guests fit the clicked table, use it directly;
+            // otherwise use findBestTables() to combine multiple tables
+            let tableIds: string[]
+            if (quickBookForm.guest_count <= quickBookData.table.seats) {
+                tableIds = [quickBookData.table.id]
+            } else {
+                const allocation = findBestTables(quickBookForm.guest_count, startTime)
+                if (!allocation || allocation.tables.length === 0) {
+                    showToast('Niet genoeg tafels beschikbaar voor dit aantal gasten', 'error')
+                    setIsSubmitting(false)
+                    return
+                }
+                tableIds = allocation.tables.map(t => t.id)
+            }
+
             const res = await fetch(`${API_BASE_URL}/api/restaurant/book`, {
                 method: 'POST',
                 headers: {
@@ -676,7 +702,8 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                 },
                 body: JSON.stringify({
                     restaurant_id: restaurantId,
-                    table_id: quickBookData.table.id,
+                    table_id: tableIds[0],
+                    table_ids: tableIds,
                     date,
                     time: startTime,
                     end_time: endTime,
@@ -1809,6 +1836,28 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                     <X className="w-5 h-5" />
                                 </button>
                             </div>
+
+                            {/* Multi-table allocation indicator */}
+                            {(() => {
+                                if (quickBookForm.guest_count > quickBookData.table.seats) {
+                                    const allocation = findBestTables(quickBookForm.guest_count, quickBookData.time)
+                                    if (allocation && allocation.tables.length > 1) {
+                                        return (
+                                            <div className="mb-3 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+                                                <p className="text-xs font-medium text-amber-800">🪑 Gecombineerde tafels ({allocation.totalSeats} stoelen)</p>
+                                                <p className="text-xs text-amber-600 mt-0.5">{allocation.tables.map(t => t.name).join(' + ')}</p>
+                                            </div>
+                                        )
+                                    } else if (!allocation) {
+                                        return (
+                                            <div className="mb-3 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
+                                                <p className="text-xs font-medium text-red-800">⚠️ Niet genoeg tafels beschikbaar voor {quickBookForm.guest_count} gasten</p>
+                                            </div>
+                                        )
+                                    }
+                                }
+                                return null
+                            })()}
 
                             <div className="space-y-3">
                                 <div className="flex gap-2">
