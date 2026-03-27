@@ -1720,7 +1720,7 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                                                 </div>
 
                                                                 {/* Timeline */}
-                                                                <div className="flex-1 relative" style={{ height: `${ROW_H}px` }}>
+                                                                <div className="flex-1 relative overflow-hidden" style={{ height: `${ROW_H}px` }}>
                                                                     {/* Grid cells */}
                                                                     <div className="absolute inset-0 flex">
                                                                         {timeSlots.map((slot, i) => {
@@ -1768,8 +1768,9 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
 
                                                                         const startM = parseInt(booking.start_time.split(':')[0]) * 60 + parseInt(booking.start_time.split(':')[1])
                                                                         const endM = parseInt(booking.end_time.split(':')[0]) * 60 + parseInt(booking.end_time.split(':')[1])
-                                                                        const l = ((startM - gridStartMins) / slotDuration) * COL
-                                                                        const w = ((endM - startM) / slotDuration) * COL
+                                                                        const effectiveStart = Math.max(startM, gridStartMins)
+                                                                        const l = Math.max(0, ((effectiveStart - gridStartMins) / slotDuration) * COL)
+                                                                        const w = ((endM - effectiveStart) / slotDuration) * COL
 
                                                                         return (
                                                                             <div
