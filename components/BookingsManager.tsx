@@ -1096,7 +1096,8 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                                         type="number"
                                         min="1"
                                         value={bookingForm.guest_count}
-                                        onChange={e => setBookingForm(f => ({ ...f, guest_count: parseInt(e.target.value) || 1 }))}
+                                        onChange={e => setBookingForm(f => ({ ...f, guest_count: e.target.value === '' ? '' as any : parseInt(e.target.value) || 0 }))}
+                                        onBlur={e => { if (!e.target.value || Number(e.target.value) < 1) setBookingForm(f => ({ ...f, guest_count: 1 })) }}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                                     />
                                 </div>
@@ -1196,7 +1197,8 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                                         min="1"
                                         max="50"
                                         value={bookingForm.guest_count}
-                                        onChange={e => setBookingForm(f => ({ ...f, guest_count: parseInt(e.target.value) || 1 }))}
+                                        onChange={e => setBookingForm(f => ({ ...f, guest_count: e.target.value === '' ? '' as any : parseInt(e.target.value) || 0 }))}
+                                        onBlur={e => { if (!e.target.value || Number(e.target.value) < 1) setBookingForm(f => ({ ...f, guest_count: 1 })) }}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                                     />
                                 </div>
@@ -1305,7 +1307,8 @@ export const BookingsManager: React.FC<{ restaurantId?: string }> = ({ restauran
                                         min="1"
                                         max="50"
                                         value={editForm.guest_count}
-                                        onChange={e => setEditForm(f => ({ ...f, guest_count: parseInt(e.target.value) || 1 }))}
+                                        onChange={e => setEditForm(f => ({ ...f, guest_count: e.target.value === '' ? '' as any : parseInt(e.target.value) || 0 }))}
+                                        onBlur={e => { if (!e.target.value || Number(e.target.value) < 1) setEditForm(f => ({ ...f, guest_count: 1 })) }}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                                     />
                                 </div>

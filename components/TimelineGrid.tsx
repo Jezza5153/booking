@@ -1867,7 +1867,8 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                             type="number"
                                             min="1"
                                             value={quickBookForm.guest_count}
-                                            onChange={e => setQuickBookForm(f => ({ ...f, guest_count: Math.max(1, Number(e.target.value) || 1) }))}
+                                            onChange={e => setQuickBookForm(f => ({ ...f, guest_count: e.target.value === '' ? '' as any : parseInt(e.target.value) || 0 }))}
+                                            onBlur={e => { if (!e.target.value || Number(e.target.value) < 1) setQuickBookForm(f => ({ ...f, guest_count: 1 })) }}
                                             className="w-full px-2 py-1.5 border rounded text-sm"
                                         />
                                     </div>
@@ -2272,7 +2273,8 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({ restaurantId }) => {
                                             type="number"
                                             min="1"
                                             value={editForm.guest_count}
-                                            onChange={e => setEditForm(f => ({ ...f, guest_count: Math.max(1, Number(e.target.value) || 1) }))}
+                                            onChange={e => setEditForm(f => ({ ...f, guest_count: e.target.value === '' ? '' as any : parseInt(e.target.value) || 0 }))}
+                                            onBlur={e => { if (!e.target.value || Number(e.target.value) < 1) setEditForm(f => ({ ...f, guest_count: 1 })) }}
                                             className="w-full px-2 py-1.5 border rounded text-sm"
                                         />
                                     </div>
