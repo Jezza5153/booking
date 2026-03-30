@@ -159,7 +159,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ events, setEvent
         restaurantId: RESTAURANT_ID,
         zones: wijken,
         events: events,
-        force: true
       });
 
       // CRITICAL FIX: Rehydrate state from server to prevent drift

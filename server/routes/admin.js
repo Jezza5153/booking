@@ -1175,15 +1175,40 @@ router.post('/api/admin/save', authMiddleware, async (req, res) => {
             );
 
             // --- SLOTS: For this event, sync slots ---
+            // CRITICAL FIX: Delete bookings BEFORE deleting slots to avoid FK RESTRICT violation
+            // (bookings.slot_id has ON DELETE RESTRICT — deleting a slot with bookings would fail
+            //  and previously triggered a nuclear cascade that wiped ALL data)
             const slotIds = (event.slots || []).map(s => s.id);
             if (slotIds.length > 0) {
-                // Delete slots NOT in this event's payload
+                // First: cancel (soft-delete) bookings on slots being removed
+                await client.query(
+                    `UPDATE bookings SET status = 'cancelled', cancelled_at = NOW()
+                     WHERE slot_id IN (SELECT id FROM slots WHERE event_id = $1 AND id != ALL($2::text[]))
+                       AND status = 'confirmed'`,
+                    [event.id, slotIds]
+                );
+                // Then: delete the bookings so the slot can be removed
+                await client.query(
+                    `DELETE FROM bookings WHERE slot_id IN (SELECT id FROM slots WHERE event_id = $1 AND id != ALL($2::text[]))`,
+                    [event.id, slotIds]
+                );
+                // Now safe to delete slots NOT in this event's payload
                 await client.query(
                     `DELETE FROM slots WHERE event_id = $1 AND id != ALL($2::text[])`,
                     [event.id, slotIds]
                 );
             } else {
-                // No slots = delete all for this event
+                // No slots = cancel + delete all bookings, then delete slots for this event
+                await client.query(
+                    `UPDATE bookings SET status = 'cancelled', cancelled_at = NOW()
+                     WHERE slot_id IN (SELECT id FROM slots WHERE event_id = $1)
+                       AND status = 'confirmed'`,
+                    [event.id]
+                );
+                await client.query(
+                    `DELETE FROM bookings WHERE slot_id IN (SELECT id FROM slots WHERE event_id = $1)`,
+                    [event.id]
+                );
                 await client.query(`DELETE FROM slots WHERE event_id = $1`, [event.id]);
             }
 
@@ -1219,33 +1244,15 @@ router.post('/api/admin/save', authMiddleware, async (req, res) => {
         await client.query('ROLLBACK');
         console.error('Save error:', error.message, error.code);
 
-        // P0-8: Handle foreign key violations — auto-cascade remaining references
+        // FK violations should no longer happen (bookings are deleted before slots above),
+        // but if they do, report the error clearly instead of nuking all data
         if (error.code === '23503') {
-            console.warn('FK violation during save, retrying with exhaustive cascade...');
-            try {
-                // Nuclear cascade: wipe ALL dependents for this restaurant, then retry
-                await client.query('BEGIN');
-                await client.query(`DELETE FROM bookings WHERE slot_id IN (SELECT id FROM slots WHERE event_id IN (SELECT id FROM events WHERE restaurant_id = $1))`, [req.body.restaurantId || 'demo-restaurant']);
-                await client.query(`DELETE FROM bookings WHERE slot_id IN (SELECT id FROM slots WHERE zone_id IN (SELECT id FROM zones WHERE restaurant_id = $1))`, [req.body.restaurantId || 'demo-restaurant']);
-                await client.query(`DELETE FROM slots WHERE event_id IN (SELECT id FROM events WHERE restaurant_id = $1)`, [req.body.restaurantId || 'demo-restaurant']);
-                await client.query(`DELETE FROM slots WHERE zone_id IN (SELECT id FROM zones WHERE restaurant_id = $1)`, [req.body.restaurantId || 'demo-restaurant']);
-                await client.query(`DELETE FROM events WHERE restaurant_id = $1`, [req.body.restaurantId || 'demo-restaurant']);
-                await client.query(`DELETE FROM zones WHERE restaurant_id = $1`, [req.body.restaurantId || 'demo-restaurant']);
-                await client.query('COMMIT');
-                // Tell the frontend to re-save (data is now clean)
-                return res.status(409).json({
-                    error: 'Referenties opgeschoond — sla opnieuw op',
-                    cleaned: true,
-                    hint: 'Old references have been cleaned up. Please save again.'
-                });
-            } catch (cascadeErr) {
-                await client.query('ROLLBACK').catch(() => {});
-                console.error('Cascade cleanup also failed:', cascadeErr.message);
-                return res.status(409).json({
-                    error: 'Kan niet verwijderen — neem contact op met support',
-                    detail: cascadeErr.message
-                });
-            }
+            console.error('FK violation during save — booking references prevent deletion:', error.detail);
+            return res.status(409).json({
+                error: 'Kan niet opslaan: er zijn nog boekingen gekoppeld aan slots die verwijderd zouden worden.',
+                detail: error.detail,
+                hint: 'Annuleer of verwijder de betreffende boekingen eerst, of neem contact op met support.'
+            });
         }
 
         if (error.statusCode === 422) {
